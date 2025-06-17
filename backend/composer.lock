@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "4a41a2de06f0c29b1c27d44122638a41",
+    "content-hash": "d84c1a12d6d7dbf69ba240246deebd53",
     "packages": [
         {
             "name": "brick/math",
@@ -1056,16 +1056,16 @@
         },
         {
             "name": "laravel/framework",
-            "version": "v12.17.0",
+            "version": "v12.18.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/laravel/framework.git",
-                "reference": "8729d084510480fdeec9b6ad198180147d4a7f06"
+                "reference": "7d264a0dad2bfc5c154240b38e8ce9b2c4cdd14d"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/laravel/framework/zipball/8729d084510480fdeec9b6ad198180147d4a7f06",
-                "reference": "8729d084510480fdeec9b6ad198180147d4a7f06",
+                "url": "https://api.github.com/repos/laravel/framework/zipball/7d264a0dad2bfc5c154240b38e8ce9b2c4cdd14d",
+                "reference": "7d264a0dad2bfc5c154240b38e8ce9b2c4cdd14d",
                 "shasum": ""
             },
             "require": {
@@ -1267,7 +1267,7 @@
                 "issues": "https://github.com/laravel/framework/issues",
                 "source": "https://github.com/laravel/framework"
             },
-            "time": "2025-06-03T14:04:18+00:00"
+            "time": "2025-06-10T14:48:34+00:00"
         },
         {
             "name": "laravel/prompts",
@@ -6112,16 +6112,16 @@
         },
         {
             "name": "filp/whoops",
-            "version": "2.18.0",
+            "version": "2.18.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/filp/whoops.git",
-                "reference": "a7de6c3c6c3c022f5cfc337f8ede6a14460cf77e"
+                "reference": "8fcc6a862f2e7b94eb4221fd0819ddba3d30ab26"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/filp/whoops/zipball/a7de6c3c6c3c022f5cfc337f8ede6a14460cf77e",
-                "reference": "a7de6c3c6c3c022f5cfc337f8ede6a14460cf77e",
+                "url": "https://api.github.com/repos/filp/whoops/zipball/8fcc6a862f2e7b94eb4221fd0819ddba3d30ab26",
+                "reference": "8fcc6a862f2e7b94eb4221fd0819ddba3d30ab26",
                 "shasum": ""
             },
             "require": {
@@ -6171,7 +6171,7 @@
             ],
             "support": {
                 "issues": "https://github.com/filp/whoops/issues",
-                "source": "https://github.com/filp/whoops/tree/2.18.0"
+                "source": "https://github.com/filp/whoops/tree/2.18.1"
             },
             "funding": [
                 {
@@ -6179,7 +6179,7 @@
                     "type": "github"
                 }
             ],
-            "time": "2025-03-15T12:00:00+00:00"
+            "time": "2025-06-03T18:56:14+00:00"
         },
         {
             "name": "hamcrest/hamcrest-php",
@@ -6355,16 +6355,16 @@
         },
         {
             "name": "laravel/pail",
-            "version": "v1.2.2",
+            "version": "v1.2.3",
             "source": {
                 "type": "git",
                 "url": "https://github.com/laravel/pail.git",
-                "reference": "f31f4980f52be17c4667f3eafe034e6826787db2"
+                "reference": "8cc3d575c1f0e57eeb923f366a37528c50d2385a"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/laravel/pail/zipball/f31f4980f52be17c4667f3eafe034e6826787db2",
-                "reference": "f31f4980f52be17c4667f3eafe034e6826787db2",
+                "url": "https://api.github.com/repos/laravel/pail/zipball/8cc3d575c1f0e57eeb923f366a37528c50d2385a",
+                "reference": "8cc3d575c1f0e57eeb923f366a37528c50d2385a",
                 "shasum": ""
             },
             "require": {
@@ -6384,7 +6384,7 @@
                 "orchestra/testbench-core": "^8.13|^9.0|^10.0",
                 "pestphp/pest": "^2.20|^3.0",
                 "pestphp/pest-plugin-type-coverage": "^2.3|^3.0",
-                "phpstan/phpstan": "^1.10",
+                "phpstan/phpstan": "^1.12.27",
                 "symfony/var-dumper": "^6.3|^7.0"
             },
             "type": "library",
@@ -6420,6 +6420,7 @@
             "description": "Easily delve into your Laravel application's log files directly from the command line.",
             "homepage": "https://github.com/laravel/pail",
             "keywords": [
+                "dev",
                 "laravel",
                 "logs",
                 "php",
@@ -6429,7 +6430,7 @@
                 "issues": "https://github.com/laravel/pail/issues",
                 "source": "https://github.com/laravel/pail"
             },
-            "time": "2025-01-28T15:15:15+00:00"
+            "time": "2025-06-05T13:55:57+00:00"
         },
         {
             "name": "laravel/pint",

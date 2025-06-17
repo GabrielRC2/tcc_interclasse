@@ -1,0 +1,66 @@
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      args:
+        WWWUSER: 1000
+        WWWGROUP: 1000
+    image: interclasse-backend
+    container_name: interclasse-backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/var/www/html
+    depends_on: #Mostra a dependência entre imagens
+      - mysql
+    environment:
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_DATABASE=laravel
+      - DB_USERNAME=sail
+      - DB_PASSWORD=password
+    # networks:
+    #   - public_network
+    #   - private_network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    image: interclasse-frontend
+    container_name: interclasse-frontend
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+    # networks:
+    #   - public_network
+
+  mysql:
+    image: mysql:8.0
+    container_name: interclasse-mysql
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_DATABASE: laravel
+      MYSQL_USER: sail
+      MYSQL_PASSWORD: password
+    volumes:
+      - mysql-data:/var/lib/mysql
+    # networks:
+    #   - private_netwok
+
+volumes:
+  mysql-data:
+
+# Configuração para que os contâiner possam "ver uns aos outros"
+# networks:
+#   public_network:
+#     driver: bridge
+#   private_netwok:
+#     driver: bridge
