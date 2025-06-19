@@ -13,9 +13,9 @@ return new class extends Migration
     {
         Schema::create('tournaments', function (Blueprint $table) {
             $table->id();
-            $table->string('nome');
-            $table->date('data_inicio');
-            $table->date('data_fim');
+            $table->string('tournaments_name');
+            $table->date('start_date');
+            $table->date('end_date');
             $table->timestamps();
 
         });
@@ -26,6 +26,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        //
+        Schema::dropIfExists('tournaments');
     }
 };

@@ -13,10 +13,11 @@ return new class extends Migration
     {
         Schema::create('teams', function(Blueprint $table){
             $table -> id();
-            $table -> string('grupo');
-            $table -> string('nome_time');
-            $table -> integer('pontos_totais');
-            $table -> string('genero_time');
+            $table -> string('teams_group');
+            $table -> string('teams_name');
+            $table -> integer('total_points');
+            $table -> string('teams_gender');
+            $table->timestamps();
         });
     }
 
@@ -25,6 +26,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        //
+        Schema::dropIfExists('teams');
     }
 };

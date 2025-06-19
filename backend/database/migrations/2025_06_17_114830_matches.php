@@ -14,8 +14,7 @@ return new class extends Migration
     {
         Schema::create('matches', function (Blueprint $table) {
             $table->id();
-            $table->string('local');
-            $table->string('status')->default('agendado'); // scheduled, ongoing, completed
+            $table->string('status')->default('agendado'); // agendado, em andamento, finalizado
             $table->timestamps();
         });
     }
