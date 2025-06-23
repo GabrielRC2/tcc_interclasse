@@ -11,11 +11,9 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('matches_teams', function(Blueprint $table){
-            $table -> id();
+        Schema::create('match_team', function (Blueprint $table) {
             $table->unsignedBigInteger('fk_id_matches');
             $table->unsignedBigInteger('fk_id_teams');
-            $table->timestamps();
 
             $table->foreign('fk_id_matches')->references('id')->on('matches')->onDelete('cascade');
             $table->foreign('fk_id_teams')->references('id')->on('teams')->onDelete('cascade');
@@ -27,6 +25,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('matches_teams');
+        Schema::dropIfExists('match_team');
     }
 };
