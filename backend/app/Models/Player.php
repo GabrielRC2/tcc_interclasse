@@ -10,6 +10,9 @@ class Player extends Model
 {
     protected $table = 'players';
 
+    //Campos que podem ser preenchidos em massa
+    protected $fillable=['player_name','jersey_number'];
+
     public function fouls():HasMany {
         return $this->hasMany(Foul::class);
     }

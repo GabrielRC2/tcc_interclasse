@@ -3,9 +3,16 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use phpDocumentor\Reflection\PseudoTypes\True_;
 
 class GerarPartidasController extends Controller
 {
+
+    public function teste()
+    {
+        return response()->json(['teste' => true]);
+    }
+    
     public function gerar(Request $request)
     {
         $grupos = $request->input('groupsData');
