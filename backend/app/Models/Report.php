@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 class Report extends Model
 {
     protected $table = 'reports';
+    protected $fillable = ['fk_id_matches', 'team1_points', 'team2_points'];
 
     public function matches():HasOne {
         return $this->hasOne(Matches::class);

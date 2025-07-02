@@ -3,26 +3,27 @@
 namespace App\Http\Controllers;
 
 use App\Http\Controllers\Controller;
-use App\Http\Resources\PlayerResource;
-use App\Models\Player;
+use App\Http\Resources\ReportResource;
+use App\Models\Report;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 
-class PlayerController extends Controller
+class ReportController extends Controller
 {
     public function index(){
-        return PlayerResource::collection(Player::all());
+        return ReportResource::collection(Report::all());
     }
 
     public function store(Request $request){
         try {
-        $validated = $request->validate([
-            'player_name' => "required|string",
-            'jersey_number' => "required|string|min:1"
-        ]);
+            $validated = $request->validate([
+                'fk_id_matches'=> 'required|integer',
+                'team1_points'=> 'required|integer',
+                'team2_points'=> 'required|integer',
+            ]);
 
-        $player = Player::create($validated);
-        return (new PlayerResource($player))->response()->setStatusCode(201);
+            $report = Report::create($validated);
+            return (new ReportResource($report))->response()->setStatusCode(201);
 
         } catch (ValidationException $e) {
             // Se a validação falhar, retorne os erros em JSON com status 422 Unprocessable Entity
@@ -34,31 +35,32 @@ class PlayerController extends Controller
     }
 
     public function show($id){
-        $player = Player::findOrFail($id);
-        return new PlayerResource($player);
+        $foul = Report::findOrFail($id);
+        return new ReportResource($foul);
     }
 
     public function destroy($id){
-        $player = Player::findOrFail($id);
-        $player->delete();
-        return response()->json(['message' => 'Player deleted successfully'], 200);
+        $report = Report::findOrFail($id);
+        $report->delete();
+        return response()->json(['message' => 'Foul deleted successfully'], 200);
     }
 
     public function update(Request $request, $id){
         try {
-            $player = Player::findOrFail($id);
+            $report = Report::findOrFail($id);
 
             // 1. Validação dos dados para atualização
             $validated = $request->validate([
-                'player_name' => "required|string",
-                'jersey_number' => "required|string|min:1"
+                'fk_id_matches'=> 'required|integer',
+                'team1_points'=> 'required|integer',
+                'team2_points'=> 'required|integer',
             ]);
 
             // 2. Atualiza o registro com os dados validados
-            $player->update($validated);
+            $report->update($validated);
 
             // 3. Retorna o recurso atualizado com status 200 OK
-            return (new PlayerResource($player))->response()->setStatusCode(200); // 200 OK
+            return (new ReportResource($report))->response()->setStatusCode(200); // 200 OK
 
         } catch (ValidationException $e) {
             return response()->json([

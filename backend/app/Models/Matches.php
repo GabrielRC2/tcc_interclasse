@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 class Matches extends Model
 {
     protected $table = 'matches';
+    protected $fillable = ['status'];
 
     public function reports(): BelongsTo{
         return $this->belongsTo(Report::class);

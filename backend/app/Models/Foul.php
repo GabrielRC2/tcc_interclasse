@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class Foul extends Model
 {
     protected $table = 'fouls';
-    protected $fillable = ['yellow_card', 'red_card', 'fouls_amount', 'fk_id_players'];
+    protected $fillable = ['fk_id_players','yellow_card', 'red_card', 'fouls_amount'];
 
     public function player(): BelongsTo {
         return $this->belongsTo(Player::class);
