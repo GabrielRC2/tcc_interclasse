@@ -18,6 +18,8 @@ class PlayerResource extends JsonResource
             'id' => $this->id,
             'player_name' => $this->player_name,
             'jersey_number' => $this->jersey_number,
+            // Adiciona os times associados se eles foram carregados
+            'teams' => TeamResource::collection($this->whenLoaded('teams')),
         ];
     }
 }

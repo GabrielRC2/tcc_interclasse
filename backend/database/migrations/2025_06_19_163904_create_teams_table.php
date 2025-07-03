@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table -> string('teams_group');
             $table -> string('teams_name');
-            $table -> integer('total_points');
+            $table -> integer('total_points')->default(0);
             $table -> string('teams_gender');
             $table->timestamps();
         });

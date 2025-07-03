@@ -20,6 +20,8 @@ class TeamResource extends JsonResource
             'teams_name'=>$this->teams_name,
             'total_points'=>$this->total_points,
             'teams_gender'=>$this->teams_gender,
+            // Adiciona os jogadores associados se eles foram carregados
+            'players' => PlayerResource::collection($this->whenLoaded('players')),
         ];
     }
 }

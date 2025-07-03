@@ -34,7 +34,7 @@ class PlayerController extends Controller
     }
 
     public function show($id){
-        $player = Player::findOrFail($id);
+        $player = Player::with('teams')->findOrFail($id);
         return new PlayerResource($player);
     }
 
@@ -50,8 +50,8 @@ class PlayerController extends Controller
 
             // 1. Validação dos dados para atualização
             $validated = $request->validate([
-                'player_name' => "required|string",
-                'jersey_number' => "required|string|min:1"
+                'player_name' => "nullable|string",
+                'jersey_number' => "nullable|string|min:1"
             ]);
 
             // 2. Atualiza o registro com os dados validados
