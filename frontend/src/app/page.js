@@ -13,23 +13,34 @@ import { GroupsPage } from '@/components/GroupsPage';
 
 export default function Home() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [currentPage, setCurrentPage] = useState('dashboard');
+  const [currentPage, setCurrentPage] = useState('dashboard'); // Começa no dashboard
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   const toggleDarkMode = () => setIsDarkMode(!isDarkMode);
-  
+
   useEffect(() => {
     document.documentElement.classList.toggle('dark', isDarkMode);
   }, [isDarkMode]);
 
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
-  
-  if (!isLoggedIn) {
-    return <LoginPage onLogin={() => setIsLoggedIn(true)} />;
-  }
 
+  // Lógica principal de renderização de conteúdo
   const renderPage = () => {
+    // Se o usuário NÃO está logado:
+    if (!isLoggedIn) {
+      // Permite apenas Dashboard e Login
+      if (currentPage === 'login') {
+        return <LoginPage onLogin={() => setIsLoggedIn(true)} />;
+      } else {
+        // Qualquer outra página (seasons, teams, etc.) quando deslogado
+        // será redirecionada para o Dashboard.
+        // O Dashboard sempre será acessível para deslogados.
+        return <DashboardPage />;
+      }
+    }
+
+    // Se o usuário ESTÁ logado:
     switch (currentPage) {
       case 'dashboard': return <DashboardPage />;
       case 'seasons': return <SeasonsPage />;
@@ -38,20 +49,25 @@ export default function Home() {
       case 'brackets': return <BracketsPage />;
       case 'matches': return <MatchesPage />;
       case 'groups': return <GroupsPage />;
-      default: return <DashboardPage />;
+      // Se estiver logado, não tem por que mostrar a LoginPage diretamente aqui,
+      // a menos que você queira uma tela de perfil/alterar senha na rota 'login'.
+      // case 'login': return <LoginPage onLogin={() => setIsLoggedIn(true)} />;
+      default: return <DashboardPage />; // Caso padrão para logados
     }
   };
 
   return (
     <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
-      <Sidebar 
+      <Sidebar
         isSidebarOpen={isSidebarOpen}
         toggleSidebar={toggleSidebar}
         currentPage={currentPage}
         setCurrentPage={setCurrentPage}
         isDarkMode={isDarkMode}
         toggleDarkMode={toggleDarkMode}
-        logout={() => setIsLoggedIn(false)}
+        isLoggedIn={isLoggedIn}
+        onLogout={() => setIsLoggedIn(false)}
+        onLoginClick={() => setCurrentPage('login')}
       />
       <div className="flex-1 flex flex-col overflow-hidden">
         <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto">

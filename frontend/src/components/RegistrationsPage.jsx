@@ -84,6 +84,7 @@ export const RegistrationsPage = () => {
                         <option>Selecionar</option>
                         <option>Esportes</option>
                         <option>Locais</option>
+                        <option>Administrador</option>
                     </Select>
                     <Input label="Nome do Cadastro" placeholder="Placeholder" defaultValue={editingItem?.name}/>
                     <Textarea label="Descrição" placeholder="Placeholder" defaultValue={editingItem?.description}/>
