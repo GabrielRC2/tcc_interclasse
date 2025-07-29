@@ -10,7 +10,7 @@ export async function GET(request, {params}) {
         return NextResponse.json({ message: "ID inválido." }, { status: 400 });
         }
 
-        // 1. Verifica se o time existe antes de tentar deletar
+        // Verifica se o time existe antes de tentar deletar
         const teamExists = await prisma.times.findUnique({
         where: {
             id_times: idTime,
@@ -19,14 +19,11 @@ export async function GET(request, {params}) {
         if (!teamExists) {
         return NextResponse.json({ message: "Time não encontrado." }, { status: 404 });
         }
-        //Retorna os times encontrados como uma resposta JSON com status 200 (OK).
         return NextResponse.json(teamExists, { status: 200 });
         
     } catch (error) {
-        // 3. Se ocorrer qualquer erro no bloco 'try', o 'catch' é executado.
-        console.error("Erro ao buscar times:", error); // Mostra o erro no console do servidor para depuração.
+        console.error("Erro ao buscar times:", error); 
     
-        // Retorna uma mensagem de erro com status 500 (Erro Interno do Servidor).
         return NextResponse.json({ message: "Não foi possível buscar os times." }, { status: 500 });
     }
 }
@@ -40,7 +37,7 @@ export async function PATCH(request, {params}) {
         return NextResponse.json({ message: "ID inválido." }, { status: 400 });
         }
 
-        // 1. Verifica se o time existe antes de atualizar
+        // Verifica se o time existe antes de atualizar
         const teamExists = await prisma.times.findUnique({
         where: {
             id_times: idTime,
@@ -61,10 +58,8 @@ export async function PATCH(request, {params}) {
         return NextResponse.json(updatedTeam, { status: 200 });
 
     } catch (error) {
-        // 3. Se ocorrer qualquer erro no bloco 'try', o 'catch' é executado.
-        console.error("Erro ao atualizar o time:", error); // Mostra o erro no console do servidor para depuração.
+        console.error("Erro ao atualizar o time:", error);
     
-        // Retorna uma mensagem de erro com status 500 (Erro Interno do Servidor).
         return NextResponse.json({ message: "Não foi possível atualizar o time." }, { status: 500 });
     }
 }
@@ -77,7 +72,7 @@ export async function DELETE(request, { params }) {
         if (isNaN(idTime)) {
         return NextResponse.json({ message: "ID inválido." }, { status: 400 });
         }
-        // 1. Verifica se o time existe antes de tentar deletar
+        //Verifica se o time existe antes de tentar deletar
         const teamExists = await prisma.times.findUnique({
         where: {
             id_times: idTime,
@@ -86,9 +81,7 @@ export async function DELETE(request, { params }) {
         if (!teamExists) {
         return NextResponse.json({ message: "Time não encontrado." }, { status: 404 });
         }
-        // 2. Se o time existir, prossegue para deletar o time
-        // O método 'delete' do Prisma é usado para remover o registro do banco de dados.   
-        // Deleta o time com o ID fornecido
+        // Se o time existir, prossegue para deletar o time
         const deletedTeam = await prisma.times.delete({
         where: { id_times: idTime,},
         });
