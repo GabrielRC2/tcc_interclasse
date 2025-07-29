@@ -69,15 +69,43 @@ export const RegistrationsPage = () => {
                         ))}
                     </div>
                 </div>
+                <div>
+                    <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">CURSOS</h2>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {mockData.registrations.courses.map(item => (
+                            <div key={item.id} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm p-4 relative overflow-hidden">
+                                <div className="relative z-10">
+                                    <h3 className="font-bold text-lg mb-2 text-gray-900 dark:text-gray-100">{item.name}</h3>
+                                    <p className="text-gray-600 dark:text-gray-300 text-sm mb-4">Sigla: {item.sigla}</p>
+                                    <div className="flex gap-2">
+                                        <Button onClick={() => handleEdit(item)}>Editar</Button>
+                                        <Button variant="secondary">Excluir</Button>
+                                    </div>
+                                </div>
+                                <CardSplat />
+                            </div>
+                        ))}
+                    </div>
+                </div>
             </div>
             <Modal isOpen={isModalOpen} onClose={closeModal} title={editingItem ? "EDITAR CADASTRO" : "CRIAR CADASTRO"}>
                 <form className="space-y-4">
-                    <Select label="Categoria" defaultValue={editingItem ? (mockData.registrations.sports.some(s => s.id === editingItem.id) ? 'Esportes' : 'Locais') : ''}>
+                    <Select
+                        label="Categoria"
+                        defaultValue={editingItem ? (
+                            mockData.registrations.sports.some(s => s.id === editingItem.id) ? 'Esportes' :
+                                mockData.registrations.locations.some(l => l.id === editingItem.id) ? 'Locais' : 'Cursos'
+                        ) : ''}
+                    >
                         <option>Selecionar</option>
                         <option>Esportes</option>
                         <option>Locais</option>
+                        <option>Cursos</option>
                     </Select>
-                    <Input label="Nome do Cadastro" placeholder="Placeholder" defaultValue={editingItem?.name} />
+                    <Input label="Nome do Cadastro" placeholder="Digite o nome" defaultValue={editingItem?.name} />
+                    {editingItem?.sigla !== undefined && (
+                        <Input label="Sigla" placeholder="Digite a sigla" defaultValue={editingItem?.sigla} />
+                    )}
                     <div className="flex justify-end pt-4">
                         <Button type="submit">Salvar</Button>
                     </div>
