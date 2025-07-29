@@ -25,7 +25,6 @@ const AccordionItem = ({ season, onEdit }) => {
                         <p><span className="font-semibold">Local:</span> {season.location}</p>
                         <p><span className="font-semibold">Data:</span> {season.date}</p>
                         <p><span className="font-semibold">Modalidades:</span> {season.modalities}</p>
-                        <p><span className="font-semibold">Descrição:</span> {season.description}</p>
                     </div>
                     <div className="flex justify-end gap-2 mt-4 relative z-10">
                         <Button variant="primary">Selecionar</Button>
@@ -45,7 +44,7 @@ export const SeasonsPage = () => {
         setEditingSeason(season);
         setIsModalOpen(true);
     }
-    
+
     const handleCreate = () => {
         setEditingSeason(null);
         setIsModalOpen(true);
@@ -54,26 +53,27 @@ export const SeasonsPage = () => {
     const closeModal = () => setIsModalOpen(false);
 
     return (
-        <div className="space-y-6">
-            <div className="flex justify-between items-center">
-                <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">TEMPORADAS</h1>
-                <Button onClick={handleCreate}>Nova Temporada</Button>
+        <>
+            <div className="space-y-6">
+                <div className="flex flex-wrap justify-between items-start gap-4">
+                    <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">TEMPORADAS</h1>
+                    <Button onClick={handleCreate}>Nova Temporada</Button>
+                </div>
+                <div className="space-y-4"> {/* Corrigido indentação aqui */}
+                    {mockData.seasons.map(season => <AccordionItem key={season.id} season={season} onEdit={handleEdit} />)}
+                </div>
             </div>
-            <div className="space-y-4">
-                {mockData.seasons.map(season => <AccordionItem key={season.id} season={season} onEdit={handleEdit} />)}
-            </div>
-            <Modal isOpen={isModalOpen} onClose={closeModal} title={editingSeason ? "EDITAR TEMPORADA" : "INFORMAÇÕES DA TEMPORADA"}>
+            <Modal isOpen={isModalOpen} onClose={closeModal} title={editingSeason ? "Editar Temporada" : "Nova Temporada"}> {/* Ajustado texto do título */}
                 <form className="space-y-4">
-                    <Input label="Nome do Torneio" placeholder="Placeholder" defaultValue={editingSeason?.name}/>
-                    <Input label="Local" placeholder="Placeholder" defaultValue={editingSeason?.location}/>
-                    <Textarea label="Descrição" placeholder="Placeholder" defaultValue={editingSeason?.description}/>
-                    <Input label="Selecionar Data" type="text" placeholder="dd/mm - dd/mm" defaultValue={editingSeason?.date}/>
-                    <Input label="Modalidades" placeholder="Placeholder" defaultValue={editingSeason?.modalities}/>
+                    <Input label="Nome do Torneio" placeholder="Digite o nome" defaultValue={editingSeason?.name} />
+                    <Input label="Local" placeholder="Digite o local" defaultValue={editingSeason?.location} />
+                    <Input label="Data" type="text" placeholder="dd/mm - dd/mm" defaultValue={editingSeason?.date} />
+                    <Input label="Modalidades" placeholder="Digite as modalidades" defaultValue={editingSeason?.modalities} />
                     <div className="flex justify-end pt-4">
                         <Button type="submit">Salvar</Button>
                     </div>
                 </form>
             </Modal>
-        </div>
+        </>
     );
 };
