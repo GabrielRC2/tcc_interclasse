@@ -96,9 +96,29 @@ export const mockData = {
       { id: 4, name: 'Eletrônica', sigla: 'ETEL' },
       { id: 5, name: 'Química', sigla: 'ETIQ' },
       { id: 6, name: 'Nutrição', sigla: 'CNAT' }
-    ]
-
-
+    ],
+    // Nova seção para administradores e staff
+    admins: [
+      {
+        id: 'admin-1',
+        name: 'Administradores',
+        description: 'Gerenciamento de usuários administradores do sistema.',
+        users: [
+          { id: 'user-a1', name: 'João Silva', email: 'joao.silva@example.com' },
+          { id: 'user-a2', name: 'Maria Souza', email: 'maria.souza@example.com' },
+        ]
+      },
+      {
+        id: 'admin-2',
+        name: 'Staff',
+        description: 'Gerenciamento de membros da equipe e apoio.',
+        users: [
+          { id: 'user-s1', name: 'Carlos Santos', email: 'carlos.santos@example.com' },
+          { id: 'user-s2', name: 'Fernanda Oliveira', email: 'fernanda.oliveira@example.com' },
+          { id: 'user-s3', name: 'Lucas Pereira', email: 'lucas.pereira@example.com' },
+        ]
+      },
+    ],
   },
   matches: [
     {
