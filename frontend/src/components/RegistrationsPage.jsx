@@ -93,6 +93,64 @@ export const RegistrationsPage = () => {
     }
   };
 
+    const handleModify = async (e) => {
+    e.preventDefault();
+    const type = e.target[0].value;
+    const name = e.target[1].value;
+    let endpoint = '';
+    let body = {};
+
+    if (type === 'Esportes') {
+      endpoint = `/api/sports/${editingItem.id_modalidade}`;
+      body = { nome_modalidade: name };
+    } else if (type === 'Locais') {
+      endpoint = `/api/places/${editingItem.id_local}`;
+      body = { nome_local: name };
+    } else if (type === 'Categorias') {
+      endpoint = `/api/division/${editingItem.id_categoria}`;
+      body = { nome_categoria: name };
+    } else {
+      alert('Escolha uma categoria válida');
+      return;
+    }
+
+    try {
+      const res = await fetch(endpoint, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) throw new Error('Erro ao atualizar');
+      setIsModalOpen(false);
+      await fetchData();
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
+  const handleDeleteById = async (item) => {
+    let endpoint = '';
+    if (item.nome_modalidade) {
+      endpoint = `/api/sports/${item.id_modalidade}`;
+    } else if (item.nome_local) {
+      endpoint = `/api/places/${item.id_local}`;
+    } else if (item.nome_categoria) {
+      endpoint = `/api/division/${item.id_categoria}`;
+    } else {
+      alert('Tipo desconhecido');
+      return;
+    }
+
+    try {
+      const res = await fetch(endpoint, { method: 'DELETE' });
+      if (!res.ok) throw new Error('Erro ao excluir');
+      await fetchData();
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
+
   return (
     <>
       <div className="space-y-8">
@@ -111,12 +169,12 @@ export const RegistrationsPage = () => {
           <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">ESPORTES</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {sports.map(item => (
-              <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm p-4 relative overflow-hidden">
+              <div key={item.id_modalidade} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm p-4 relative overflow-hidden">
                 <div className="relative z-10">
                   <h3 className="font-bold text-lg mb-2 text-gray-900 dark:text-gray-100">{item.nome_modalidade}</h3>
                   <div className="flex gap-2">
                     <Button onClick={() => handleEdit(item)}>Editar</Button>
-                    <Button variant="secondary">Excluir</Button>
+                    <Button variant="secondary" onClick={() => handleDeleteById(item)}>Excluir</Button>
                   </div>
                 </div>
                 <CardSplat />
@@ -130,12 +188,12 @@ export const RegistrationsPage = () => {
           <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">LOCAIS</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {places.map(item => (
-              <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm p-4 relative overflow-hidden">
+              <div key={item.id_local} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm p-4 relative overflow-hidden">
                 <div className="relative z-10">
                   <h3 className="font-bold text-lg mb-2 text-gray-900 dark:text-gray-100">{item.nome_local}</h3>
                   <div className="flex gap-2">
                     <Button onClick={() => handleEdit(item)}>Editar</Button>
-                    <Button variant="secondary">Excluir</Button>
+                    <Button variant="secondary"onClick={() => handleDeleteById(item)}>Excluir</Button>
                   </div>
                 </div>
                 <CardSplat />
@@ -149,12 +207,12 @@ export const RegistrationsPage = () => {
           <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">CATEGORIAS</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {divisions.map(item => (
-              <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm p-4 relative overflow-hidden">
+              <div key={item.id_categoria} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm p-4 relative overflow-hidden">
                 <div className="relative z-10">
                   <h3 className="font-bold text-lg mb-2 text-gray-900 dark:text-gray-100">{item.nome_categoria}</h3>
                   <div className="flex gap-2">
                     <Button onClick={() => handleEdit(item)}>Editar</Button>
-                    <Button variant="secondary">Excluir</Button>
+                    <Button variant="secondary" onClick={() => handleDeleteById(item)}>Excluir</Button>
                   </div>
                 </div>
                 <CardSplat />
@@ -168,14 +226,23 @@ export const RegistrationsPage = () => {
 
       {/* MODAL DE CRIAÇÃO/EDIÇÃO */}
       <Modal isOpen={isModalOpen} onClose={closeModal} title={editingItem ? "EDITAR CADASTRO" : "CRIAR CADASTRO"}>
-        <form className="space-y-4" onSubmit={handleSave}>
-          <Select label="Categoria" defaultValue={editingItem ? sports.some(s => s.id === editingItem.id) ? 'Esportes' : 'Locais': ''}>
+        <form className="space-y-4" onSubmit={editingItem ? handleModify : handleSave}>
+          <Select label="Categoria" defaultValue={editingItem ? editingItem.nome_modalidade ? 'Esportes' : editingItem.nome_local ? 'Locais' : editingItem.nome_categoria ? 'Categorias' : '' : ''}>
             <option>Selecionar</option>
             <option>Esportes</option>
             <option>Locais</option>
             <option>Categorias</option>
           </Select>
-          <Input label="Nome do Cadastro" placeholder="Placeholder" defaultValue={editingItem?.nome_local || editingItem?.nome_modalidade || ''}/>
+          <Input
+            label="Nome do Cadastro"
+            placeholder="Placeholder"
+            defaultValue={
+              editingItem?.nome_local ||
+              editingItem?.nome_modalidade ||
+              editingItem?.nome_categoria ||
+              ''
+            }
+          />
           <div className="flex justify-end pt-4">
             <Button type="submit">Salvar</Button>
           </div>
