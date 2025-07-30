@@ -12,6 +12,9 @@ function TeamsPage() {
   const [selectedTeam, setSelectedTeam] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [showAddPlayer, setShowAddPlayer] = useState(false);
+  const [newPlayer, setNewPlayer] = useState({ name: '', numeroCamisa: '' });
+  const [availablePlayers, setAvailablePlayers] = useState([]);
   
   // Estados dos filtros
   const [filters, setFilters] = useState({
@@ -113,6 +116,64 @@ function TeamsPage() {
       setFormData({ name: '', course: '', year: '', gender: '', sport: '' });
     } catch (error) {
       console.error('Erro ao criar time:', error);
+    }
+  };
+
+  // Função para carregar jogadores disponíveis CORRIDA
+  const loadAvailablePlayers = async () => {
+    try {
+      if (!selectedTeam) return;
+      
+      console.log('Carregando jogadores para time:', selectedTeam.id);
+      const response = await fetch(`/api/jogadores?timeId=${selectedTeam.id}`);
+      
+      if (!response.ok) {
+        throw new Error('Erro ao carregar jogadores');
+      }
+      
+      const players = await response.json();
+      console.log('Jogadores disponíveis:', players);
+      setAvailablePlayers(players);
+    } catch (error) {
+      console.error('Erro ao carregar jogadores:', error);
+      setAvailablePlayers([]);
+    }
+  };
+
+  // Função para adicionar jogador ao time CORRIGIDA
+  const addPlayerToTeam = async (e) => {
+    e.preventDefault();
+    if (!selectedTeam) return;
+
+    try {
+      console.log('Adicionando jogador:', newPlayer);
+      
+      const response = await fetch(`/api/teams/${selectedTeam.id}/jogadores`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          jogadorId: newPlayer.jogadorId,
+          numeroCamisa: newPlayer.numeroCamisa
+        })
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        alert(error.error || 'Erro ao adicionar jogador');
+        return;
+      }
+
+      // Recarregar dados do time
+      await loadTeams();
+      
+      // Limpar formulário e fechar modal
+      setNewPlayer({ name: '', numeroCamisa: '', jogadorId: null });
+      setShowAddPlayer(false);
+      
+      alert('Jogador adicionado com sucesso!');
+    } catch (error) {
+      console.error('Erro ao adicionar jogador:', error);
+      alert('Erro ao adicionar jogador');
     }
   };
 
@@ -290,9 +351,15 @@ function TeamsPage() {
                       <div>
                           <div className="flex justify-between items-center mb-2">
                               <h4 className="font-bold border-b-2 border-gray-200 dark:border-gray-700 w-full pb-1 text-gray-900 dark:text-gray-100">JOGADORES</h4>
-                              <button className="bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center -mb-2 flex-shrink-0">
-                                  <Plus size={16} />
-                              </button>
+                              <button 
+  onClick={() => {
+    loadAvailablePlayers();
+    setShowAddPlayer(true);
+  }}
+  className="bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center -mb-2 flex-shrink-0"
+>
+  <Plus size={16} />
+</button>
                           </div>
                           <div className="space-y-2 max-h-80 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-red-500 scrollbar-track-gray-100 dark:scrollbar-track-gray-700 hover:scrollbar-thumb-red-600 dark:hover:scrollbar-thumb-red-400">
                               {selectedTeam.players.map(p => (
@@ -398,6 +465,53 @@ function TeamsPage() {
   </form>
               )}
           </Modal>
+
+          {/* Modal para Adicionar Jogador */}
+          {showAddPlayer && (
+  <Modal 
+    isOpen={showAddPlayer} 
+    onClose={() => setShowAddPlayer(false)} 
+    title="Adicionar Jogador"
+    size="max-w-md"
+  >
+    <form onSubmit={addPlayerToTeam} className="space-y-4">
+      <Select
+        label="Jogador"
+        value={newPlayer.jogadorId || ''}
+        onChange={(e) => setNewPlayer({...newPlayer, jogadorId: parseInt(e.target.value)})}
+        required
+      >
+        <option value="">Selecione um jogador</option>
+        {availablePlayers.map(player => (
+          <option key={player.id} value={player.id}>
+            {player.name} - {player.course}
+          </option>
+        ))}
+      </Select>
+      
+      <Input
+        label="Número da Camisa"
+        type="number"
+        min="1"
+        max="99"
+        value={newPlayer.numeroCamisa}
+        onChange={(e) => setNewPlayer({...newPlayer, numeroCamisa: e.target.value})}
+        required
+      />
+      
+      <div className="flex justify-end gap-2">
+        <Button 
+          type="button" 
+          onClick={() => setShowAddPlayer(false)}
+          className="bg-gray-500"
+        >
+          Cancelar
+        </Button>
+        <Button type="submit">Adicionar</Button>
+      </div>
+    </form>
+  </Modal>
+)}
       </>
   );
 };

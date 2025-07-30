@@ -4,7 +4,6 @@ const prisma = new PrismaClient();
 
 export async function GET() {
   try {
-    // Primeiro, vamos verificar se as tabelas existem
     console.log('Tentando buscar times...');
     
     const times = await prisma.time.findMany({
@@ -25,7 +24,6 @@ export async function GET() {
 
     console.log('Times encontrados:', times.length);
 
-    // Se não há times, retorna array vazio em vez de erro
     if (times.length === 0) {
       return Response.json([]);
     }
@@ -34,13 +32,14 @@ export async function GET() {
       id: time.id,
       name: time.nome,
       course: time.curso?.nome || 'Curso não definido',
-      year: "1º", // Temporário
+      year: time.sala || "1º", // CORRIGIDO: usar sala do time
       gender: time.categoria?.nome || 'Categoria não definida',
       sport: time.categoria?.modalidade?.nome || 'Modalidade não definida',
       playersCount: time.jogadores?.length || 0,
       players: time.jogadores?.map(tj => ({
         id: tj.jogador.id,
         name: tj.jogador.nome,
+        number: tj.numeroCamisa, // ADICIONADO: número da camisa
         points: 0,
         red: 0,
         yellow: 0
@@ -51,7 +50,6 @@ export async function GET() {
   } catch (error) {
     console.error('Erro detalhado na API teams:', error);
     
-    // Se for erro de conexão com banco, retorna array vazio
     if (error.code === 'P1001' || error.code === 'P1000') {
       console.log('Problema de conexão com banco - retornando array vazio');
       return Response.json([]);
@@ -118,6 +116,7 @@ export async function POST(request) {
     const newTime = await prisma.time.create({
       data: {
         nome: data.name,
+        sala: data.year, // Ex: "3º", "2º", "1º"
         cursoId: curso.id,
         categoriaId: categoria.id
       },

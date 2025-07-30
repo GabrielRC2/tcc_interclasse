@@ -53,7 +53,6 @@ model Categoria {
   modalidadeId  Int      @map("fk_id_modalidade")
   modalidade    Modalidade @relation(fields: [modalidadeId], references: [id])
   times         Time[]
-  grupos        Grupo[]
 
   @@map("Categoria")
 }
@@ -75,6 +74,7 @@ model Curso {
 model Jogador {
   id             Int             @id @default(autoincrement()) @map("id_jogador")
   nome           String          @map("nome_jogador") @db.VarChar(70)
+  sala           String          @map("sala_jogador") @db.VarChar(10) // NOVO CAMPO
   cursoId        Int             @map("fk_id_curso")
   curso          Curso           @relation(fields: [cursoId], references: [id])
   eventosPartida EventoPartida[]
@@ -86,15 +86,16 @@ model Jogador {
 // Tabela: Time
 // Descrição: Define uma equipe específica.
 model Time {
-  id          Int           @id @default(autoincrement()) @map("id_time")
-  nome        String        @map("nome_time") @db.VarChar(100)
-  cursoId     Int           @map("fk_id_curso")
-  categoriaId Int           @map("fk_id_categoria")
-  curso       Curso         @relation(fields: [cursoId], references: [id])
-  categoria   Categoria     @relation(fields: [categoriaId], references: [id])
-  grupos      GrupoTime[]
-  jogadores   TimeJogador[]
-  partidas    PartidaTime[]
+  id           Int            @id @default(autoincrement()) @map("id_time")
+  nome         String         @map("nome_time") @db.VarChar(100)
+  sala         String         @map("sala_time") @db.VarChar(10)
+  cursoId      Int            @map("fk_id_curso")
+  categoriaId  Int            @map("fk_id_categoria")
+  curso        Curso          @relation(fields: [cursoId], references: [id])
+  categoria    Categoria      @relation(fields: [categoriaId], references: [id])
+  jogadores    TimeJogador[]
+  partidas     PartidaTime[]  // CORRIGIDO: relacionamento correto
+  grupos       GrupoTime[]    // ADICIONADO: relacionamento com grupos
 
   @@map("Time")
 }
@@ -102,16 +103,14 @@ model Time {
 // Tabela: Grupo
 // Descrição: Organiza os times dentro de um torneio.
 model Grupo {
-  id           Int         @id @default(autoincrement()) @map("id_grupo")
-  nome         String      @map("nome_grupo") @db.VarChar(30)
-  torneioId    Int         @map("fk_id_torneio")
-  modalidadeId Int         @map("fk_id_modalidade")
-  categoriaId  Int         @map("fk_id_categoria")
-  torneio      Torneio     @relation(fields: [torneioId], references: [id])
-  modalidade   Modalidade  @relation(fields: [modalidadeId], references: [id])
-  categoria    Categoria   @relation(fields: [categoriaId], references: [id])
-  partidas     Partida[]
-  times        GrupoTime[]
+  id            Int         @id @default(autoincrement()) @map("id_grupo")
+  nome          String      @map("nome_grupo") @db.VarChar(50)
+  modalidadeId  Int         @map("fk_id_modalidade")
+  torneioId     Int         @map("fk_id_torneio")
+  modalidade    Modalidade  @relation(fields: [modalidadeId], references: [id])
+  torneio       Torneio     @relation(fields: [torneioId], references: [id])
+  partidas      Partida[]
+  times         GrupoTime[]
 
   @@map("Grupo")
 }
@@ -131,19 +130,19 @@ model Local {
 // Tabela: Partida
 // Descrição: Registra cada partida que ocorre.
 model Partida {
-  id              Int             @id @default(autoincrement()) @map("id_partida")
-  dataHora        DateTime        @map("data_hora_partida") @db.DateTime
-  status          String          @map("status_partida") @db.VarChar(20)
-  placarTimeUm    Int             @map("placar_time_um")
-  placarTimeDois  Int             @map("placar_time_dois")
-  torneioId       Int             @map("fk_id_torneio")
-  localId         Int             @map("fk_id_local")
-  grupoId         Int             @map("fk_id_grupo")
-  torneio         Torneio         @relation(fields: [torneioId], references: [id])
-  local           Local           @relation(fields: [localId], references: [id])
-  grupo           Grupo           @relation(fields: [grupoId], references: [id])
-  eventosPartida  EventoPartida[]
-  times           PartidaTime[]
+  id               Int               @id @default(autoincrement()) @map("id_partida")
+  dataHora         DateTime          @map("data_hora_partida") @db.DateTime
+  statusPartida    String            @map("status_partida") @db.VarChar(20)
+  pontosCasa       Int?              @map("pontos_casa")
+  pontosVisitante  Int?              @map("pontos_visitante")
+  grupoId          Int               @map("fk_id_grupo")
+  localId          Int               @map("fk_id_local")
+  torneioId        Int               @map("fk_id_torneio")
+  grupo            Grupo             @relation(fields: [grupoId], references: [id])
+  local            Local             @relation(fields: [localId], references: [id])
+  torneio          Torneio           @relation(fields: [torneioId], references: [id])
+  eventosPartida   EventoPartida[]
+  times            PartidaTime[]     // ADICIONADO: relacionamento com times
 
   @@map("Partida")
 }
@@ -194,13 +193,13 @@ model TorneioModalidade {
 // Tabela: Grupo_Times
 // Descrição: Define quais Times pertencem a quais Grupos.
 model GrupoTime {
-  grupoId Int @map("fk_id_grupo")
-  timeId  Int @map("fk_id_time")
+  grupoId Int   @map("fk_id_grupo")
+  timeId  Int   @map("fk_id_time")
   grupo   Grupo @relation(fields: [grupoId], references: [id])
   time    Time  @relation(fields: [timeId], references: [id])
 
   @@id([grupoId, timeId])
-  @@map("Grupo_Times")
+  @@map("GrupoTime")
 }
 
 // Tabela: Time_Jogadores
@@ -219,11 +218,12 @@ model TimeJogador {
 // Tabela: Partida_Times
 // Descrição: Registra os Times que disputam uma Partida.
 model PartidaTime {
-  partidaId Int @map("fk_id_partida")
-  timeId    Int @map("fk_id_time")
-  partida   Partida @relation(fields: [partidaId], references: [id])
-  time      Time    @relation(fields: [timeId], references: [id])
+  partidaId     Int     @map("fk_id_partida")
+  timeId        Int     @map("fk_id_time")
+  ehCasa        Boolean @map("eh_casa") // true = casa, false = visitante
+  partida       Partida @relation(fields: [partidaId], references: [id])
+  time          Time    @relation(fields: [timeId], references: [id])
 
   @@id([partidaId, timeId])
-  @@map("Partida_Times")
+  @@map("PartidaTime")
 }
