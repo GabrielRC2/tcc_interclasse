@@ -27,7 +27,7 @@ function TeamsPage() {
   // Opções dos filtros
   const genderOptions = ['Todos', 'Masculino', 'Feminino'];
   const sportOptions = ['Todos', 'Futsal', 'Vôlei', 'Basquete', 'Handebol'];
-  const courseOptions = ['Todos', '1º ETIM', '2º ETIM', '3º ETIM', 'Misto'];
+  const courseOptions = ['Todos', 'DS', 'ETEL', 'EDA', 'ETIQ', 'ADA', 'CNAT', 'HUM'];
   const yearOptions = ['Todos', '1º', '2º', '3º', 'Misto'];
 
   useEffect(() => {
@@ -92,7 +92,6 @@ function TeamsPage() {
   };
 
   const [formData, setFormData] = useState({
-    name: '',
     course: '',
     year: '',
     gender: '',
@@ -110,10 +109,30 @@ function TeamsPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      await teamsService.create(formData);
+      // Gerar nome automaticamente
+      const teamName = generateTeamName(formData.year, formData.course);
+      
+      // Verificar se já existe time com esse nome, gênero e esporte
+      const existingTeam = teams.find(team => 
+        team.name === teamName && 
+        team.gender === formData.gender && 
+        team.sport === formData.sport
+      );
+      
+      if (existingTeam) {
+        alert(`Time ${teamName} ${formData.gender} de ${formData.sport} já existe!`);
+        return;
+      }
+      
+      const teamData = {
+        ...formData,
+        name: teamName // Nome gerado automaticamente
+      };
+      
+      await teamsService.create(teamData);
       await loadTeams();
       setIsDetailOpen(false);
-      setFormData({ name: '', course: '', year: '', gender: '', sport: '' });
+      setFormData({ course: '', year: '', gender: '', sport: '' });
     } catch (error) {
       console.error('Erro ao criar time:', error);
     }
@@ -174,6 +193,70 @@ function TeamsPage() {
     } catch (error) {
       console.error('Erro ao adicionar jogador:', error);
       alert('Erro ao adicionar jogador');
+    }
+  };
+
+  // Adicionar função para gerar nome automaticamente
+  const generateTeamName = (year, course) => {
+    if (!year || !course) return '';
+    return `${year}${course}`;
+  };
+
+  // Adicionar novos estados
+  const [showCreatePlayer, setShowCreatePlayer] = useState(false);
+  const [newPlayerData, setNewPlayerData] = useState({
+    name: '',
+    sala: '',
+    cursoId: null
+  });
+
+  // Adicionar estado para cursos
+  const [cursos, setCursos] = useState([]);
+
+  // Carregar cursos ao inicializar
+  useEffect(() => {
+    loadCursos();
+  }, []);
+
+  const loadCursos = async () => {
+    try {
+      const response = await fetch('/api/cursos');
+      const cursosData = await response.json();
+      setCursos(cursosData);
+    } catch (error) {
+      console.error('Erro ao carregar cursos:', error);
+    }
+  };
+
+  // Função para criar novo jogador
+  const createNewPlayer = async (e) => {
+    e.preventDefault();
+    try {
+      console.log('Criando novo jogador:', newPlayerData);
+      
+      const response = await fetch('/api/jogadores', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newPlayerData)
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        alert(error.error || 'Erro ao criar jogador');
+        return;
+      }
+
+      // Recarregar jogadores disponíveis
+      await loadAvailablePlayers();
+      
+      // Limpar formulário e fechar modal
+      setNewPlayerData({ name: '', sala: '', cursoId: null });
+      setShowCreatePlayer(false);
+      
+      alert('Jogador criado com sucesso!');
+    } catch (error) {
+      console.error('Erro ao criar jogador:', error);
+      alert('Erro ao criar jogador');
     }
   };
 
@@ -399,70 +482,76 @@ function TeamsPage() {
                   </div>
               ) : (
                   <form onSubmit={handleSubmit} className="space-y-4">
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <Input 
-        label="Nome do Time" 
-        name="name"
-        value={formData.name}
-        onChange={handleInputChange}
-        placeholder="Ex: 1º ETIM" 
-        required
-      />
-      <Select 
-        label="Curso"
-        name="course"
-        value={formData.course}
-        onChange={handleInputChange}
-        required
-      >
-        <option value="">Selecione o curso</option>
-        {courseOptions.filter(c => c !== 'Todos').map(course => (
-          <option key={course} value={course}>{course}</option>
-        ))}
-      </Select>
-      <Select 
-        label="Ano"
-        name="year"
-        value={formData.year}
-        onChange={handleInputChange}
-        required
-      >
-        <option value="">Selecione o ano</option>
-        <option value="1º">1º</option>
-        <option value="2º">2º</option>
-        <option value="3º">3º</option>
-        <option value="Misto">Misto</option>
-      </Select>
-      <Select 
-        label="Gênero"
-        name="gender"
-        value={formData.gender}
-        onChange={handleInputChange}
-        required
-      >
-        <option value="">Selecione o gênero</option>
-        <option value="Masculino">Masculino</option>
-        <option value="Feminino">Feminino</option>
-      </Select>
-      <Select 
-        label="Esporte" 
-        name="sport"
-        value={formData.sport}
-        onChange={handleInputChange}
-        className="md:col-span-2"
-        required
-      >
-        <option value="">Selecione o esporte</option>
-        <option value="Futsal">Futsal</option>
-        <option value="Vôlei">Vôlei</option>
-        <option value="Basquete">Basquete</option>
-        <option value="Handebol">Handebol</option>
-      </Select>
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    
+    {/* PREVIEW DO NOME DO TIME */}
+    <div className="md:col-span-2 bg-gray-50 dark:bg-gray-700 rounded-lg p-4 border-2 border-dashed border-gray-300 dark:border-gray-600">
+      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+        Nome do Time (Automático)
+      </label>
+      <div className="text-2xl font-bold text-red-600 dark:text-red-400 text-center py-2">
+        {generateTeamName(formData.year, formData.course) || 'Selecione Ano e Curso'}
+      </div>
     </div>
-    <div className="flex justify-end pt-4">
-      <Button type="submit">Salvar</Button>
-    </div>
-  </form>
+
+    <Select 
+      label="Curso"
+      name="course"
+      value={formData.course}
+      onChange={handleInputChange}
+      required
+    >
+      <option value="">Selecione o curso</option>
+      {courseOptions.filter(c => c !== 'Todos').map(course => (
+        <option key={course} value={course}>{course}</option>
+      ))}
+    </Select>
+    
+    <Select 
+      label="Ano"
+      name="year"
+      value={formData.year}
+      onChange={handleInputChange}
+      required
+    >
+      <option value="">Selecione o ano</option>
+      <option value="1º">1º</option>
+      <option value="2º">2º</option>
+      <option value="3º">3º</option>
+      <option value="Misto">Misto</option>
+    </Select>
+    
+    <Select 
+      label="Gênero"
+      name="gender"
+      value={formData.gender}
+      onChange={handleInputChange}
+      required
+    >
+      <option value="">Selecione o gênero</option>
+      <option value="Masculino">Masculino</option>
+      <option value="Feminino">Feminino</option>
+    </Select>
+    
+    <Select 
+      label="Esporte" 
+      name="sport"
+      value={formData.sport}
+      onChange={handleInputChange}
+      className="md:col-span-2"
+      required
+    >
+      <option value="">Selecione o esporte</option>
+      <option value="Futsal">Futsal</option>
+      <option value="Vôlei">Vôlei</option>
+      <option value="Basquete">Basquete</option>
+      <option value="Handebol">Handebol</option>
+    </Select>
+  </div>
+  <div className="flex justify-end pt-4">
+    <Button type="submit">Salvar</Button>
+  </div>
+</form>
               )}
           </Modal>
 
@@ -471,10 +560,31 @@ function TeamsPage() {
   <Modal 
     isOpen={showAddPlayer} 
     onClose={() => setShowAddPlayer(false)} 
-    title="Adicionar Jogador"
+    title="Adicionar Jogador ao Time"
     size="max-w-md"
   >
     <form onSubmit={addPlayerToTeam} className="space-y-4">
+      <div className="flex justify-between items-center mb-4">
+        <span className="text-sm text-gray-600 dark:text-gray-400">
+          Jogadores disponíveis da sala {selectedTeam?.year}
+        </span>
+        <button
+          type="button"
+          onClick={() => {
+            setNewPlayerData({
+              name: '',
+              sala: selectedTeam?.year || '',
+              cursoId: selectedTeam?.course === 'DS' ? 1 : 
+                       selectedTeam?.course === 'ETIM' ? 2 : 1 // Ajustar conforme seus cursos
+            });
+            setShowCreatePlayer(true);
+          }}
+          className="text-sm bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700"
+        >
+          + Criar Novo Jogador
+        </button>
+      </div>
+      
       <Select
         label="Jogador"
         value={newPlayer.jogadorId || ''}
@@ -507,7 +617,61 @@ function TeamsPage() {
         >
           Cancelar
         </Button>
-        <Button type="submit">Adicionar</Button>
+        <Button type="submit">Adicionar ao Time</Button>
+      </div>
+    </form>
+  </Modal>
+)}
+
+{/* Adicionar modal para criar novo jogador */}
+{showCreatePlayer && (
+  <Modal 
+    isOpen={showCreatePlayer} 
+    onClose={() => setShowCreatePlayer(false)} 
+    title="Criar Novo Jogador"
+    size="max-w-md"
+  >
+    <form onSubmit={createNewPlayer} className="space-y-4">
+      <Input
+        label="Nome do Jogador"
+        type="text"
+        value={newPlayerData.name}
+        onChange={(e) => setNewPlayerData({...newPlayerData, name: e.target.value})}
+        required
+      />
+      
+      <Input
+        label="Sala"
+        type="text"
+        value={newPlayerData.sala}
+        onChange={(e) => setNewPlayerData({...newPlayerData, sala: e.target.value})}
+        placeholder="Ex: 3º, 2º, 1º"
+        required
+      />
+      
+      <Select
+        label="Curso"
+        value={newPlayerData.cursoId || ''}
+        onChange={(e) => setNewPlayerData({...newPlayerData, cursoId: parseInt(e.target.value)})}
+        required
+      >
+        <option value="">Selecione o curso</option>
+        {cursos.map(curso => (
+          <option key={curso.id} value={curso.id}>
+            {curso.nome}
+          </option>
+        ))}
+      </Select>
+      
+      <div className="flex justify-end gap-2">
+        <Button 
+          type="button" 
+          onClick={() => setShowCreatePlayer(false)}
+          className="bg-gray-500"
+        >
+          Cancelar
+        </Button>
+        <Button type="submit">Criar Jogador</Button>
       </div>
     </form>
   </Modal>

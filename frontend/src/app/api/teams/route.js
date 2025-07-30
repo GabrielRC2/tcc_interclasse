@@ -67,6 +67,27 @@ export async function POST(request) {
     const data = await request.json();
     console.log('Dados recebidos para criar time:', data);
     
+    // Verificar se já existe time com mesmo nome, gênero e esporte
+    const existingTeam = await prisma.time.findFirst({
+      where: {
+        nome: data.name,
+        sala: data.year,
+        categoria: {
+          nome: data.gender,
+          modalidade: {
+            nome: data.sport
+          }
+        }
+      }
+    });
+    
+    if (existingTeam) {
+      return Response.json(
+        { error: `Time ${data.name} ${data.gender} de ${data.sport} já existe!` },
+        { status: 400 }
+      );
+    }
+    
     // Buscar ou criar curso
     let curso = await prisma.curso.findFirst({
       where: { nome: data.course }
@@ -115,8 +136,8 @@ export async function POST(request) {
     // Criar time
     const newTime = await prisma.time.create({
       data: {
-        nome: data.name,
-        sala: data.year, // Ex: "3º", "2º", "1º"
+        nome: data.name, // Nome automático (ex: 3ºDS)
+        sala: data.year, // Sala (ex: 3º)
         cursoId: curso.id,
         categoriaId: categoria.id
       },
@@ -136,7 +157,7 @@ export async function POST(request) {
       id: newTime.id,
       name: newTime.nome,
       course: newTime.curso.nome,
-      year: data.year,
+      year: newTime.sala,
       gender: newTime.categoria.nome,
       sport: newTime.categoria.modalidade.nome,
       playersCount: 0,

@@ -74,7 +74,7 @@ model Curso {
 model Jogador {
   id             Int             @id @default(autoincrement()) @map("id_jogador")
   nome           String          @map("nome_jogador") @db.VarChar(70)
-  sala           String          @map("sala_jogador") @db.VarChar(10) // NOVO CAMPO
+  sala           String          @map("sala_jogador") @db.VarChar(10) // CAMPO SALA
   cursoId        Int             @map("fk_id_curso")
   curso          Curso           @relation(fields: [cursoId], references: [id])
   eventosPartida EventoPartida[]
