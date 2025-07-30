@@ -1,77 +1,155 @@
-import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma"; // Importa o cliente Prisma para interagir com o banco de dados
+import { PrismaClient } from '@prisma/client';
 
-/**
- * Função para lidar com requisições GET
- * Objetivo: Buscar todos os times do banco de dados, incluindo os nomes dos participantes.
- */
+const prisma = new PrismaClient();
+
 export async function GET() {
   try {
-    const times = await prisma.times.findMany({
+    // Primeiro, vamos verificar se as tabelas existem
+    console.log('Tentando buscar times...');
+    
+    const times = await prisma.time.findMany({
       include: {
-        // CORRIGIDO: O nome do relacionamento no model Times é 'participantes'
-        participantes: {
+        curso: true,
+        categoria: {
           include: {
-            // Inclui o modelo 'Jogador' que está relacionado via a tabela pivô 'Jogadores_times'
-            jogador: {
-              select: {
-                nome_jogador: true, // Seleciona apenas o nome do jogador
-                // Adicione outros campos do jogador se precisar, ex: numero_camisa_jogador
-              },
-            },
-          },
+            modalidade: true
+          }
         },
-      },
+        jogadores: {
+          include: {
+            jogador: true
+          }
+        }
+      }
     });
 
-    // Formata a resposta para incluir uma lista simples de nomes de participantes por time.
-    const timesFormatados = times.map(time => ({
-      id_times: time.id_times, // Note que o campo no banco é id_times
-      nome_time: time.nome_time,
-      // Mapeia os participantes do time para extrair apenas os nomes dos jogadores
-      nomes_participantes: time.participantes.map(
-        // Aqui 'p' é um registro da tabela Jogadores_times
-        p => p.jogador.nome_jogador // Acessa o jogador relacionado e seu nome
-      ),
+    console.log('Times encontrados:', times.length);
+
+    // Se não há times, retorna array vazio em vez de erro
+    if (times.length === 0) {
+      return Response.json([]);
+    }
+
+    const teamsFormatted = times.map(time => ({
+      id: time.id,
+      name: time.nome,
+      course: time.curso?.nome || 'Curso não definido',
+      year: "1º", // Temporário
+      gender: time.categoria?.nome || 'Categoria não definida',
+      sport: time.categoria?.modalidade?.nome || 'Modalidade não definida',
+      playersCount: time.jogadores?.length || 0,
+      players: time.jogadores?.map(tj => ({
+        id: tj.jogador.id,
+        name: tj.jogador.nome,
+        points: 0,
+        red: 0,
+        yellow: 0
+      })) || []
     }));
 
-    return NextResponse.json(timesFormatados, { status: 200 });
+    return Response.json(teamsFormatted);
   } catch (error) {
-    console.error("Erro ao buscar times e participantes:", error);
-    return NextResponse.json(
-      { message: "Não foi possível buscar os times e seus participantes." },
-      { status: 500 }
-    );
+    console.error('Erro detalhado na API teams:', error);
+    
+    // Se for erro de conexão com banco, retorna array vazio
+    if (error.code === 'P1001' || error.code === 'P1000') {
+      console.log('Problema de conexão com banco - retornando array vazio');
+      return Response.json([]);
+    }
+    
+    return Response.json({ 
+      error: 'Erro interno do servidor',
+      details: error.message 
+    }, { status: 500 });
   }
 }
 
-/**
- * Função para lidar com requisições POST
- * Objetivo: Criar um novo time no banco de dados.
- */
 export async function POST(request) {
   try {
-    const body = await request.json();
-
-    // 1. Mudança aqui: Pegamos apenas o nome_time do corpo da requisição.
-    const { nome_time } = body;
-
-    // 2. Mudança aqui: Validamos apenas se o nome_time foi enviado.
-    if (!nome_time) {
-      return NextResponse.json({ message: "Nome do time é obrigatório." }, { status: 400 });
+    const data = await request.json();
+    console.log('Dados recebidos para criar time:', data);
+    
+    // Buscar ou criar curso
+    let curso = await prisma.curso.findFirst({
+      where: { nome: data.course }
+    });
+    
+    if (!curso) {
+      curso = await prisma.curso.create({
+        data: {
+          nome: data.course,
+          sigla: data.course.substring(0, 5).toUpperCase()
+        }
+      });
+      console.log('Curso criado:', curso);
     }
 
-    // 3. Mudança aqui: Criamos o time no banco de dados apenas com o nome_time.
-    const novoTime = await prisma.times.create({
+    // Buscar ou criar modalidade
+    let modalidade = await prisma.modalidade.findFirst({
+      where: { nome: data.sport }
+    });
+    
+    if (!modalidade) {
+      modalidade = await prisma.modalidade.create({
+        data: { nome: data.sport }
+      });
+      console.log('Modalidade criada:', modalidade);
+    }
+
+    // Buscar ou criar categoria
+    let categoria = await prisma.categoria.findFirst({
+      where: { 
+        nome: data.gender,
+        modalidadeId: modalidade.id
+      }
+    });
+    
+    if (!categoria) {
+      categoria = await prisma.categoria.create({
+        data: {
+          nome: data.gender,
+          modalidadeId: modalidade.id
+        }
+      });
+      console.log('Categoria criada:', categoria);
+    }
+
+    // Criar time
+    const newTime = await prisma.time.create({
       data: {
-        nome_time,
+        nome: data.name,
+        cursoId: curso.id,
+        categoriaId: categoria.id
       },
+      include: {
+        curso: true,
+        categoria: {
+          include: {
+            modalidade: true
+          }
+        }
+      }
     });
 
-    return NextResponse.json(novoTime, { status: 201 });
+    console.log('Time criado com sucesso:', newTime);
 
+    const teamFormatted = {
+      id: newTime.id,
+      name: newTime.nome,
+      course: newTime.curso.nome,
+      year: data.year,
+      gender: newTime.categoria.nome,
+      sport: newTime.categoria.modalidade.nome,
+      playersCount: 0,
+      players: []
+    };
+
+    return Response.json(teamFormatted, { status: 201 });
   } catch (error) {
-    console.error("Erro ao criar time:", error);
-    return NextResponse.json({ message: "Não foi possível criar o time." }, { status: 500 });
+    console.error('Erro ao criar time:', error);
+    return Response.json({ 
+      error: 'Erro ao criar time',
+      details: error.message 
+    }, { status: 500 });
   }
 }
