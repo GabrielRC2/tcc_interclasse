@@ -8,21 +8,25 @@ export async function GET(request) {
     const timeId = searchParams.get('timeId');
 
     if (timeId) {
-      // Buscar primeiro o time para saber qual sala
+      // Buscar primeiro o time para saber qual sala e gênero
       const time = await prisma.time.findUnique({
         where: { id: parseInt(timeId) },
-        include: { curso: true }
+        include: { 
+          curso: true,
+          categoria: true
+        }
       });
 
       if (!time) {
         return Response.json({ error: 'Time não encontrado' }, { status: 404 });
       }
 
-      // Buscar jogadores da MESMA SALA que NÃO estão neste time
+      // Buscar jogadores da MESMA SALA, MESMO CURSO E MESMO GÊNERO que NÃO estão neste time
       const jogadoresDisponiveis = await prisma.jogador.findMany({
         where: {
           sala: time.sala, // MESMA SALA
           cursoId: time.cursoId, // MESMO CURSO
+          genero: time.categoria.nome, // MESMO GÊNERO (Masculino/Feminino)
           times: {
             none: {
               timeId: parseInt(timeId) // NÃO está neste time
@@ -38,6 +42,7 @@ export async function GET(request) {
         id: j.id,
         name: j.nome,
         sala: j.sala,
+        genero: j.genero,
         course: j.curso.nome
       })));
     }
@@ -58,6 +63,7 @@ export async function GET(request) {
       id: j.id,
       name: j.nome,
       sala: j.sala,
+      genero: j.genero,
       course: j.curso.nome,
       teams: j.times.map(tj => tj.time.nome)
     })));
@@ -77,6 +83,7 @@ export async function POST(request) {
       data: {
         nome: data.name,
         sala: data.sala,
+        genero: data.genero, // ADICIONAR GÊNERO
         cursoId: data.cursoId
       },
       include: {
@@ -88,6 +95,7 @@ export async function POST(request) {
       id: newJogador.id,
       name: newJogador.nome,
       sala: newJogador.sala,
+      genero: newJogador.genero,
       course: newJogador.curso.nome
     }, { status: 201 });
   } catch (error) {

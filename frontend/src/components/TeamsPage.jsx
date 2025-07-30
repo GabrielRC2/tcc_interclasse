@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { teamsService } from '@/services/api';
-import { Trash2, Plus, UserCircle, Filter, X } from 'lucide-react';
+import { Trash2, Plus, UserCircle, Filter, X, Edit } from 'lucide-react';
 import { Modal } from '@/components/Modal';
 import { Button, Input, CardSplat, Select } from '@/components/common';
 
@@ -46,8 +46,23 @@ function TeamsPage() {
     }
   };
 
+  // Adicionar novos estados
+  const [isEditing, setIsEditing] = useState(false);
+
   const openDetails = (team) => {
       setSelectedTeam(team);
+      if (team) {
+        setFormData({
+          course: team.course,
+          year: team.year,
+          gender: team.gender,
+          sport: team.sport
+        });
+        setIsEditing(false);
+      } else {
+        setFormData({ course: '', year: '', gender: '', sport: '' });
+        setIsEditing(false);
+      }
       setIsDetailOpen(true);
   };
 
@@ -260,6 +275,65 @@ function TeamsPage() {
     }
   };
 
+  // Função para excluir time
+  const deleteTeam = async (teamId) => {
+    if (!confirm('Tem certeza que deseja excluir este time? Esta ação não pode ser desfeita.')) {
+      return;
+    }
+    
+    try {
+      const response = await fetch(`/api/teams/${teamId}`, {
+        method: 'DELETE'
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        alert(error.error || 'Erro ao excluir time');
+        return;
+      }
+      
+      await loadTeams();
+      setIsDetailOpen(false);
+      alert('Time excluído com sucesso!');
+    } catch (error) {
+      console.error('Erro ao excluir time:', error);
+      alert('Erro ao excluir time');
+    }
+  };
+
+  // Função para editar time
+  const editTeam = async (e) => {
+    e.preventDefault();
+    try {
+      const teamName = generateTeamName(formData.year, formData.course);
+      
+      const teamData = {
+        ...formData,
+        name: teamName
+      };
+      
+      const response = await fetch(`/api/teams/${selectedTeam.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(teamData)
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        alert(error.error || 'Erro ao editar time');
+        return;
+      }
+      
+      await loadTeams();
+      setIsDetailOpen(false);
+      setIsEditing(false);
+      alert('Time editado com sucesso!');
+    } catch (error) {
+      console.error('Erro ao editar time:', error);
+      alert('Erro ao editar time');
+    }
+  };
+
   return (
       <>
           <div className="space-y-6">
@@ -410,6 +484,28 @@ function TeamsPage() {
                   <div className="space-y-4">
                       {/* Informações do Time */}
                       <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 mb-4">
+                          <div className="flex justify-between items-start mb-4">
+                            <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">
+                              {selectedTeam.name}
+                            </h3>
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => setIsEditing(true)}
+                                className="text-blue-600 hover:text-blue-700 dark:text-blue-400"
+                                title="Editar time"
+                              >
+                                <Edit size={20} />
+                              </button>
+                              <button
+                                onClick={() => deleteTeam(selectedTeam.id)}
+                                className="text-red-600 hover:text-red-700 dark:text-red-400"
+                                title="Excluir time"
+                              >
+                                <Trash2 size={20} />
+                              </button>
+                            </div>
+                          </div>
+                          
                           <div className="grid grid-cols-2 gap-4 text-sm">
                               <div>
                                   <span className="font-semibold text-gray-600 dark:text-gray-400">Curso:</span>
@@ -648,6 +744,17 @@ function TeamsPage() {
         placeholder="Ex: 3º, 2º, 1º"
         required
       />
+      
+      <Select
+        label="Gênero"
+        value={newPlayerData.genero || ''}
+        onChange={(e) => setNewPlayerData({...newPlayerData, genero: e.target.value})}
+        required
+      >
+        <option value="">Selecione o gênero</option>
+        <option value="Masculino">Masculino</option>
+        <option value="Feminino">Feminino</option>
+      </Select>
       
       <Select
         label="Curso"
