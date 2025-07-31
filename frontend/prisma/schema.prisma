@@ -26,7 +26,6 @@ model Torneio {
   inicio           DateTime             @map("inicio_torneio") @db.DateTime
   fim              DateTime             @map("fim_torneio") @db.DateTime
   grupos           Grupo[]
-  locais           Local[]
   partidas         Partida[]
   torneioModalidades TorneioModalidade[]
 
@@ -121,8 +120,6 @@ model Grupo {
 model Local {
   id        Int       @id @default(autoincrement()) @map("id_local")
   nome      String    @map("nome_local") @db.VarChar(100)
-  torneioId Int       @map("fk_id_torneio")
-  torneio   Torneio   @relation(fields: [torneioId], references: [id])
   partidas  Partida[]
 
   @@map("Local")

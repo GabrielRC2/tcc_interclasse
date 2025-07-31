@@ -1,76 +1,188 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Trash2 } from 'lucide-react';
 import { Modal } from '@/components/Modal';
-import { Button, Input, Textarea, Select, CardSplat } from '@/components/common';
-import { mockData } from '@/data'; // Certifique-se de que o caminho está correto
+import { Button, Input, Select, CardSplat } from '@/components/common';
 
 export const RegistrationsPage = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingItem, setEditingItem] = useState(null);
-    const [editingUserListType, setEditingUserListType] = useState(null); // 'admins' ou 'staff' para o modal de usuários
+    const [category, setCategory] = useState('');
+    
+    const [sports, setSports] = useState([]);
+    const [locations, setLocations] = useState([]);
+    const [courses, setCourses] = useState([]);
+    const [administrators, setAdministrators] = useState([
+        { id: 1, name: 'Admin Principal', email: 'admin@interclasse.com', role: 'Super Admin' },
+        { id: 2, name: 'João Silva', email: 'joao@interclasse.com', role: 'Moderador' },
+        { id: 3, name: 'Maria Santos', email: 'maria@interclasse.com', role: 'Editor' }
+    ]);
+    const [loading, setLoading] = useState(true);
 
-    const handleEdit = (item) => {
-        setEditingItem(item);
-        setIsModalOpen(true);
-        // Se o item for de admins, preparamos o modal para listar usuários
-        if (item.id.startsWith('admin')) {
-            setEditingUserListType(item.id === 'admin-1' ? 'admins' : 'staff');
-        } else {
-            setEditingUserListType(null); // Reseta para outros tipos de cadastro
+    const [formData, setFormData] = useState({
+        name: '',
+        sigla: ''
+    });
+
+    useEffect(() => {
+        loadAllData();
+    }, []);
+
+    const loadAllData = async () => {
+        try {
+            const [sportsRes, locationsRes, coursesRes] = await Promise.all([
+                fetch('/api/modalidades'),
+                fetch('/api/locais'),
+                fetch('/api/cursos')
+            ]);
+
+            const sportsData = await sportsRes.json();
+            const locationsData = await locationsRes.json();
+            const coursesData = await coursesRes.json();
+
+            setSports(sportsData);
+            setLocations(locationsData);
+            setCourses(coursesData);
+        } catch (error) {
+            console.error('Erro ao carregar dados:', error);
+        } finally {
+            setLoading(false);
         }
-    }
+    };
+
+    const handleEdit = (item, type) => {
+        setEditingItem(item);
+        setCategory(type);
+        setFormData({
+            name: item.nome || item.name || '',
+            sigla: item.sigla || ''
+        });
+        setIsModalOpen(true);
+    };
 
     const handleCreate = () => {
         setEditingItem(null);
+        setCategory('');
+        setFormData({ name: '', sigla: '' });
         setIsModalOpen(true);
-        setEditingUserListType(null); // Criação normal, não é uma lista de usuários
-    }
+    };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        
+        try {
+            let endpoint = '';
+            let body = {};
+            let method = editingItem ? 'PUT' : 'POST';
+
+            switch (category) {
+                case 'Esportes':
+                    endpoint = editingItem ? `/api/modalidades/${editingItem.id}` : '/api/modalidades';
+                    body = { name: formData.name };
+                    break;
+                case 'Locais':
+                    endpoint = editingItem ? `/api/locais/${editingItem.id}` : '/api/locais';
+                    body = { name: formData.name };
+                    break;
+                case 'Cursos':
+                    endpoint = editingItem ? `/api/cursos/${editingItem.id}` : '/api/cursos';
+                    body = { name: formData.name, sigla: formData.sigla };
+                    break;
+                default:
+                    alert('Selecione uma categoria');
+                    return;
+            }
+
+            const response = await fetch(endpoint, {
+                method: method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            });
+
+            if (response.ok) {
+                await loadAllData();
+                setIsModalOpen(false);
+                alert(`${category.slice(0, -1)} ${editingItem ? 'editado' : 'criado'} com sucesso!`);
+            } else {
+                alert(`Erro ao ${editingItem ? 'editar' : 'criar'} cadastro`);
+            }
+        } catch (error) {
+            console.error('Erro ao salvar:', error);
+            alert('Erro ao salvar cadastro');
+        }
+    };
+
+    const handleDelete = async (item, type) => {
+        if (!confirm(`Tem certeza que deseja excluir "${item.nome || item.name}"?`)) {
+            return;
+        }
+
+        try {
+            let endpoint = '';
+            switch (type) {
+                case 'Esportes':
+                    endpoint = `/api/modalidades/${item.id}`;
+                    break;
+                case 'Locais':
+                    endpoint = `/api/locais/${item.id}`;
+                    break;
+                case 'Cursos':
+                    endpoint = `/api/cursos/${item.id}`;
+                    break;
+                default:
+                    return;
+            }
+
+            const response = await fetch(endpoint, {
+                method: 'DELETE'
+            });
+
+            if (response.ok) {
+                await loadAllData();
+                alert(`${type.slice(0, -1)} excluído com sucesso!`);
+            } else {
+                alert('Erro ao excluir cadastro');
+            }
+        } catch (error) {
+            console.error('Erro ao excluir:', error);
+            alert('Erro ao excluir cadastro');
+        }
+    };
 
     const closeModal = () => {
         setIsModalOpen(false);
-        setEditingUserListType(null); // Garante que o tipo de lista de usuários seja resetado ao fechar
+        setFormData({ name: '', sigla: '' });
+        setCategory('');
+        setEditingItem(null);
     };
 
-    // Funções para manipular usuários dentro do modal de admins/staff
-    const handleAddUser = (type) => {
-        // Lógica para adicionar um novo usuário (nome/email) à lista
-        console.log(`Adicionar novo usuário para ${type}`);
-        // Você precisaria de inputs dentro do modal para coletar nome e email
-        // E então atualizar o estado ou mockData
-    };
-
-    const handleDeleteUser = (type, userId) => {
-        // Lógica para deletar um usuário específico da lista
-        console.log(`Deletar usuário ${userId} de ${type}`);
-        // Atualizar o estado ou mockData removendo o usuário
-    };
+    if (loading) {
+        return <div className="flex justify-center items-center h-64">Carregando...</div>;
+    }
 
     return (
         <>
             <div className="space-y-8">
                 <div className="flex flex-wrap justify-between items-center gap-4">
                     <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">CADASTROS</h1>
-                    <div className="flex items-center gap-4">
-                        <button className="text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400">
-                            <Trash2 size={24} />
-                        </button>
-                        <Button onClick={handleCreate}>Cadastrar Novo</Button>
-                    </div>
+                    <Button onClick={handleCreate}>Cadastrar Novo</Button>
                 </div>
 
-                {/* Seção ESPORTES */}
                 <div>
                     <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">ESPORTES</h2>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {mockData.registrations.sports.map(item => (
+                        {sports.map(item => (
                             <div key={item.id} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm p-4 relative overflow-hidden">
                                 <div className="relative z-10">
-                                    <h3 className="font-bold text-lg mb-2 text-gray-900 dark:text-gray-100">{item.name}</h3>
-                                    <p className="text-gray-600 dark:text-gray-300 text-sm mb-4">{item.description}</p>
+                                    <h3 className="font-bold text-lg mb-4 text-gray-900 dark:text-gray-100">{item.nome}</h3>
                                     <div className="flex gap-2">
-                                        <Button onClick={() => handleEdit(item)}>Editar</Button>
-                                        <Button variant="secondary">Excluir</Button>
+                                        <Button onClick={() => handleEdit(item, 'Esportes')}>Editar</Button>
+                                        <Button 
+                                            onClick={() => handleDelete(item, 'Esportes')}
+                                            className="bg-red-600 hover:bg-red-700"
+                                        >
+                                            Excluir
+                                        </Button>
                                     </div>
                                 </div>
                                 <CardSplat />
@@ -79,18 +191,21 @@ export const RegistrationsPage = () => {
                     </div>
                 </div>
 
-                {/* Seção LOCAIS */}
                 <div>
                     <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">LOCAIS</h2>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {mockData.registrations.locations.map(item => (
+                        {locations.map(item => (
                             <div key={item.id} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm p-4 relative overflow-hidden">
                                 <div className="relative z-10">
-                                    <h3 className="font-bold text-lg mb-2 text-gray-900 dark:text-gray-100">{item.name}</h3>
-                                    <p className="text-gray-600 dark:text-gray-300 text-sm mb-4">{item.description}</p>
+                                    <h3 className="font-bold text-lg mb-4 text-gray-900 dark:text-gray-100">{item.nome}</h3>
                                     <div className="flex gap-2">
-                                        <Button onClick={() => handleEdit(item)}>Editar</Button>
-                                        <Button variant="secondary">Excluir</Button>
+                                        <Button onClick={() => handleEdit(item, 'Locais')}>Editar</Button>
+                                        <Button 
+                                            onClick={() => handleDelete(item, 'Locais')}
+                                            className="bg-red-600 hover:bg-red-700"
+                                        >
+                                            Excluir
+                                        </Button>
                                     </div>
                                 </div>
                                 <CardSplat />
@@ -99,18 +214,22 @@ export const RegistrationsPage = () => {
                     </div>
                 </div>
 
-                {/* Seção CURSOS */}
                 <div>
                     <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">CURSOS</h2>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {mockData.registrations.courses.map(item => (
+                        {courses.map(item => (
                             <div key={item.id} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm p-4 relative overflow-hidden">
                                 <div className="relative z-10">
-                                    <h3 className="font-bold text-lg mb-2 text-gray-900 dark:text-gray-100">{item.name}</h3>
+                                    <h3 className="font-bold text-lg mb-2 text-gray-900 dark:text-gray-100">{item.nome}</h3>
                                     <p className="text-gray-600 dark:text-gray-300 text-sm mb-4">Sigla: {item.sigla}</p>
                                     <div className="flex gap-2">
-                                        <Button onClick={() => handleEdit(item)}>Editar</Button>
-                                        <Button variant="secondary">Excluir</Button>
+                                        <Button onClick={() => handleEdit(item, 'Cursos')}>Editar</Button>
+                                        <Button 
+                                            onClick={() => handleDelete(item, 'Cursos')}
+                                            className="bg-red-600 hover:bg-red-700"
+                                        >
+                                            Excluir
+                                        </Button>
                                     </div>
                                 </div>
                                 <CardSplat />
@@ -119,20 +238,18 @@ export const RegistrationsPage = () => {
                     </div>
                 </div>
 
-                {/* Nova Seção ADMINISTRADORES */}
                 <div>
                     <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">ADMINISTRADORES</h2>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {mockData.registrations.admins.map(item => (
-                            <div key={item.id} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm p-4 relative overflow-hidden">
+                        {administrators.map(admin => (
+                            <div key={admin.id} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm p-4 relative overflow-hidden">
                                 <div className="relative z-10">
-                                    <h3 className="font-bold text-lg mb-2 text-gray-900 dark:text-gray-100">{item.name}</h3>
-                                    <p className="text-gray-600 dark:text-gray-300 text-sm mb-4">{item.description}</p>
+                                    <h3 className="font-bold text-lg mb-2 text-gray-900 dark:text-gray-100">{admin.name}</h3>
+                                    <p className="text-gray-600 dark:text-gray-300 text-sm mb-1">{admin.email}</p>
+                                    <p className="text-gray-500 dark:text-gray-400 text-xs mb-4">{admin.role}</p>
                                     <div className="flex gap-2">
-                                        {/* Botão de Editar preto e sem Excluir */}
-                                        <Button onClick={() => handleEdit(item)} className="bg-black text-white hover:bg-gray-800 dark:bg-gray-700 dark:hover:bg-gray-600">
-                                            Editar
-                                        </Button>
+                                        <Button>Editar</Button>
+                                        <Button className="bg-red-600 hover:bg-red-700">Excluir</Button>
                                     </div>
                                 </div>
                                 <CardSplat />
@@ -142,65 +259,45 @@ export const RegistrationsPage = () => {
                 </div>
             </div>
 
-            {/* Modal de Edição/Criação */}
             <Modal isOpen={isModalOpen} onClose={closeModal} title={editingItem ? "EDITAR CADASTRO" : "CRIAR CADASTRO"}>
-                {editingUserListType ? ( // Se for uma edição de "Administradores" ou "Staff"
-                    <form className="space-y-4">
-                        <h3 className="text-lg font-bold mb-4">Gerenciar Usuários de {editingItem?.name}</h3>
-                        <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
-                            {editingItem?.users?.map(user => (
-                                <div key={user.id} className="flex items-center justify-between p-2 border rounded-md dark:border-gray-600">
-                                    <div>
-                                        <p className="font-medium text-gray-900 dark:text-gray-100">{user.name}</p>
-                                        <p className="text-sm text-gray-600 dark:text-gray-300">{user.email}</p>
-                                    </div>
-                                    <Button
-                                        variant="secondary"
-                                        className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-200"
-                                        onClick={() => handleDeleteUser(editingUserListType, user.id)}
-                                    >
-                                        Deletar
-                                    </Button>
-                                </div>
-                            ))}
-                        </div>
-                        <div className="pt-4 border-t dark:border-gray-700">
-                            <h4 className="font-semibold mb-2">Adicionar Novo Usuário</h4>
-                            <Input label="Nome" placeholder="Nome do usuário" />
-                            <Input label="Email" placeholder="email@exemplo.com" type="email" className="mt-2" />
-                            <Button onClick={() => handleAddUser(editingUserListType)} className="mt-4 w-full">Adicionar Usuário</Button>
-                        </div>
-                        <div className="flex justify-end pt-4">
-                            <Button type="button" onClick={closeModal}>Fechar</Button>
-                        </div>
-                    </form>
-                ) : ( // Modal para outros tipos de cadastro
-                    <form className="space-y-4">
-                        <Select
-                            label="Categoria"
-                            defaultValue={editingItem ? (
-                                mockData.registrations.sports.some(s => s.id === editingItem.id) ? 'Esportes' :
-                                    mockData.registrations.locations.some(l => l.id === editingItem.id) ? 'Locais' : 'Cursos'
-                            ) : ''}
-                        >
-                            <option>Selecionar</option>
-                            <option>Esportes</option>
-                            <option>Locais</option>
-                            <option>Cursos</option>
-                            {/* Você pode adicionar 'Administradores' e 'Staff' aqui se quiser que sejam criáveis diretamente */}
-                        </Select>
-                        <Input label="Nome do Cadastro" placeholder="Digite o nome" defaultValue={editingItem?.name} />
-                        {editingItem?.sigla !== undefined && (
-                            <Input label="Sigla" placeholder="Digite a sigla" defaultValue={editingItem?.sigla} />
-                        )}
-                        {editingItem && !editingItem.id.startsWith('admin') && ( // Descrição apenas para Esportes e Locais
-                            <Textarea label="Descrição" placeholder="Digite a descrição" defaultValue={editingItem?.description} />
-                        )}
-                        <div className="flex justify-end pt-4">
-                            <Button type="submit">Salvar</Button>
-                        </div>
-                    </form>
-                )}
+                <form onSubmit={handleSubmit} className="space-y-4">
+                    <Select
+                        label="Categoria"
+                        value={category}
+                        onChange={(e) => setCategory(e.target.value)}
+                        required
+                    >
+                        <option value="">Selecionar categoria</option>
+                        <option value="Esportes">Esportes</option>
+                        <option value="Locais">Locais</option>
+                        <option value="Cursos">Cursos</option>
+                    </Select>
+                    
+                    <Input 
+                        label="Nome" 
+                        placeholder="Digite o nome" 
+                        value={formData.name}
+                        onChange={(e) => setFormData({...formData, name: e.target.value})}
+                        required
+                    />
+                    
+                    {category === 'Cursos' && (
+                        <Input 
+                            label="Sigla" 
+                            placeholder="Digite a sigla" 
+                            value={formData.sigla}
+                            onChange={(e) => setFormData({...formData, sigla: e.target.value})}
+                            required
+                        />
+                    )}
+                    
+                    <div className="flex justify-end gap-2 pt-4">
+                        <Button type="button" onClick={closeModal} className="bg-gray-500">
+                            Cancelar
+                        </Button>
+                        <Button type="submit">{editingItem ? 'Salvar' : 'Criar'}</Button>
+                    </div>
+                </form>
             </Modal>
         </>
     );

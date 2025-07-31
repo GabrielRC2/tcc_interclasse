@@ -88,21 +88,6 @@ export async function POST(request) {
       );
     }
     
-    // Buscar ou criar curso
-    let curso = await prisma.curso.findFirst({
-      where: { nome: data.course }
-    });
-    
-    if (!curso) {
-      curso = await prisma.curso.create({
-        data: {
-          nome: data.course,
-          sigla: data.course.substring(0, 5).toUpperCase()
-        }
-      });
-      console.log('Curso criado:', curso);
-    }
-
     // Buscar ou criar modalidade
     let modalidade = await prisma.modalidade.findFirst({
       where: { nome: data.sport }
@@ -131,6 +116,38 @@ export async function POST(request) {
         }
       });
       console.log('Categoria criada:', categoria);
+    }
+
+    // Buscar ou criar curso
+    let curso = await prisma.curso.findFirst({
+      where: { 
+        OR: [
+          { nome: data.course },
+          { sigla: data.course }
+        ]
+      }
+    });
+    
+    if (!curso) {
+      // Gerar sigla única
+      let sigla = data.course.substring(0, 5).toUpperCase();
+      
+      // Verificar se sigla já existe e adicionar número se necessário
+      const existingSigla = await prisma.curso.findFirst({
+        where: { sigla: sigla }
+      });
+      
+      if (existingSigla) {
+        sigla = `${data.course.substring(0, 4).toUpperCase()}${Math.floor(Math.random() * 10)}`;
+      }
+      
+      curso = await prisma.curso.create({
+        data: {
+          nome: data.course,
+          sigla: sigla
+        }
+      });
+      console.log('Curso criado:', curso);
     }
 
     // Criar time
