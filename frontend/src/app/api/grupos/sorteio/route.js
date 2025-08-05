@@ -13,7 +13,7 @@ export async function POST(request) {
         categoria: {
           AND: [
             { modalidadeId: parseInt(modalidadeId) },
-            { nome: { contains: genero } }
+            { genero: genero }
           ]
         }
       },
@@ -31,47 +31,29 @@ export async function POST(request) {
       }, { status: 400 });
     }
 
-    // 2. REMOVER grupos existentes para refazer sorteio
+    // 2. LIMPAR todos os grupos existentes da modalidade/torneio
+    // Primeiro remover todas as associações grupo-time
     await prisma.grupoTime.deleteMany({
       where: {
-        modalidadeId: parseInt(modalidadeId),
-        torneioId: parseInt(torneioId),
-        time: {
-          categoria: {
-            nome: { contains: genero }
-          }
+        grupo: {
+          modalidadeId: parseInt(modalidadeId),
+          torneioId: parseInt(torneioId)
         }
       }
     });
 
-    // 3. Limpar grupos vazios
-    const gruposVazios = await prisma.grupo.findMany({
+    // Depois remover todos os grupos
+    await prisma.grupo.deleteMany({
       where: {
         modalidadeId: parseInt(modalidadeId),
         torneioId: parseInt(torneioId)
-      },
-      include: {
-        times: true
       }
     });
 
-    for (const grupo of gruposVazios) {
-      if (grupo.times.length === 0) {
-        await prisma.grupo.delete({
-          where: { 
-            modalidadeId_torneioId: {
-              modalidadeId: grupo.modalidadeId,
-              torneioId: grupo.torneioId
-            }
-          }
-        });
-      }
-    }
-
-    // 4. Usar quantidade específica de grupos
+    // 3. Usar quantidade específica de grupos
     const numGrupos = parseInt(quantidadeGrupos);
 
-    // 5. Criar novos grupos
+    // 4. Criar novos grupos
     const gruposCriados = [];
     for (let i = 0; i < numGrupos; i++) {
       const nomeGrupo = String.fromCharCode(65 + i); // A, B, C, D...
@@ -87,16 +69,16 @@ export async function POST(request) {
       gruposCriados.push(grupo);
     }
 
-    // 6. Sortear times nos grupos (distribuição balanceada)
+    // 5. Sortear times nos grupos (distribuição balanceada)
     const timesEmbaralhados = [...times].sort(() => Math.random() - 0.5);
     
     for (let i = 0; i < timesEmbaralhados.length; i++) {
       const grupoIndex = i % numGrupos;
+      const grupo = gruposCriados[grupoIndex];
       
       await prisma.grupoTime.create({
         data: {
-          modalidadeId: parseInt(modalidadeId),
-          torneioId: parseInt(torneioId),
+          grupoId: grupo.id,
           timeId: timesEmbaralhados[i].id
         }
       });

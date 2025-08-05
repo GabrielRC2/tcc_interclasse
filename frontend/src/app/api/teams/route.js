@@ -78,10 +78,12 @@ export async function POST(request) {
     });
 
     if (!curso) {
+      // Se não encontrar, criar com sigla baseada no nome
+      const sigla = course.length > 5 ? course.substring(0, 5).toUpperCase() : course.toUpperCase();
       curso = await prisma.curso.create({
         data: {
           nome: course,
-          sigla: course.substring(0, 5).toUpperCase()
+          sigla: sigla
         }
       });
     }

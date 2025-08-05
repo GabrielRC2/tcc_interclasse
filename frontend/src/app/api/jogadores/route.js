@@ -21,15 +21,17 @@ export async function GET(request) {
         return Response.json({ error: 'Time não encontrado' }, { status: 404 });
       }
 
-      // Buscar jogadores da MESMA SALA, MESMO CURSO E MESMO GÊNERO que NÃO estão neste time
+      // Buscar jogadores da MESMA SALA, MESMO CURSO E MESMO GÊNERO que NÃO estão em nenhum time da categoria
       const jogadoresDisponiveis = await prisma.jogador.findMany({
         where: {
           sala: time.sala, // MESMA SALA
           cursoId: time.cursoId, // MESMO CURSO
-          genero: time.categoria.nome, // MESMO GÊNERO (Masculino/Feminino)
+          genero: time.categoria.genero, // MESMO GÊNERO (usar campo genero direto)
           times: {
             none: {
-              timeId: parseInt(timeId) // NÃO está neste time
+              time: {
+                categoriaId: time.categoriaId // NÃO está em nenhum time da mesma categoria
+              }
             }
           }
         },

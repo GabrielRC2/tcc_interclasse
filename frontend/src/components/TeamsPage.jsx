@@ -91,6 +91,7 @@ function TeamsPage() {
   const openDetails = (team) => {
     setSelectedTeam(team);
     if (team) {
+      // Modo visualização de time existente
       setFormData({
         course: team.course,
         year: team.year,
@@ -99,6 +100,7 @@ function TeamsPage() {
       });
       setIsEditing(false);
     } else {
+      // Modo criação de novo time
       setFormData({ course: '', year: '', gender: '', sport: '' });
       setIsEditing(false);
     }
@@ -267,6 +269,7 @@ function TeamsPage() {
   const [newPlayerData, setNewPlayerData] = useState({
     name: '',
     sala: '',
+    genero: 'Masculino', // Valor padrão
     cursoId: null
   });
 
@@ -292,7 +295,7 @@ function TeamsPage() {
       await loadAvailablePlayers();
 
       // Limpar formulário e fechar modal
-      setNewPlayerData({ name: '', sala: '', cursoId: null });
+      setNewPlayerData({ name: '', sala: '', genero: 'Masculino', cursoId: null });
       setShowCreatePlayer(false);
 
       alert('Jogador criado com sucesso!');
@@ -599,32 +602,62 @@ function TeamsPage() {
       </div>
 
       {isDetailOpen && (
-        <Modal isOpen={isDetailOpen} onClose={() => setIsDetailOpen(false)} title={isEditing ? "Editar Time" : "Novo Time"}>
-          {isEditing ? (
+        <Modal isOpen={isDetailOpen} onClose={() => setIsDetailOpen(false)} title={selectedTeam ? "Detalhes do Time" : "Novo Time"}>
+          {selectedTeam && !isEditing ? (
             <div className="space-y-4">
-              <div>
-                <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-2">
-                  {selectedTeam.name}
-                </h3>
-                <div className="grid grid-cols-2 gap-4 text-sm text-gray-600 dark:text-gray-300">
-                  <p><strong>Curso:</strong> {selectedTeam.course}</p>
-                  <p><strong>Ano:</strong> {selectedTeam.year}</p>
-                  <p><strong>Gênero:</strong> {selectedTeam.gender}</p>
-                  <p><strong>Modalidade:</strong> {selectedTeam.sport}</p>
+              <div className="flex justify-between items-start">
+                <div>
+                  <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-2">
+                    {selectedTeam.name}
+                  </h3>
+                  <div className="grid grid-cols-2 gap-4 text-sm text-gray-600 dark:text-gray-300">
+                    <p><strong>Curso:</strong> {selectedTeam.course}</p>
+                    <p><strong>Ano:</strong> {selectedTeam.year}</p>
+                    <p><strong>Gênero:</strong> {selectedTeam.gender}</p>
+                    <p><strong>Modalidade:</strong> {selectedTeam.sport}</p>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setIsEditing(true)}
+                    className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+                    title="Editar time"
+                  >
+                    <Edit size={20} />
+                  </button>
+                  <button
+                    onClick={() => deleteTeam(selectedTeam.id)}
+                    className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+                    title="Excluir time"
+                  >
+                    <Trash2 size={20} />
+                  </button>
                 </div>
               </div>
 
               <div>
-                <h4 className="text-md font-semibold text-gray-900 dark:text-gray-100 mb-3">
-                  Jogadores ({selectedTeam.players?.length || 0})
-                </h4>
+                <div className="flex justify-between items-center mb-3">
+                  <h4 className="text-md font-semibold text-gray-900 dark:text-gray-100">
+                    Jogadores ({selectedTeam.players?.length || 0})
+                  </h4>
+                  <Button 
+                    onClick={() => {
+                      loadAvailablePlayers();
+                      setShowAddPlayer(true);
+                    }}
+                    className="text-sm"
+                  >
+                    <Plus size={16} className="mr-1" />
+                    Adicionar Jogador
+                  </Button>
+                </div>
                 
                 {selectedTeam.players && selectedTeam.players.length > 0 ? (
                   <div className="space-y-2 max-h-60 overflow-y-auto">
                     {selectedTeam.players.map((player, index) => (
                       <div key={player.id} className="flex items-center gap-3 p-2 bg-gray-50 dark:bg-gray-700 rounded">
                         <div className="w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold">
-                          {player.numeroCamisa || index + 1}
+                          {player.numero || index + 1}
                         </div>
                         <div className="flex-1">
                           <p className="font-medium text-gray-900 dark:text-gray-100">{player.name}</p>
@@ -641,8 +674,8 @@ function TeamsPage() {
                     <p>Nenhum jogador cadastrado</p>
                     <Button 
                       onClick={() => {
-                        setIsDetailOpen(false);
-                        // TODO: Abrir modal de adicionar jogadores
+                        loadAvailablePlayers();
+                        setShowAddPlayer(true);
                       }}
                       className="mt-2"
                     >
@@ -652,6 +685,82 @@ function TeamsPage() {
                 )}
               </div>
             </div>
+          ) : isEditing ? (
+            <form onSubmit={editTeam} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* PREVIEW DO NOME DO TIME */}
+                <div className="md:col-span-2 bg-gray-50 dark:bg-gray-700 rounded-lg p-4 border-2 border-dashed border-gray-300 dark:border-gray-600">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Nome do Time (Automático)
+                  </label>
+                  <div className="text-2xl font-bold text-red-600 dark:text-red-400 text-center py-2">
+                    {generateTeamName(formData.year, formData.course) || 'Selecione Ano e Curso'}
+                  </div>
+                </div>
+
+                <Select
+                  label="Ano"
+                  name="year"
+                  value={formData.year}
+                  onChange={handleInputChange}
+                  required
+                >
+                  <option value="">Selecione o ano</option>
+                  <option value="1º">1º</option>
+                  <option value="2º">2º</option>
+                  <option value="3º">3º</option>
+                  <option value="Misto">Misto</option>
+                </Select>
+
+                <Select
+                  label="Curso"
+                  name="course"
+                  value={formData.course}
+                  onChange={handleInputChange}
+                  required
+                >
+                  <option value="">Selecione o curso</option>
+                  {cursos.map(curso => (
+                    <option key={curso.id} value={curso.nome}>{curso.nome}</option>
+                  ))}
+                </Select>
+
+                <Select
+                  label="Gênero"
+                  name="gender"
+                  value={formData.gender}
+                  onChange={handleInputChange}
+                  required
+                >
+                  <option value="">Selecione o gênero</option>
+                  <option value="Masculino">Masculino</option>
+                  <option value="Feminino">Feminino</option>
+                </Select>
+
+                <Select
+                  label="Esporte"
+                  name="sport"
+                  value={formData.sport}
+                  onChange={handleInputChange}
+                  required
+                >
+                  <option value="">Selecione o esporte</option>
+                  {modalidades.map(modalidade => (
+                    <option key={modalidade.id} value={modalidade.nome}>{modalidade.nome}</option>
+                  ))}
+                </Select>
+              </div>
+              <div className="flex justify-end gap-2 pt-4">
+                <Button
+                  type="button"
+                  onClick={() => setIsEditing(false)}
+                  className="bg-gray-500"
+                >
+                  Cancelar
+                </Button>
+                <Button type="submit">Salvar Alterações</Button>
+              </div>
+            </form>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -689,7 +798,7 @@ function TeamsPage() {
                 >
                   <option value="">Selecione o curso</option>
                   {cursos.map(curso => (
-                    <option key={curso.id} value={curso.sigla}>{curso.sigla}</option>
+                    <option key={curso.id} value={curso.nome}>{curso.nome}</option>
                   ))}
                 </Select>
 

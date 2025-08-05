@@ -19,7 +19,7 @@ export async function GET(request) {
         categoria: {
           AND: [
             { modalidadeId: parseInt(modalidadeId) },
-            { nome: { contains: genero } } // USAR NOME QUE CONTÉM O GÊNERO
+            { genero: genero } // USAR CAMPO GENERO DIRETO
           ]
         }
       },
