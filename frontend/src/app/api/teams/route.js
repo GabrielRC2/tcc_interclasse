@@ -2,11 +2,18 @@ import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-export async function GET() {
+export async function GET(request) {
   try {
-    console.log('Tentando buscar times...');
-    
+    const { searchParams } = new URL(request.url);
+    const torneioId = searchParams.get('torneioId');
+
+    let whereClause = {};
+    if (torneioId) {
+      whereClause.torneioId = parseInt(torneioId);
+    }
+
     const times = await prisma.time.findMany({
+      where: whereClause,
       include: {
         curso: true,
         categoria: {
@@ -14,51 +21,38 @@ export async function GET() {
             modalidade: true
           }
         },
+        torneio: true,
         jogadores: {
           include: {
             jogador: true
           }
         }
-      }
+      },
+      orderBy: { nome: 'asc' }
     });
 
-    console.log('Times encontrados:', times.length);
-
-    if (times.length === 0) {
-      return Response.json([]);
-    }
-
-    const teamsFormatted = times.map(time => ({
-      id: time.id,
-      name: time.nome,
-      course: time.curso?.nome || 'Curso não definido',
-      year: time.sala || "1º", // CORRIGIDO: usar sala do time
-      gender: time.categoria?.nome || 'Categoria não definida',
-      sport: time.categoria?.modalidade?.nome || 'Modalidade não definida',
-      playersCount: time.jogadores?.length || 0,
-      players: time.jogadores?.map(tj => ({
+    const timesFormatted = times.map(t => ({
+      id: t.id,
+      name: t.nome,
+      course: t.curso.nome,
+      year: t.sala,
+      gender: t.categoria.nome.includes('Masculino') ? 'Masculino' : 'Feminino',
+      sport: t.categoria.modalidade?.nome || 'N/A',
+      playersCount: t.jogadores.length,
+      torneio: t.torneio.nome,
+      players: t.jogadores.map(tj => ({
         id: tj.jogador.id,
         name: tj.jogador.nome,
-        number: tj.numeroCamisa, // ADICIONADO: número da camisa
-        points: 0,
-        red: 0,
-        yellow: 0
-      })) || []
+        numero: tj.numeroCamisa,
+        genero: tj.jogador.genero,
+        sala: tj.jogador.sala
+      }))
     }));
 
-    return Response.json(teamsFormatted);
+    return Response.json(timesFormatted);
   } catch (error) {
-    console.error('Erro detalhado na API teams:', error);
-    
-    if (error.code === 'P1001' || error.code === 'P1000') {
-      console.log('Problema de conexão com banco - retornando array vazio');
-      return Response.json([]);
-    }
-    
-    return Response.json({ 
-      error: 'Erro interno do servidor',
-      details: error.message 
-    }, { status: 500 });
+    console.error('Erro ao buscar times:', error);
+    return Response.json({ error: 'Erro interno do servidor' }, { status: 500 });
   }
 }
 
@@ -66,97 +60,85 @@ export async function POST(request) {
   try {
     const data = await request.json();
     console.log('Dados recebidos para criar time:', data);
-    
-    // Verificar se já existe time com mesmo nome, gênero e esporte
-    const existingTeam = await prisma.time.findFirst({
-      where: {
-        nome: data.name,
-        sala: data.year,
-        categoria: {
-          nome: data.gender,
-          modalidade: {
-            nome: data.sport
-          }
-        }
+
+    const { course, year, gender, sport, torneioId } = data;
+
+    if (!torneioId) {
+      return Response.json({ error: 'Torneio é obrigatório' }, { status: 400 });
+    }
+
+    // Buscar curso
+    let curso = await prisma.curso.findFirst({
+      where: { 
+        OR: [
+          { nome: course },
+          { sigla: course }
+        ]
       }
     });
-    
-    if (existingTeam) {
-      return Response.json(
-        { error: `Time ${data.name} ${data.gender} de ${data.sport} já existe!` },
-        { status: 400 }
-      );
+
+    if (!curso) {
+      curso = await prisma.curso.create({
+        data: {
+          nome: course,
+          sigla: course.substring(0, 5).toUpperCase()
+        }
+      });
     }
-    
-    // Buscar ou criar modalidade
+
+    // Buscar modalidade
     let modalidade = await prisma.modalidade.findFirst({
-      where: { nome: data.sport }
+      where: { nome: sport }
     });
-    
+
     if (!modalidade) {
       modalidade = await prisma.modalidade.create({
-        data: { nome: data.sport }
+        data: { nome: sport }
       });
-      console.log('Modalidade criada:', modalidade);
     }
 
     // Buscar ou criar categoria
     let categoria = await prisma.categoria.findFirst({
-      where: { 
-        nome: data.gender,
-        modalidadeId: modalidade.id
+      where: {
+        modalidadeId: modalidade.id,
+        genero: gender
       }
     });
-    
+
     if (!categoria) {
       categoria = await prisma.categoria.create({
         data: {
-          nome: data.gender,
+          nome: `${gender} - ${sport}`,
+          genero: gender,
           modalidadeId: modalidade.id
         }
       });
-      console.log('Categoria criada:', categoria);
     }
 
-    // Buscar ou criar curso
-    let curso = await prisma.curso.findFirst({
-      where: { 
-        OR: [
-          { nome: data.course },
-          { sigla: data.course }
-        ]
+    // Gerar nome do time
+    const teamName = `${year}${curso.sigla}`;
+
+    // Verificar se time já existe neste torneio
+    const existingTeam = await prisma.time.findFirst({
+      where: {
+        nome: teamName,
+        categoriaId: categoria.id,
+        torneioId: parseInt(torneioId)
       }
     });
-    
-    if (!curso) {
-      // Gerar sigla única
-      let sigla = data.course.substring(0, 5).toUpperCase();
-      
-      // Verificar se sigla já existe e adicionar número se necessário
-      const existingSigla = await prisma.curso.findFirst({
-        where: { sigla: sigla }
-      });
-      
-      if (existingSigla) {
-        sigla = `${data.course.substring(0, 4).toUpperCase()}${Math.floor(Math.random() * 10)}`;
-      }
-      
-      curso = await prisma.curso.create({
-        data: {
-          nome: data.course,
-          sigla: sigla
-        }
-      });
-      console.log('Curso criado:', curso);
+
+    if (existingTeam) {
+      return Response.json({ error: 'Time já existe neste torneio' }, { status: 400 });
     }
 
     // Criar time
-    const newTime = await prisma.time.create({
+    const time = await prisma.time.create({
       data: {
-        nome: data.name, // Nome automático (ex: 3ºDS)
-        sala: data.year, // Sala (ex: 3º)
+        nome: teamName,
+        sala: year,
         cursoId: curso.id,
-        categoriaId: categoria.id
+        categoriaId: categoria.id,
+        torneioId: parseInt(torneioId)
       },
       include: {
         curso: true,
@@ -164,29 +146,24 @@ export async function POST(request) {
           include: {
             modalidade: true
           }
-        }
+        },
+        torneio: true
       }
     });
 
-    console.log('Time criado com sucesso:', newTime);
-
-    const teamFormatted = {
-      id: newTime.id,
-      name: newTime.nome,
-      course: newTime.curso.nome,
-      year: newTime.sala,
-      gender: newTime.categoria.nome,
-      sport: newTime.categoria.modalidade.nome,
+    return Response.json({
+      id: time.id,
+      name: time.nome,
+      course: time.curso.nome,
+      year: time.sala,
+      gender: time.categoria.genero,
+      sport: time.categoria.modalidade.nome,
       playersCount: 0,
-      players: []
-    };
+      torneio: time.torneio.nome
+    }, { status: 201 });
 
-    return Response.json(teamFormatted, { status: 201 });
   } catch (error) {
     console.error('Erro ao criar time:', error);
-    return Response.json({ 
-      error: 'Erro ao criar time',
-      details: error.message 
-    }, { status: 500 });
+    return Response.json({ error: 'Erro ao criar time' }, { status: 500 });
   }
 }

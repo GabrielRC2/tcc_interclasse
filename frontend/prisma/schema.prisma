@@ -20,13 +20,14 @@ datasource db {
 // Tabela: Torneio
 // Descrição: Armazena as informações gerais sobre cada torneio.
 model Torneio {
-  id               Int                  @id @default(autoincrement()) @map("id_torneio")
-  nome             String               @map("nome_torneio") @db.VarChar(200)
-  status           String               @map("status_torneio") @db.VarChar(20)
-  inicio           DateTime             @map("inicio_torneio") @db.DateTime
-  fim              DateTime             @map("fim_torneio") @db.DateTime
-  grupos           Grupo[]
-  partidas         Partida[]
+  id                 Int                 @id @default(autoincrement()) @map("id_torneio")
+  nome               String              @map("nome_torneio") @db.VarChar(200)
+  status             String              @map("status_torneio") @db.VarChar(20)
+  inicio             DateTime            @map("inicio_torneio") @db.DateTime
+  fim                DateTime            @map("fim_torneio") @db.DateTime
+  times              Time[]              // ADICIONAR ESTA LINHA
+  grupos             Grupo[]
+  partidas           Partida[]
   torneioModalidades TorneioModalidade[]
 
   @@map("Torneio")
@@ -49,6 +50,7 @@ model Modalidade {
 model Categoria {
   id            Int      @id @default(autoincrement()) @map("id_categoria")
   nome          String   @map("nome_categoria") @db.VarChar(50)
+  genero        String   @map("genero_categoria") @db.VarChar(10) // ADICIONAR ESTA LINHA
   modalidadeId  Int      @map("fk_id_modalidade")
   modalidade    Modalidade @relation(fields: [modalidadeId], references: [id])
   times         Time[]
@@ -91,11 +93,13 @@ model Time {
   sala         String         @map("sala_time") @db.VarChar(10)
   cursoId      Int            @map("fk_id_curso")
   categoriaId  Int            @map("fk_id_categoria")
+  torneioId    Int            @map("fk_id_torneio") // ADICIONAR ESTA LINHA
   curso        Curso          @relation(fields: [cursoId], references: [id])
   categoria    Categoria      @relation(fields: [categoriaId], references: [id])
+  torneio      Torneio        @relation(fields: [torneioId], references: [id]) // ADICIONAR ESTA LINHA
   jogadores    TimeJogador[]
-  partidas     PartidaTime[]  // CORRIGIDO: relacionamento correto
-  grupos       GrupoTime[]    // ADICIONADO: relacionamento com grupos
+  partidas     PartidaTime[]
+  grupos       GrupoTime[]
 
   @@map("Time")
 }

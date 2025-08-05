@@ -1,12 +1,12 @@
 'use client';
-
-import { useState, useEffect } from 'react';
-import { teamsService } from '@/services/api';
-import { Trash2, Plus, UserCircle, Filter, X, Edit } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Plus, Edit, Trash2, UserCircle, Filter, X } from 'lucide-react';
 import { Modal } from '@/components/Modal';
-import { Button, Input, CardSplat, Select } from '@/components/common';
+import { Button, Input, Select, CardSplat } from '@/components/common';
+import { useTournament } from '@/contexts/TournamentContext';
 
 function TeamsPage() {
+  const { selectedTournament } = useTournament();
   const [teams, setTeams] = useState([]);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [selectedTeam, setSelectedTeam] = useState(null);
@@ -36,12 +36,21 @@ function TeamsPage() {
   }, []);
 
   const loadTeams = async () => {
+    if (!selectedTournament) {
+      setTeams([]);
+      return;
+    }
+
     try {
       setLoading(true);
-      const data = await teamsService.getAll();
+      const response = await fetch(`/api/teams?torneioId=${selectedTournament.id}`);
+      if (!response.ok) throw new Error('Erro ao carregar times');
+      
+      const data = await response.json();
       setTeams(data);
     } catch (error) {
-      console.error('Erro:', error);
+      console.error('Erro ao carregar times:', error);
+      setTeams([]);
     } finally {
       setLoading(false);
     }
@@ -153,33 +162,34 @@ function TeamsPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    if (!selectedTournament) {
+      alert('Selecione um torneio no Dashboard primeiro');
+      return;
+    }
+
     try {
-      // Gerar nome automaticamente
-      const teamName = generateTeamName(formData.year, formData.course);
+      const response = await fetch('/api/teams', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...formData,
+          torneioId: selectedTournament.id
+        })
+      });
 
-      // Verificar se já existe time com esse nome, gênero e esporte
-      const existingTeam = teams.find(team =>
-        team.name === teamName &&
-        team.gender === formData.gender &&
-        team.sport === formData.sport
-      );
-
-      if (existingTeam) {
-        alert(`Time ${teamName} ${formData.gender} de ${formData.sport} já existe!`);
-        return;
+      if (response.ok) {
+        await loadTeams();
+        setIsDetailOpen(false);
+        setFormData({ course: '', year: '', gender: '', sport: '' });
+        alert('Time criado com sucesso!');
+      } else {
+        const error = await response.json();
+        alert(error.error || 'Erro ao criar time');
       }
-
-      const teamData = {
-        ...formData,
-        name: teamName // Nome gerado automaticamente
-      };
-
-      await teamsService.create(teamData);
-      await loadTeams();
-      setIsDetailOpen(false);
-      setFormData({ course: '', year: '', gender: '', sport: '' });
     } catch (error) {
       console.error('Erro ao criar time:', error);
+      alert('Erro ao criar time');
     }
   };
 
@@ -409,12 +419,30 @@ function TeamsPage() {
     }
   };
 
+  // Adicionar verificação de torneio
+  if (!selectedTournament) {
+    return (
+      <div className="space-y-6">
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">TIMES</h1>
+        <div className="text-center py-12">
+          <p className="text-gray-500 dark:text-gray-400 text-lg">
+            Selecione um torneio no Dashboard primeiro
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <>
       <div className="space-y-6">
-        {/* Cabeçalho */}
         <div className="flex flex-wrap justify-between items-center gap-4">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">TIMES</h1>
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">TIMES</h1>
+            <p className="text-gray-500 dark:text-gray-400">
+              Torneio: {selectedTournament.name}
+            </p>
+          </div>
           <div className="flex items-center gap-4">
             {/* Mostrar contador e botão delete quando há seleções */}
             {selectedTeamsIds.length > 0 && (
@@ -570,253 +598,134 @@ function TeamsPage() {
         </div>
       </div>
 
-      <Modal isOpen={isDetailOpen} onClose={() => setIsDetailOpen(false)} title={selectedTeam ? selectedTeam.name : 'Criar Novo Time'} size="max-w-2xl">
-        {selectedTeam ? (
-          <div className="space-y-4">
-            {!isEditing ? (
-              <>
-                <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 mb-4">
-                  <div className="flex justify-between items-start mb-4">
-                    <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">
-                      {selectedTeam.name}
-                    </h3>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => setIsEditing(true)}
-                        className="text-blue-600 hover:text-blue-700 dark:text-blue-400"
-                        title="Editar time"
-                      >
-                        <Edit size={20} />
-                      </button>
-                      <button
-                        onClick={() => deleteTeam(selectedTeam.id)}
-                        className="text-red-600 hover:text-red-700 dark:text-red-400"
-                        title="Excluir time"
-                      >
-                        <Trash2 size={20} />
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <span className="font-semibold text-gray-600 dark:text-gray-400">Curso:</span>
-                      <span className="ml-2 text-gray-900 dark:text-gray-100">{selectedTeam.course}</span>
-                    </div>
-                    <div>
-                      <span className="font-semibold text-gray-600 dark:text-gray-400">Ano:</span>
-                      <span className="ml-2 text-gray-900 dark:text-gray-100">{selectedTeam.year}</span>
-                    </div>
-                    <div>
-                      <span className="font-semibold text-gray-600 dark:text-gray-400">Gênero:</span>
-                      <span className="ml-2 text-gray-900 dark:text-gray-100">{selectedTeam.gender}</span>
-                    </div>
-                    <div>
-                      <span className="font-semibold text-gray-600 dark:text-gray-400">Esporte:</span>
-                      <span className="ml-2 text-gray-900 dark:text-gray-100">{selectedTeam.sport}</span>
-                    </div>
-                  </div>
+      {isDetailOpen && (
+        <Modal isOpen={isDetailOpen} onClose={() => setIsDetailOpen(false)} title={isEditing ? "Editar Time" : "Novo Time"}>
+          {isEditing ? (
+            <div className="space-y-4">
+              <div>
+                <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-2">
+                  {selectedTeam.name}
+                </h3>
+                <div className="grid grid-cols-2 gap-4 text-sm text-gray-600 dark:text-gray-300">
+                  <p><strong>Curso:</strong> {selectedTeam.course}</p>
+                  <p><strong>Ano:</strong> {selectedTeam.year}</p>
+                  <p><strong>Gênero:</strong> {selectedTeam.gender}</p>
+                  <p><strong>Modalidade:</strong> {selectedTeam.sport}</p>
                 </div>
+              </div>
 
-                <div>
-                  <div className="flex justify-between items-center mb-2">
-                    <h4 className="font-bold border-b-2 border-gray-200 dark:border-gray-700 w-full pb-1 text-gray-900 dark:text-gray-100">JOGADORES</h4>
-                    <button
-                      onClick={() => {
-                        loadAvailablePlayers();
-                        setShowAddPlayer(true);
-                      }}
-                      className="bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center -mb-2 flex-shrink-0"
-                    >
-                      <Plus size={16} />
-                    </button>
-                  </div>
-                  <div className="space-y-2 max-h-80 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-red-500 scrollbar-track-gray-100 dark:scrollbar-track-gray-700 hover:scrollbar-thumb-red-600 dark:hover:scrollbar-thumb-red-400">
-                    {selectedTeam.players.map(p => (
-                      <div key={p.id} className="flex items-center justify-between text-gray-700 dark:text-gray-300 min-w-0">
-                        <div className="flex items-center gap-2 min-w-0 flex-1">
-                          <UserCircle size={24} className="text-gray-400 flex-shrink-0" />
-                          <span className="truncate">{p.name}</span>
-                          <span className="font-bold text-blue-600 dark:text-blue-400 flex-shrink-0">{p.points} PTS</span>
+              <div>
+                <h4 className="text-md font-semibold text-gray-900 dark:text-gray-100 mb-3">
+                  Jogadores ({selectedTeam.players?.length || 0})
+                </h4>
+                
+                {selectedTeam.players && selectedTeam.players.length > 0 ? (
+                  <div className="space-y-2 max-h-60 overflow-y-auto">
+                    {selectedTeam.players.map((player, index) => (
+                      <div key={player.id} className="flex items-center gap-3 p-2 bg-gray-50 dark:bg-gray-700 rounded">
+                        <div className="w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold">
+                          {player.numeroCamisa || index + 1}
                         </div>
-                        <div className="flex items-center gap-2 flex-shrink-0 ml-2">
-                          {p.red > 0 && (
-                            <div className="flex items-center gap-1">
-                              <div className="w-3 h-4 bg-red-600 rounded-sm"></div>
-                              <span className="text-xs font-bold text-red-600">{p.red}</span>
-                            </div>
-                          )}
-                          {p.yellow > 0 && (
-                            <div className="flex items-center gap-1">
-                              <div className="w-3 h-4 bg-yellow-500 rounded-sm"></div>
-                              <span className="text-xs font-bold text-yellow-600 dark:text-yellow-400">{p.yellow}</span>
-                            </div>
-                          )}
-                          {p.red === 0 && p.yellow === 0 && (
-                            <span className="text-xs text-gray-400">Sem cartões</span>
-                          )}
+                        <div className="flex-1">
+                          <p className="font-medium text-gray-900 dark:text-gray-100">{player.name}</p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">
+                            {player.sala} • {player.genero}
+                          </p>
                         </div>
                       </div>
                     ))}
                   </div>
-                  <div className="mt-3 pt-2 border-t border-gray-200 dark:border-gray-700">
-                    <div className="flex justify-between text-sm text-gray-600 dark:text-gray-400">
-                      <span>Total de jogadores: {selectedTeam.players.length}</span>
-                      <span>Pontos do time: {selectedTeam.players.reduce((sum, p) => sum + p.points, 0)}</span>
-                    </div>
+                ) : (
+                  <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                    <UserCircle size={48} className="mx-auto mb-2" />
+                    <p>Nenhum jogador cadastrado</p>
+                    <Button 
+                      onClick={() => {
+                        setIsDetailOpen(false);
+                        // TODO: Abrir modal de adicionar jogadores
+                      }}
+                      className="mt-2"
+                    >
+                      Adicionar Jogadores
+                    </Button>
                   </div>
-                </div>
-              </>
-            ) : (
-              <form onSubmit={editTeam} className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="md:col-span-2 bg-gray-50 dark:bg-gray-700 rounded-lg p-4 border-2 border-dashed border-gray-300 dark:border-gray-600">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Nome do Time (Automático)
-                    </label>
-                    <div className="text-2xl font-bold text-red-600 dark:text-red-400 text-center py-2">
-                      {generateTeamName(formData.year, formData.course) || 'Selecione Ano e Curso'}
-                    </div>
-                  </div>
-
-                  <Select
-                    label="Curso"
-                    name="course"
-                    value={formData.course}
-                    onChange={handleInputChange}
-                    required
-                  >
-                    <option value="">Selecione o curso</option>
-                    {cursos.map(curso => (
-                      <option key={curso.id} value={curso.nome}>{curso.nome} ({curso.sigla})</option>
-                    ))}
-                  </Select>
-
-                  <Select
-                    label="Ano"
-                    name="year"
-                    value={formData.year}
-                    onChange={handleInputChange}
-                    required
-                  >
-                    <option value="">Selecione o ano</option>
-                    <option value="1º">1º</option>
-                    <option value="2º">2º</option>
-                    <option value="3º">3º</option>
-                    <option value="Misto">Misto</option>
-                  </Select>
-
-                  <Select
-                    label="Gênero"
-                    name="gender"
-                    value={formData.gender}
-                    onChange={handleInputChange}
-                    required
-                  >
-                    <option value="">Selecione o gênero</option>
-                    <option value="Masculino">Masculino</option>
-                    <option value="Feminino">Feminino</option>
-                  </Select>
-
-                  <Select
-                    label="Esporte"
-                    name="sport"
-                    value={formData.sport}
-                    onChange={handleInputChange}
-                    required
-                  >
-                    <option value="">Selecione o esporte</option>
-                    {modalidades.map(modalidade => (
-                      <option key={modalidade.id} value={modalidade.nome}>{modalidade.nome}</option>
-                    ))}
-                  </Select>
-                </div>
-                <div className="flex justify-end gap-2 pt-4">
-                  <Button
-                    type="button"
-                    onClick={() => setIsEditing(false)}
-                    className="bg-gray-500"
-                  >
-                    Cancelar
-                  </Button>
-                  <Button type="submit">Salvar Alterações</Button>
-                </div>
-              </form>
-            )}
-          </div>
-        ) : (
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-
-              {/* PREVIEW DO NOME DO TIME */}
-              <div className="md:col-span-2 bg-gray-50 dark:bg-gray-700 rounded-lg p-4 border-2 border-dashed border-gray-300 dark:border-gray-600">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Nome do Time (Automático)
-                </label>
-                <div className="text-2xl font-bold text-red-600 dark:text-red-400 text-center py-2">
-                  {generateTeamName(formData.year, formData.course) || 'Selecione Ano e Curso'}
-                </div>
+                )}
               </div>
-
-              <Select
-                label="Ano"
-                name="year"
-                value={formData.year}
-                onChange={handleInputChange}
-                required
-              >
-                <option value="">Selecione o ano</option>
-                <option value="1º">1º</option>
-                <option value="2º">2º</option>
-                <option value="3º">3º</option>
-                <option value="Misto">Misto</option>
-              </Select>
-
-              <Select
-                label="Curso"
-                name="course"
-                value={formData.course}
-                onChange={handleInputChange}
-                required
-              >
-                <option value="">Selecione o curso</option>
-                {cursos.map(curso => (
-                  <option key={curso.id} value={curso.sigla}>{curso.sigla}</option>
-                ))}
-              </Select>
-
-              <Select
-                label="Gênero"
-                name="gender"
-                value={formData.gender}
-                onChange={handleInputChange}
-                required
-              >
-                <option value="">Selecione o gênero</option>
-                <option value="Masculino">Masculino</option>
-                <option value="Feminino">Feminino</option>
-              </Select>
-
-              <Select
-                label="Esporte"
-                name="sport"
-                value={formData.sport}
-                onChange={handleInputChange}
-                className="md:col-span-2"
-                required
-              >
-                <option value="">Selecione o esporte</option>
-                {modalidades.map(modalidade => (
-                  <option key={modalidade.id} value={modalidade.nome}>{modalidade.nome}</option>
-                ))}
-              </Select>
             </div>
-            <div className="flex justify-end pt-4">
-              <Button type="submit">Salvar</Button>
-            </div>
-          </form>
-        )}
-      </Modal>
+          ) : (
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+                {/* PREVIEW DO NOME DO TIME */}
+                <div className="md:col-span-2 bg-gray-50 dark:bg-gray-700 rounded-lg p-4 border-2 border-dashed border-gray-300 dark:border-gray-600">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Nome do Time (Automático)
+                  </label>
+                  <div className="text-2xl font-bold text-red-600 dark:text-red-400 text-center py-2">
+                    {generateTeamName(formData.year, formData.course) || 'Selecione Ano e Curso'}
+                  </div>
+                </div>
+
+                <Select
+                  label="Ano"
+                  name="year"
+                  value={formData.year}
+                  onChange={handleInputChange}
+                  required
+                >
+                  <option value="">Selecione o ano</option>
+                  <option value="1º">1º</option>
+                  <option value="2º">2º</option>
+                  <option value="3º">3º</option>
+                  <option value="Misto">Misto</option>
+                </Select>
+
+                <Select
+                  label="Curso"
+                  name="course"
+                  value={formData.course}
+                  onChange={handleInputChange}
+                  required
+                >
+                  <option value="">Selecione o curso</option>
+                  {cursos.map(curso => (
+                    <option key={curso.id} value={curso.sigla}>{curso.sigla}</option>
+                  ))}
+                </Select>
+
+                <Select
+                  label="Gênero"
+                  name="gender"
+                  value={formData.gender}
+                  onChange={handleInputChange}
+                  required
+                >
+                  <option value="">Selecione o gênero</option>
+                  <option value="Masculino">Masculino</option>
+                  <option value="Feminino">Feminino</option>
+                </Select>
+
+                <Select
+                  label="Esporte"
+                  name="sport"
+                  value={formData.sport}
+                  onChange={handleInputChange}
+                  className="md:col-span-2"
+                  required
+                >
+                  <option value="">Selecione o esporte</option>
+                  {modalidades.map(modalidade => (
+                    <option key={modalidade.id} value={modalidade.nome}>{modalidade.nome}</option>
+                  ))}
+                </Select>
+              </div>
+              <div className="flex justify-end pt-4">
+                <Button type="submit">Salvar</Button>
+              </div>
+            </form>
+          )}
+        </Modal>
+      )}
 
       {/* Modal para Adicionar Jogador */}
       {showAddPlayer && (
