@@ -2,7 +2,6 @@ import NextAuth from "next-auth";
 import { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
-<<<<<<< Updated upstream
 //import prisma from "@/generated/prisma/client";
 //import { PrismaClient } from "@prisma/client";
 import { prisma } from "@/lib/prisma"; // Certifique-se de que o caminho está correto
@@ -10,9 +9,6 @@ import { hash } from "crypto";
 
 //const prisma = new PrismaClient();
 
-=======
-import { prisma } from "@/lib/prisma";
->>>>>>> Stashed changes
 
 const authOptions: NextAuthOptions = {
     providers: [
@@ -21,7 +17,6 @@ const authOptions: NextAuthOptions = {
                 email: { label: "Email", type: "text", placeholder: "email@icm.com" },
                 password: { label: "Password", type: "password", placeholder: "password" },
             },
-<<<<<<< Updated upstream
            async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
           return null; // Credenciais incompletas
@@ -65,54 +60,6 @@ const authOptions: NextAuthOptions = {
             })
     ]
 }
-=======
-            async authorize(credentials) {
-                try {
-                    if (!credentials?.email || !credentials?.password) {
-                        return null;
-                    }
-
-                    const user = await prisma.usuarios.findUnique({
-                        where: {
-                            email_usuario: credentials.email,
-                        },
-                    });
-
-                    if (!user) {
-                        console.log("Usuário não encontrado");
-                        return null;
-                    }
-
-                    // Compara a senha usando bcrypt.compare
-                    const isValid = await bcrypt.compare(
-                        credentials.password,
-                        user.senha_hash
-                    );
-
-                    if (isValid) {
-                        console.log("Senha inválida");
-                        return null;
-                    }
-
-                    return {
-                        id: user.id_usuario.toString(),
-                        email: user.email_usuario,
-                        name: user.nome_usuario,
-                        tipo: user.tipo_usuario
-                    };
-                } catch (error) {
-                    console.error("Erro na autenticação:", error);
-                    return null;
-                }
-            }
-        })
-    ],
-    pages: {
-        signIn: '/login',
-    },
-    debug: process.env.NODE_ENV === 'development',
-};
->>>>>>> Stashed changes
 
 const handler = NextAuth(authOptions);
 export { handler as GET, handler as POST };

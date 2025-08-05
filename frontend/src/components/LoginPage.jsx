@@ -28,13 +28,8 @@ export const LoginPage = ({ onLogin }) => {
       <div className="w-full max-w-sm bg-white rounded-lg shadow-md p-8">
         <h1 className="text-2xl font-bold text-center mb-6">ICM - Interclass Manager</h1>
         <form className="space-y-4" onSubmit={handleLogin}>
-<<<<<<< Updated upstream
           <Input label="Email" type="email" name="email" defaultValue="admin@icm.com" />
           <Input label="Senha" type="password" name="senha" defaultValue="password" />
-=======
-          <Input label="Email" type="email" name="email" defaultValue="carlos@icm.com" />
-          <Input label="Senha" type="password" name="senha" defaultValue="123" />
->>>>>>> Stashed changes
           <Button type="submit" className="w-full">Entrar</Button>
         </form>
       </div>
