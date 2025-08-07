@@ -136,7 +136,7 @@ export const GroupsPage = () => {
             return;
         }
 
-        if (!confirm('Gerar chaveamento automático? Esta ação criará todas as partidas.')) {
+        if (!confirm('Gerar chaveamento automático? Esta ação criará todas as partidas otimizadas.')) {
             return;
         }
 
@@ -152,7 +152,8 @@ export const GroupsPage = () => {
             });
 
             if (response.ok) {
-                alert('Chaveamento gerado com sucesso!');
+                const result = await response.json();
+                alert(`Chaveamento gerado com sucesso! ${result.partidasGeradas} partidas criadas.`);
             } else {
                 const error = await response.json();
                 alert(error.error || 'Erro ao gerar chaveamento');

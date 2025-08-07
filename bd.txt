@@ -1,4 +1,4 @@
-
+-- https://gemini.google.com/share/97300940f725
 -- 2. INSERIR CURSOS (CONFORME ESPECIFICADO)
 INSERT INTO Curso (nome_curso, sigla_curso) VALUES
 ('Desenvolvimento de Sistemas', 'DS'),
