@@ -24,6 +24,10 @@ export const GroupsPage = () => {
         loadTimesDisponiveis();
     }, [selectedModalidade, selectedGenero]);
 
+    useEffect(() => {
+        loadGrupos();
+    }, [selectedModalidade, selectedGenero, selectedTournament]);
+
     const loadInitialData = async () => {
         try {
             const [modalidadesRes] = await Promise.all([
@@ -176,7 +180,7 @@ export const GroupsPage = () => {
                         )}
                     </div>
                     <div className="flex gap-2">
-                        <Button onClick={handleSorteio} disabled={!selectedTournament || !selectedModalidade || !selectedGenero}>
+                        <Button onClick={handleSorteio} disabled={!selectedTournament || !selectedModalidade || !selectedGenero || !quantidadeGrupos}>
                             <Shuffle size={20} className="mr-2" />
                             Realizar Sorteio
                         </Button>
@@ -329,19 +333,6 @@ export const GroupsPage = () => {
                                 ))
                             )}
                         </div>
-
-                        {/* Botão de Sorteio Atualizado */}
-                        <Button 
-                            onClick={handleSorteio} 
-                            disabled={!selectedTournament || !selectedModalidade || !selectedGenero || !quantidadeGrupos || timesDisponiveis.length === 0}
-                            className={timesDisponiveis.length > 0 && quantidadeGrupos ? 'bg-green-600 hover:bg-green-700' : ''}
-                        >
-                            <Shuffle size={20} className="mr-2" />
-                            {timesDisponiveis.length > 0 && quantidadeGrupos 
-                                ? `Sortear ${timesDisponiveis.length} Times em ${quantidadeGrupos} Grupos` 
-                                : 'Realizar Sorteio'
-                            }
-                        </Button>
                     </>
                 )}
             </div>

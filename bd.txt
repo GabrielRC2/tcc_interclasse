@@ -1,0 +1,170 @@
+
+-- 2. INSERIR CURSOS (CONFORME ESPECIFICADO)
+INSERT INTO Curso (nome_curso, sigla_curso) VALUES
+('Desenvolvimento de Sistemas', 'DS'),
+('Eletrônica', 'ETEL'),
+('Eventos', 'EVE'),
+('Química', 'ETIQ'),
+('Humanas', 'HUM'),
+('Edificações', 'EDA'),
+('Administração', 'ADM');
+
+-- 3. INSERIR MODALIDADES
+INSERT INTO Modalidade (nome_modalidade) VALUES
+('Futsal'),
+('Vôlei'),
+('Basquete'),
+('Handebol');
+
+-- 4. INSERIR TORNEIOS
+INSERT INTO Torneio (nome_torneio, status_torneio, inicio_torneio, fim_torneio) VALUES
+('Meio do Ano', 'EM ANDAMENTO', '2024-05-15 08:00:00', '2024-06-15 18:00:00'),
+('Fim de Ano', 'PLANEJAMENTO', '2024-11-10 08:00:00', '2024-12-10 18:00:00'),
+('Meio do Ano', 'FINALIZADO', '2023-05-20 08:00:00', '2023-06-20 18:00:00');
+
+-- 5. INSERIR CATEGORIAS (CORRIGIDO - USAR IDs SEQUENCIAIS)
+INSERT INTO Categoria (nome_categoria, genero_categoria, fk_id_modalidade) VALUES
+-- ID 1: FUTSAL
+('Futsal Masculino', 'Masculino', 1),
+-- ID 2: FUTSAL  
+('Futsal Feminino', 'Feminino', 1),
+-- ID 3: VÔLEI
+('Vôlei Masculino', 'Masculino', 2),
+-- ID 4: VÔLEI
+('Vôlei Feminino', 'Feminino', 2),
+-- ID 5: BASQUETE
+('Basquete Masculino', 'Masculino', 3),
+-- ID 6: BASQUETE
+('Basquete Feminino', 'Feminino', 3),
+-- ID 7: HANDEBOL
+('Handebol Masculino', 'Masculino', 4),
+-- ID 8: HANDEBOL
+('Handebol Feminino', 'Feminino', 4);
+
+-- 6. INSERIR RELAÇÃO TORNEIO-MODALIDADES
+INSERT INTO Torneio_Modalidades (fk_id_torneio, fk_id_modalidade) VALUES
+-- Meio do Ano 2024 (Vôlei e Handebol)
+(1, 2), (1, 4),
+-- Fim de Ano 2024 (Futsal e Basquete)  
+(2, 1), (2, 3),
+-- Meio do Ano 2023 (Vôlei e Handebol)
+(3, 2), (3, 4);
+
+-- 7. INSERIR LOCAIS
+INSERT INTO Local (nome_local) VALUES
+('Quadra Principal'),
+('Quadra Secundária'),
+('Ginásio Coberto'),
+('Quadra Externa');
+
+-- 8. INSERIR JOGADORES
+INSERT INTO Jogador (nome_jogador, sala_jogador, genero_jogador, fk_id_curso) VALUES
+-- JOGADORES MASCULINOS DS (3º)
+('João Silva Santos', '3º', 'Masculino', 1),
+('Pedro Oliveira Costa', '3º', 'Masculino', 1),
+('Lucas Ferreira Lima', '3º', 'Masculino', 1),
+('Gabriel Santos Alves', '3º', 'Masculino', 1),
+('Rafael Costa Ribeiro', '3º', 'Masculino', 1),
+('Mateus Lima Pereira', '3º', 'Masculino', 1),
+('André Alves Martins', '3º', 'Masculino', 1),
+('Bruno Ribeiro Rocha', '3º', 'Masculino', 1),
+
+-- JOGADORES MASCULINOS ETEL (2º)
+('Carlos Eduardo Nunes', '2º', 'Masculino', 2),
+('Diego Martins Cardoso', '2º', 'Masculino', 2),
+('Fernando Rocha Barbosa', '2º', 'Masculino', 2),
+('Gustavo Pereira Monteiro', '2º', 'Masculino', 2),
+('Henrique Nunes Campos', '2º', 'Masculino', 2),
+('Igor Cardoso Teixeira', '2º', 'Masculino', 2),
+('Juliano Barbosa Vieira', '2º', 'Masculino', 2),
+('Kevin Monteiro Cruz', '2º', 'Masculino', 2),
+
+-- JOGADORES MASCULINOS EVE (1º)
+('Leonardo Campos Moura', '1º', 'Masculino', 3),
+('Marcelo Teixeira Souza', '1º', 'Masculino', 3),
+('Nathan Vieira Dias', '1º', 'Masculino', 3),
+('Otávio Cruz Silva', '1º', 'Masculino', 3),
+('Paulo Roberto Oliveira', '1º', 'Masculino', 3),
+('Quirino Moura Santos', '1º', 'Masculino', 3),
+('Ricardo Souza Costa', '1º', 'Masculino', 3),
+('Samuel Dias Lima', '1º', 'Masculino', 3),
+
+-- JOGADORAS FEMININAS DS (3º)
+('Ana Paula Silva', '3º', 'Feminino', 1),
+('Beatriz Lima Santos', '3º', 'Feminino', 1),
+('Camila Santos Oliveira', '3º', 'Feminino', 1),
+('Daniela Costa Ferreira', '3º', 'Feminino', 1),
+('Eduarda Silva Lima', '3º', 'Feminino', 1),
+('Fernanda Alves Santos', '3º', 'Feminino', 1),
+('Gabriela Rocha Costa', '3º', 'Feminino', 1),
+('Helena Martins Ribeiro', '3º', 'Feminino', 1),
+
+-- JOGADORAS FEMININAS ETEL (2º)
+('Isabela Ferreira Pereira', '2º', 'Feminino', 2),
+('Juliana Ribeiro Martins', '2º', 'Feminino', 2),
+('Karla Pereira Rocha', '2º', 'Feminino', 2),
+('Larissa Nunes Cardoso', '2º', 'Feminino', 2),
+('Mariana Cardoso Barbosa', '2º', 'Feminino', 2),
+('Natália Barbosa Monteiro', '2º', 'Feminino', 2),
+('Olivia Monteiro Campos', '2º', 'Feminino', 2),
+('Patrícia Campos Teixeira', '2º', 'Feminino', 2),
+
+-- JOGADORAS FEMININAS EVE (1º)
+('Quitéria Teixeira Vieira', '1º', 'Feminino', 3),
+('Roberta Vieira Cruz', '1º', 'Feminino', 3),
+('Sabrina Cruz Moura', '1º', 'Feminino', 3),
+('Tatiana Moura Souza', '1º', 'Feminino', 3),
+('Úrsula Souza Dias', '1º', 'Feminino', 3),
+('Vanessa Dias Silva', '1º', 'Feminino', 3),
+('Wanda Oliveira Santos', '1º', 'Feminino', 3),
+('Ximena Silva Costa', '1º', 'Feminino', 3);
+
+-- 9. INSERIR TIMES (CORRIGIDO - USAR IDs CORRETOS DAS CATEGORIAS)
+INSERT INTO Time (nome_time, sala_time, fk_id_curso, fk_id_categoria, fk_id_torneio) VALUES
+-- TIMES VÔLEI MASCULINO (Categoria ID = 3)
+('3ºDS', '3º', 1, 3, 1),
+('2ºETEL', '2º', 2, 3, 1),
+('1ºEVE', '1º', 3, 3, 1),
+('3ºETIQ', '3º', 4, 3, 1),
+
+-- TIMES VÔLEI FEMININO (Categoria ID = 4)
+('3ºDS', '3º', 1, 4, 1),
+('2ºETEL', '2º', 2, 4, 1),
+('1ºEVE', '1º', 3, 4, 1),
+
+-- TIMES HANDEBOL MASCULINO (Categoria ID = 7)
+('3ºDS', '3º', 1, 7, 1),
+('2ºETEL', '2º', 2, 7, 1),
+('1ºEVE', '1º', 3, 7, 1),
+('3ºHUM', '3º', 5, 7, 1),
+
+-- TIMES HANDEBOL FEMININO (Categoria ID = 8)
+('3ºDS', '3º', 1, 8, 1),
+('2ºETEL', '2º', 2, 8, 1),
+('1ºEVE', '1º', 3, 8, 1);
+
+-- 10. INSERIR JOGADORES NOS TIMES (Time_Jogadores)
+INSERT INTO Time_Jogadores (fk_id_time, fk_id_jogador, numero_camisa) VALUES
+-- Time 1: 3ºDS Vôlei Masculino
+(1, 1, 1), (1, 2, 2), (1, 3, 3), (1, 4, 4), (1, 5, 5), (1, 6, 6),
+-- Time 2: 2ºETEL Vôlei Masculino  
+(2, 9, 1), (2, 10, 2), (2, 11, 3), (2, 12, 4), (2, 13, 5), (2, 14, 6),
+-- Time 3: 1ºEVE Vôlei Masculino
+(3, 17, 1), (3, 18, 2), (3, 19, 3), (3, 20, 4), (3, 21, 5), (3, 22, 6),
+
+-- Time 5: 3ºDS Vôlei Feminino
+(5, 25, 1), (5, 26, 2), (5, 27, 3), (5, 28, 4), (5, 29, 5), (5, 30, 6),
+-- Time 6: 2ºETEL Vôlei Feminino
+(6, 33, 1), (6, 34, 2), (6, 35, 3), (6, 36, 4), (6, 37, 5), (6, 38, 6),
+-- Time 7: 1ºEVE Vôlei Feminino
+(7, 41, 1), (7, 42, 2), (7, 43, 3), (7, 44, 4), (7, 45, 5), (7, 46, 6),
+
+-- Time 8: 3ºDS Handebol Masculino
+(8, 7, 7), (8, 8, 8), (8, 1, 9), (8, 2, 10), (8, 3, 11), (8, 4, 12), (8, 5, 13),
+-- Time 9: 2ºETEL Handebol Masculino
+(9, 15, 7), (9, 16, 8), (9, 9, 9), (9, 10, 10), (9, 11, 11), (9, 12, 12), (9, 13, 13),
+
+-- Time 12: 3ºDS Handebol Feminino
+(12, 31, 7), (12, 32, 8), (12, 25, 9), (12, 26, 10), (12, 27, 11), (12, 28, 12), (12, 29, 13),
+-- Time 13: 2ºETEL Handebol Feminino
+(13, 39, 7), (13, 40, 8), (13, 33, 9), (13, 34, 10), (13, 35, 11), (13, 36, 12), (13, 37, 13);

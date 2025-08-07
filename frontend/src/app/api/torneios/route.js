@@ -7,6 +7,7 @@ export async function GET() {
     const torneios = await prisma.torneio.findMany({
       orderBy: { inicio: 'desc' },
       include: {
+        times: true, // INCLUIR TIMES PARA CONTAGEM
         grupos: {
           include: {
             times: true
@@ -22,11 +23,11 @@ export async function GET() {
       status: t.status,
       startDate: t.inicio.toISOString().split('T')[0],
       endDate: t.fim.toISOString().split('T')[0],
-      location: 'ETEC João Belarmino', // Fixo por enquanto
-      modalities: 'Futsal, Vôlei, Basquete, Handebol', // Pode ser dinâmico depois
-      teamsCount: t.grupos.reduce((acc, g) => acc + g.times.length, 0),
-      matchesTotal: t.partidas.length,
-      matchesPlayed: t.partidas.filter(p => p.statusPartida === 'FINALIZADA').length
+      location: 'ETEC João Belarmino',
+      modalities: getModalitiesByName(t.nome), // FUNÇÃO HELPER
+      teamsCount: t.times?.length || 0, // CONTAGEM REAL DE TIMES
+      matchesTotal: t.partidas?.length || 0,
+      matchesPlayed: t.partidas?.filter(p => p.statusPartida === 'FINALIZADA').length || 0
     }));
 
     return Response.json(torneiosFormatted);
@@ -34,6 +35,13 @@ export async function GET() {
     console.error('Erro ao buscar torneios:', error);
     return Response.json({ error: 'Erro interno do servidor' }, { status: 500 });
   }
+}
+
+// ADICIONAR FUNÇÃO HELPER:
+function getModalitiesByName(nome) {
+  if (nome === 'Meio do Ano') return 'Vôlei, Handebol';
+  if (nome === 'Fim de Ano') return 'Futsal, Basquete';
+  return 'Futsal, Vôlei, Basquete, Handebol'; // Fallback
 }
 
 export async function POST(request) {

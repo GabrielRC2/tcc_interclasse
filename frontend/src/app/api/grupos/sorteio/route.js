@@ -11,10 +11,8 @@ export async function POST(request) {
       where: {
         torneioId: parseInt(torneioId),
         categoria: {
-          AND: [
-            { modalidadeId: parseInt(modalidadeId) },
-            { genero: genero }
-          ]
+          modalidadeId: parseInt(modalidadeId),
+          genero: genero
         }
       },
       include: {
@@ -31,8 +29,7 @@ export async function POST(request) {
       }, { status: 400 });
     }
 
-    // 2. LIMPAR todos os grupos existentes da modalidade/torneio
-    // Primeiro remover todas as associações grupo-time
+    // 2. LIMPAR grupos existentes para refazer sorteio
     await prisma.grupoTime.deleteMany({
       where: {
         grupo: {
@@ -42,7 +39,6 @@ export async function POST(request) {
       }
     });
 
-    // Depois remover todos os grupos
     await prisma.grupo.deleteMany({
       where: {
         modalidadeId: parseInt(modalidadeId),
@@ -50,11 +46,10 @@ export async function POST(request) {
       }
     });
 
-    // 3. Usar quantidade específica de grupos
+    // 3. Criar novos grupos
     const numGrupos = parseInt(quantidadeGrupos);
-
-    // 4. Criar novos grupos
     const gruposCriados = [];
+    
     for (let i = 0; i < numGrupos; i++) {
       const nomeGrupo = String.fromCharCode(65 + i); // A, B, C, D...
       
@@ -69,16 +64,15 @@ export async function POST(request) {
       gruposCriados.push(grupo);
     }
 
-    // 5. Sortear times nos grupos (distribuição balanceada)
+    // 4. Sortear times nos grupos (distribuição balanceada)
     const timesEmbaralhados = [...times].sort(() => Math.random() - 0.5);
     
     for (let i = 0; i < timesEmbaralhados.length; i++) {
       const grupoIndex = i % numGrupos;
-      const grupo = gruposCriados[grupoIndex];
       
       await prisma.grupoTime.create({
         data: {
-          grupoId: grupo.id,
+          grupoId: gruposCriados[grupoIndex].id,
           timeId: timesEmbaralhados[i].id
         }
       });
@@ -95,6 +89,6 @@ export async function POST(request) {
     });
   } catch (error) {
     console.error('Erro ao realizar sorteio:', error);
-    return Response.json({ error: 'Erro ao realizar sorteio' }, { status: 500 });
+    return Response.json({ error: 'Erro ao realizar sorteio: ' + error.message }, { status: 500 });
   }
 }

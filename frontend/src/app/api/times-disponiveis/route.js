@@ -17,37 +17,27 @@ export async function GET(request) {
       where: {
         torneioId: parseInt(torneioId),
         categoria: {
-          AND: [
-            { modalidadeId: parseInt(modalidadeId) },
-            { genero: genero } // USAR CAMPO GENERO DIRETO
-          ]
+          modalidadeId: parseInt(modalidadeId),
+          genero: genero
         }
       },
       include: {
         curso: true,
-        categoria: {
-          include: {
-            modalidade: true
-          }
-        },
-        jogadores: {
-          include: {
-            jogador: true
-          }
-        }
+        categoria: true,
+        jogadores: true
       }
     });
 
-    return Response.json(times.map(t => ({
-      id: t.id,
-      nome: t.nome,
-      curso: t.curso.nome,
-      sala: t.sala,
-      jogadoresCount: t.jogadores.length,
-      categoria: `${t.categoria.genero} - ${t.categoria.modalidade?.nome || 'N/A'}`
-    })));
+    const timesFormatados = times.map(time => ({
+      id: time.id,
+      nome: time.nome,
+      curso: time.curso.sigla,
+      jogadoresCount: time.jogadores.length
+    }));
+
+    return Response.json(timesFormatados);
   } catch (error) {
     console.error('Erro ao buscar times disponíveis:', error);
-    return Response.json({ error: 'Erro interno do servidor' }, { status: 500 });
+    return Response.json([], { status: 500 });
   }
 }
