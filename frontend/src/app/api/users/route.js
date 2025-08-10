@@ -50,3 +50,34 @@ export async function POST(request) {
     );
   }
 }
+
+// GET: Retorna todos os usuários
+export async function GET() {
+  try {
+    const users = await prisma.usuarios.findMany({
+      select: {
+        id_usuario: true,
+        nome_usuario: true,
+        email_usuario: true,
+        tipo_usuario: true,
+      },
+      orderBy: {
+        nome_usuario: "asc",
+      },
+    });
+
+    if (!users || users.length === 0) {
+      console.log("Nenhum usuário encontrado");
+      return NextResponse.json([]);
+    }
+
+    console.log("Usuários encontrados:", users);
+    return NextResponse.json(users);
+  } catch (error) {
+    console.error("Erro ao buscar usuários:", error);
+    return NextResponse.json(
+      { error: "Erro ao buscar usuários" },
+      { status: 500 }
+    );
+  }
+}
