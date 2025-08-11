@@ -2,270 +2,270 @@
 import React, { useState, useEffect } from 'react';
 import { Trash2 } from 'lucide-react';
 import { Modal } from '@/components/Modal';
-import { Button, Input, Textarea, Select, CardSplat } from '@/components/common';
-import { mockData } from '@/data';
+import { Button, Input, Select, Textarea, CardSplat } from '@/components/common';
 
 export const RegistrationsPage = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingItem, setEditingItem] = useState(null);
-    const [editingUserListType, setEditingUserListType] = useState(null);
-    const [selectedCategory, setSelectedCategory] = useState('Administradores');
-    const [formData, setFormData] = useState({
-        nome: '',
-        email: '',
-        senha: '',
-        tipo_usuario: ''
-    });
+    const [category, setCategory] = useState('');
+    const [selectedUserCategory, setSelectedUserCategory] = useState('Administradores');
 
-    // Estado para dados
-    const [data, setData] = useState({
-        sports: [],
-        locations: [],
-        courses: [],
+    // Estados para dados principais
+    const [sports, setSports] = useState([]);
+    const [locations, setLocations] = useState([]);
+    const [courses, setCourses] = useState([]);
+
+    // Estados para usuários (importante para login)
+    const [users, setUsers] = useState({
         administradores: [],
         staff: [],
         alunos: []
     });
 
-    // Função para carregar usuários
-    const loadUsers = async () => {
+    const [loading, setLoading] = useState(true);
+
+    const [formData, setFormData] = useState({
+        name: '',
+        sigla: '',
+        email: '',
+        senha: '',
+        tipo_usuario: ''
+    });
+
+    useEffect(() => {
+        loadAllData();
+    }, []);
+
+    // Função para carregar todos os dados (cadastros + usuários)
+    const loadAllData = async () => {
         try {
-            const response = await fetch('/api/users');
-            const users = await response.json();
-            setData(prev => ({
-                ...prev,
-                administradores: users.filter(u => u.tipo_usuario.toLowerCase() === 'admin'),
-                staff: users.filter(u => u.tipo_usuario.toLowerCase() === 'staff'),
-                alunos: users.filter(u => u.tipo_usuario.toLowerCase() === 'aluno')
-            }));
+            // Carregar cadastros básicos
+            const [sportsRes, locationsRes, coursesRes] = await Promise.all([
+                fetch('/api/modalidades'),
+                fetch('/api/locais'),
+                fetch('/api/cursos')
+            ]);
+
+            const sportsData = await sportsRes.json();
+            const locationsData = await locationsRes.json();
+            const coursesData = await coursesRes.json();
+
+            // Garantir que sejam arrays
+            setSports(Array.isArray(sportsData) ? sportsData : []);
+            setLocations(Array.isArray(locationsData) ? locationsData : []);
+            setCourses(Array.isArray(coursesData) ? coursesData : []);
+
+            // Carregar usuários (importante para login)
+            await loadUsers();
         } catch (error) {
-            console.error('Erro ao carregar usuários:', error);
+            console.error('Erro ao carregar dados:', error);
+            // Definir arrays vazios em caso de erro
+            setSports([]);
+            setLocations([]);
+            setCourses([]);
+        } finally {
+            setLoading(false);
         }
     };
 
-    // Carregar dados iniciais
-    useEffect(() => {
-        const loadInitialData = async () => {
-            await loadUsers();
-            setData(prev => ({
-                ...prev,
-                ...mockData.registrations
-            }));
-        };
+    // Função para carregar usuários (ESSENCIAL PARA LOGIN)
+    const loadUsers = async () => {
+        try {
+            const response = await fetch('/api/users');
+            const usersData = await response.json();
 
-        loadInitialData();
-    }, []);
+            // Separar usuários por tipo (importante para controle de acesso)
+            setUsers({
+                administradores: usersData.filter(u => u.tipo_usuario?.toLowerCase() === 'admin'),
+                staff: usersData.filter(u => u.tipo_usuario?.toLowerCase() === 'staff'),
+                alunos: usersData.filter(u => u.tipo_usuario?.toLowerCase() === 'aluno')
+            });
+        } catch (error) {
+            console.error('Erro ao carregar usuários:', error);
+            // Se a API não existe ainda, usar dados mock
+            setUsers({
+                administradores: [
+                    { id: 1, nome_usuario: 'Admin Principal', email_usuario: 'admin@interclasse.com', tipo_usuario: 'admin' }
+                ],
+                staff: [],
+                alunos: []
+            });
+        }
+    };
 
-    const handleEdit = (item) => {
+    const handleEdit = (item, type) => {
         setEditingItem(item);
-        setIsModalOpen(true);
+        setCategory(type);
 
-        if (item.id_usuario) {
-            setSelectedCategory('Usuários');
+        if (type === 'Usuários') {
+            // Para usuários (importante para login)
             setFormData({
-                nome: item.nome_usuario,
-                email: item.email_usuario,
+                name: item.nome_usuario || '',
+                sigla: '',
+                email: item.email_usuario || '',
                 senha: '',
-                tipo_usuario: item.tipo_usuario
+                tipo_usuario: item.tipo_usuario || ''
             });
         } else {
-            setSelectedCategory(
-                item.id.startsWith('sport') ? 'Esportes' :
-                    item.id.startsWith('location') ? 'Locais' :
-                        'Cursos'
-            );
+            // Para outros cadastros
             setFormData({
-                nome: item.name,
+                name: item.nome || item.name || '',
+                sigla: item.sigla || '',
                 email: '',
                 senha: '',
                 tipo_usuario: ''
             });
         }
-
-        setEditingUserListType(null);
-    }
+        setIsModalOpen(true);
+    };
 
     const handleCreate = () => {
         setEditingItem(null);
+        setCategory('');
+        setFormData({ name: '', sigla: '', email: '', senha: '', tipo_usuario: '' });
         setIsModalOpen(true);
-        setEditingUserListType(null);
-    }
-
-    const closeModal = () => {
-        setIsModalOpen(false);
-        setEditingItem(null);
-        setEditingUserListType(null);
-        setSelectedCategory('');
-        setFormData({
-            nome: '',
-            email: '',
-            senha: '',
-            tipo_usuario: ''
-        });
-    };
-
-    // Função para adicionar usuário
-    const handleAddUser = async (type) => {
-        try {
-            const response = await fetch('/api/users', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    nome_usuario: formData.nome,
-                    email_usuario: formData.email,
-                    senha: '123456',
-                    tipo_usuario: type === 'admins' ? 'admin' : 'staff'
-                }),
-            });
-
-            if (response.ok) {
-                loadUsers();
-                closeModal();
-                setFormData({ nome: '', email: '' });
-            } else {
-                const error = await response.json();
-                alert(error.message);
-            }
-        } catch (error) {
-            console.error('Erro ao adicionar usuário:', error);
-            alert('Erro ao adicionar usuário');
-        }
-    };
-
-    const handleDeleteUser = async (type, userId) => {
-        if (!confirm('Tem certeza que deseja deletar este usuário?')) return;
-
-        try {
-            const response = await fetch(`/api/users/${userId}`, {
-                method: 'DELETE',
-            });
-
-            if (response.ok) {
-                await loadUsers();
-                if (editingItem?.id_usuario === userId) {
-                    closeModal();
-                }
-            } else {
-                const error = await response.json();
-                alert(error.message || 'Erro ao deletar usuário');
-            }
-        } catch (error) {
-            console.error('Erro ao deletar usuário:', error);
-            alert('Erro ao deletar usuário');
-        }
-    };
-
-    const handleInputChange = (e) => {
-        const { name, value } = e.target;
-        setFormData(prev => ({
-            ...prev,
-            [name]: value
-        }));
-    };
-
-    const handleCategoryChange = (e) => {
-        setSelectedCategory(e.target.value);
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        const formData = new FormData(e.target);
-        const category = formData.get('category');
 
-        if (category === 'Usuários') {
-            const userData = {
-                nome_usuario: formData.get('nome'),
-                email_usuario: formData.get('email'),
-                tipo_usuario: formData.get('tipo_usuario'),
-                senha: formData.get('senha') || '123456'
-            };
-
-            try {
-                if (editingItem) {
-                    await handleUpdate(editingItem.id_usuario, userData);
-                } else {
-                    const response = await fetch('/api/users', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify(userData),
-                    });
-
-                    if (response.ok) {
-                        await loadUsers();
-                        closeModal();
-                        setFormData({ nome: '', email: '', senha: '', tipo_usuario: '' });
-                    } else {
-                        const error = await response.json();
-                        alert(error.message);
-                    }
-                }
-            } catch (error) {
-                console.error('Erro ao salvar usuário:', error);
-                alert('Erro ao salvar usuário');
-            }
-        } else {
-            const itemData = {
-                name: formData.get('nome'),
-                description: formData.get('description'),
-                ...(category === 'Cursos' && { sigla: formData.get('sigla') })
-            };
-
-            // TODO: Implementar lógica para salvar outras categorias
-            console.log('Dados do item:', itemData);
-        }
-    };
-
-    const handleUpdate = async (userId, userData) => {
         try {
-            const response = await fetch(`/api/users/${userId}`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(userData),
+            let endpoint = '';
+            let body = {};
+            let method = editingItem ? 'PUT' : 'POST';
+
+            switch (category) {
+                case 'Esportes':
+                    endpoint = editingItem ? `/api/modalidades/${editingItem.id}` : '/api/modalidades';
+                    body = { name: formData.name };
+                    break;
+                case 'Locais':
+                    endpoint = editingItem ? `/api/locais/${editingItem.id}` : '/api/locais';
+                    body = { name: formData.name };
+                    break;
+                case 'Cursos':
+                    endpoint = editingItem ? `/api/cursos/${editingItem.id}` : '/api/cursos';
+                    body = { name: formData.name, sigla: formData.sigla };
+                    break;
+                case 'Usuários':
+                    // IMPORTANTE PARA LOGIN: Gerenciamento de usuários
+                    endpoint = editingItem ? `/api/users/${editingItem.id_usuario}` : '/api/users';
+                    body = {
+                        nome_usuario: formData.name,
+                        email_usuario: formData.email,
+                        tipo_usuario: formData.tipo_usuario,
+                        ...(formData.senha && { senha: formData.senha })
+                    };
+                    break;
+                default:
+                    alert('Selecione uma categoria');
+                    return;
+            }
+
+            const response = await fetch(endpoint, {
+                method: method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
             });
 
             if (response.ok) {
-                await loadUsers();
-                closeModal();
+                if (category === 'Usuários') {
+                    await loadUsers(); // Recarregar usuários
+                } else {
+                    await loadAllData(); // Recarregar outros dados
+                }
+                setIsModalOpen(false);
+                alert(`${category.slice(0, -1)} ${editingItem ? 'editado' : 'criado'} com sucesso!`);
             } else {
                 const error = await response.json();
-                alert(error.message);
+                alert(error.message || `Erro ao ${editingItem ? 'editar' : 'criar'} cadastro`);
             }
         } catch (error) {
-            console.error('Erro ao atualizar usuário:', error);
-            alert('Erro ao atualizar usuário');
+            console.error('Erro ao salvar:', error);
+            alert('Erro ao salvar cadastro');
         }
     };
+
+    const handleDelete = async (item, type) => {
+        if (!confirm(`Tem certeza que deseja excluir "${item.nome || item.name || item.nome_usuario}"?`)) {
+            return;
+        }
+
+        try {
+            let endpoint = '';
+            switch (type) {
+                case 'Esportes':
+                    endpoint = `/api/modalidades/${item.id}`;
+                    break;
+                case 'Locais':
+                    endpoint = `/api/locais/${item.id}`;
+                    break;
+                case 'Cursos':
+                    endpoint = `/api/cursos/${item.id}`;
+                    break;
+                case 'Usuários':
+                    // IMPORTANTE PARA LOGIN: Exclusão de usuários
+                    endpoint = `/api/users/${item.id_usuario}`;
+                    break;
+                default:
+                    return;
+            }
+
+            const response = await fetch(endpoint, {
+                method: 'DELETE'
+            });
+
+            if (response.ok) {
+                if (type === 'Usuários') {
+                    await loadUsers(); // Recarregar usuários
+                } else {
+                    await loadAllData(); // Recarregar outros dados
+                }
+                alert(`${type.slice(0, -1)} excluído com sucesso!`);
+            } else {
+                const error = await response.json();
+                alert(error.message || 'Erro ao excluir cadastro');
+            }
+        } catch (error) {
+            console.error('Erro ao excluir:', error);
+            alert('Erro ao excluir cadastro');
+        }
+    };
+
+    const closeModal = () => {
+        setIsModalOpen(false);
+        setFormData({ name: '', sigla: '', email: '', senha: '', tipo_usuario: '' });
+        setCategory('');
+        setEditingItem(null);
+    };
+
+    if (loading) {
+        return <div className="flex justify-center items-center h-64">Carregando...</div>;
+    }
 
     return (
         <>
             <div className="space-y-8">
                 <div className="flex flex-wrap justify-between items-center gap-4">
                     <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">CADASTROS</h1>
-                    <div className="flex items-center gap-4">
-                        <button className="text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400">
-                            <Trash2 size={24} />
-                        </button>
-                        <Button onClick={handleCreate}>Cadastrar Novo</Button>
-                    </div>
+                    <Button onClick={handleCreate}>Cadastrar Novo</Button>
                 </div>
 
-                {/* Seção ESPORTES */}
                 <div>
                     <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">ESPORTES</h2>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {data?.sports?.map((item, index) => (
-                            <div key={item.id || `sport-${index}`} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm p-4 relative overflow-hidden">
+                        {sports.map(item => (
+                            <div key={item.id} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm p-4 relative overflow-hidden">
                                 <div className="relative z-10">
-                                    <h3 className="font-bold text-lg mb-2 text-gray-900 dark:text-gray-100">{item.name}</h3>
+                                    <h3 className="font-bold text-lg mb-4 text-gray-900 dark:text-gray-100">{item.nome}</h3>
                                     <div className="flex gap-2">
-                                        <Button onClick={() => handleEdit(item)}>Editar</Button>
-                                        <Button variant="secondary">Excluir</Button>
+                                        <Button onClick={() => handleEdit(item, 'Esportes')}>Editar</Button>
+                                        <Button
+                                            onClick={() => handleDelete(item, 'Esportes')}
+                                            className="bg-red-600 hover:bg-red-700"
+                                        >
+                                            Excluir
+                                        </Button>
                                     </div>
                                 </div>
                                 <CardSplat />
@@ -274,18 +274,21 @@ export const RegistrationsPage = () => {
                     </div>
                 </div>
 
-                {/* Seção LOCAIS */}
                 <div>
                     <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">LOCAIS</h2>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {data?.locations?.map((item, index) => (
-                            <div key={item.id || `location-${index}`} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm p-4 relative overflow-hidden">
+                        {locations.map(item => (
+                            <div key={item.id} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm p-4 relative overflow-hidden">
                                 <div className="relative z-10">
-                                    <h3 className="font-bold text-lg mb-2 text-gray-900 dark:text-gray-100">{item.name}</h3>
-                                    <p className="text-gray-600 dark:text-gray-300 text-sm mb-4">{item.description}</p>
+                                    <h3 className="font-bold text-lg mb-4 text-gray-900 dark:text-gray-100">{item.nome}</h3>
                                     <div className="flex gap-2">
-                                        <Button onClick={() => handleEdit(item)}>Editar</Button>
-                                        <Button variant="secondary">Excluir</Button>
+                                        <Button onClick={() => handleEdit(item, 'Locais')}>Editar</Button>
+                                        <Button
+                                            onClick={() => handleDelete(item, 'Locais')}
+                                            className="bg-red-600 hover:bg-red-700"
+                                        >
+                                            Excluir
+                                        </Button>
                                     </div>
                                 </div>
                                 <CardSplat />
@@ -294,18 +297,22 @@ export const RegistrationsPage = () => {
                     </div>
                 </div>
 
-                {/* Seção CURSOS */}
                 <div>
                     <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">CURSOS</h2>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {data?.courses?.map((item, index) => (
-                            <div key={item.id || `course-${index}`} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm p-4 relative overflow-hidden">
+                        {courses.map(item => (
+                            <div key={item.id} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm p-4 relative overflow-hidden">
                                 <div className="relative z-10">
-                                    <h3 className="font-bold text-lg mb-2 text-gray-900 dark:text-gray-100">{item.name}</h3>
+                                    <h3 className="font-bold text-lg mb-2 text-gray-900 dark:text-gray-100">{item.nome}</h3>
                                     <p className="text-gray-600 dark:text-gray-300 text-sm mb-4">Sigla: {item.sigla}</p>
                                     <div className="flex gap-2">
-                                        <Button onClick={() => handleEdit(item)}>Editar</Button>
-                                        <Button variant="secondary">Excluir</Button>
+                                        <Button onClick={() => handleEdit(item, 'Cursos')}>Editar</Button>
+                                        <Button
+                                            onClick={() => handleDelete(item, 'Cursos')}
+                                            className="bg-red-600 hover:bg-red-700"
+                                        >
+                                            Excluir
+                                        </Button>
                                     </div>
                                 </div>
                                 <CardSplat />
@@ -314,19 +321,20 @@ export const RegistrationsPage = () => {
                     </div>
                 </div>
 
-                {/* Seção ADMINISTRADORES */}
+                {/* Seção USUÁRIOS (ESSENCIAL PARA LOGIN) */}
                 <div>
-                    <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">ADMINISTRADORES</h2>
+                    <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">GERENCIAMENTO DE USUÁRIOS</h2>
                     <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm p-6 relative overflow-hidden">
                         <div className="relative z-10">
                             <div className="flex justify-between items-center mb-6">
                                 <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">
-                                    Gerenciamento de Usuários
+                                    Sistema de Autenticação
                                 </h3>
                                 <Button onClick={() => {
                                     setEditingItem(null);
+                                    setCategory('Usuários');
+                                    setFormData({ name: '', sigla: '', email: '', senha: '', tipo_usuario: '' });
                                     setIsModalOpen(true);
-                                    setSelectedCategory('Usuários');
                                 }}>
                                     Cadastrar Novo Usuário
                                 </Button>
@@ -337,8 +345,8 @@ export const RegistrationsPage = () => {
                                 {['Administradores', 'Staff', 'Alunos'].map((tab) => (
                                     <button
                                         key={tab}
-                                        onClick={() => setSelectedCategory(tab)}
-                                        className={`py-2 px-4 border-b-2 ${selectedCategory === tab
+                                        onClick={() => setSelectedUserCategory(tab)}
+                                        className={`py-2 px-4 border-b-2 transition-colors ${selectedUserCategory === tab
                                             ? 'border-red-600 text-red-600'
                                             : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
                                             }`}
@@ -348,11 +356,11 @@ export const RegistrationsPage = () => {
                                 ))}
                             </div>
 
-                            {/* Lista de usuários */}
+                            {/* Lista de usuários por categoria */}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                {data[selectedCategory.toLowerCase()]?.map((user) => (
+                                {users[selectedUserCategory.toLowerCase()]?.map((user) => (
                                     <div
-                                        key={user.id_usuario}
+                                        key={user.id_usuario || user.id}
                                         className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg"
                                     >
                                         <div className="flex justify-between items-start">
@@ -363,18 +371,21 @@ export const RegistrationsPage = () => {
                                                 <p className="text-sm text-gray-600 dark:text-gray-400">
                                                     {user.email_usuario}
                                                 </p>
+                                                <span className="inline-block mt-1 px-2 py-1 text-xs bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 rounded">
+                                                    {user.tipo_usuario}
+                                                </span>
                                             </div>
                                             <div className="flex gap-2">
                                                 <Button
                                                     size="sm"
-                                                    onClick={() => handleEdit(user)}
+                                                    onClick={() => handleEdit(user, 'Usuários')}
                                                 >
                                                     Editar
                                                 </Button>
                                                 <Button
                                                     size="sm"
-                                                    variant="secondary"
-                                                    onClick={() => handleDeleteUser(selectedCategory.toLowerCase(), user.id_usuario)}
+                                                    className="bg-red-600 hover:bg-red-700"
+                                                    onClick={() => handleDelete(user, 'Usuários')}
                                                 >
                                                     Excluir
                                                 </Button>
@@ -382,6 +393,22 @@ export const RegistrationsPage = () => {
                                         </div>
                                     </div>
                                 ))}
+                                {(!users[selectedUserCategory.toLowerCase()] || users[selectedUserCategory.toLowerCase()].length === 0) && (
+                                    <div className="col-span-2 text-center py-8 text-gray-500 dark:text-gray-400">
+                                        <p>Nenhum usuário do tipo "{selectedUserCategory}" encontrado.</p>
+                                        <Button
+                                            onClick={() => {
+                                                setEditingItem(null);
+                                                setCategory('Usuários');
+                                                setFormData({ name: '', sigla: '', email: '', senha: '', tipo_usuario: selectedUserCategory === 'Administradores' ? 'admin' : selectedUserCategory === 'Staff' ? 'staff' : 'aluno' });
+                                                setIsModalOpen(true);
+                                            }}
+                                            className="mt-2"
+                                        >
+                                            Criar Primeiro {selectedUserCategory.slice(0, -1)}
+                                        </Button>
+                                    </div>
+                                )}
                             </div>
                         </div>
                         <CardSplat />
@@ -389,143 +416,80 @@ export const RegistrationsPage = () => {
                 </div>
             </div>
 
-            {/* Modal de Edição/Criação */}
             <Modal isOpen={isModalOpen} onClose={closeModal} title={editingItem ? "EDITAR CADASTRO" : "CRIAR CADASTRO"}>
-                {editingUserListType ? (
-                    <form className="space-y-4" onSubmit={(e) => {
-                        e.preventDefault();
-                        handleAddUser(editingUserListType);
-                    }}>
-                        <h3 className="text-lg font-bold mb-4">Gerenciar Usuários de {editingItem?.name}</h3>
-                        <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
-                            {data[editingUserListType]?.map((user, index) => (
-                                <div key={user.id_usuario || `user-${index}`} className="flex items-center justify-between p-2 border rounded-md dark:border-gray-600">
-                                    <div>
-                                        <p className="font-medium text-gray-900 dark:text-gray-100">{user.nome_usuario}</p>
-                                        <p className="text-sm text-gray-600 dark:text-gray-300">{user.email_usuario}</p>
-                                    </div>
-                                    <Button
-                                        type="button"
-                                        variant="secondary"
-                                        className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-200"
-                                        onClick={() => handleDeleteUser(editingUserListType, user.id_usuario)}
-                                    >
-                                        Deletar
-                                    </Button>
-                                </div>
-                            ))}
-                        </div>
-                        <div className="pt-4 border-t dark:border-gray-700">
-                            <h4 className="font-semibold mb-2">Adicionar Novo Usuário</h4>
-                            <Input
-                                name="nome"
-                                label="Nome"
-                                placeholder="Nome do usuário"
-                                value={formData.nome}
-                                onChange={handleInputChange}
-                                required
-                            />
-                            <Input
-                                name="email"
-                                label="Email"
-                                type="email"
-                                placeholder="email@exemplo.com"
-                                className="mt-2"
-                                value={formData.email}
-                                onChange={handleInputChange}
-                                required
-                            />
-                            <Button type="submit" className="mt-4 w-full">
-                                Adicionar Usuário
-                            </Button>
-                        </div>
-                        <div className="flex justify-end pt-4">
-                            <Button type="button" onClick={closeModal}>Fechar</Button>
-                        </div>
-                    </form>
-                ) : (
-                    <form className="space-y-4" onSubmit={handleSubmit}>
-                        <Select
-                            name="category"
-                            label="Categoria"
-                            value={selectedCategory}
-                            onChange={handleCategoryChange}
-                            required
-                        >
-                            <option value="">Selecionar</option>
-                            <option value="Esportes">Esportes</option>
-                            <option value="Locais">Locais</option>
-                            <option value="Cursos">Cursos</option>
-                            <option value="Usuários">Usuários</option>
-                        </Select>
+                <form onSubmit={handleSubmit} className="space-y-4">
+                    <Select
+                        label="Categoria"
+                        value={category}
+                        onChange={(e) => setCategory(e.target.value)}
+                        required
+                    >
+                        <option value="">Selecionar categoria</option>
+                        <option value="Esportes">Esportes</option>
+                        <option value="Locais">Locais</option>
+                        <option value="Cursos">Cursos</option>
+                        <option value="Usuários">Usuários (Login)</option>
+                    </Select>
 
+                    <Input
+                        label="Nome"
+                        placeholder="Digite o nome"
+                        value={formData.name}
+                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                        required
+                    />
+
+                    {category === 'Cursos' && (
                         <Input
-                            name="nome"
-                            label="Nome"
-                            placeholder="Digite o nome"
-                            defaultValue={editingItem?.name || editingItem?.nome_usuario}
+                            label="Sigla"
+                            placeholder="Digite a sigla"
+                            value={formData.sigla}
+                            onChange={(e) => setFormData({ ...formData, sigla: e.target.value })}
                             required
                         />
+                    )}
 
-                        {selectedCategory === 'Usuários' ? (
-                            <>
-                                <Input
-                                    name="email"
-                                    type="email"
-                                    label="Email"
-                                    placeholder="email@exemplo.com"
-                                    value={formData.email}
-                                    onChange={handleInputChange}
-                                    required
-                                />
-                                <Input
-                                    name="senha"
-                                    type="password"
-                                    label="Senha"
-                                    placeholder="Digite a senha"
-                                    value={formData.senha}
-                                    onChange={handleInputChange}
-                                    required={!editingItem}
-                                />
-                                <Select
-                                    name="tipo_usuario"
-                                    label="Tipo de Usuário"
-                                    value={formData.tipo_usuario}
-                                    onChange={handleInputChange}
-                                    required
-                                >
-                                    <option value="">Selecionar</option>
-                                    <option value="admin">Administrador</option>
-                                    <option value="staff">Staff</option>
-                                    <option value="aluno">Aluno</option>
-                                </Select>
-                            </>
-                        ) : (
-                            <>
-                                <Textarea
-                                    name="description"
-                                    label="Descrição"
-                                    placeholder="Digite a descrição"
-                                    defaultValue={editingItem?.description}
-                                    required
-                                />
-                                {selectedCategory === 'Cursos' && (
-                                    <Input
-                                        name="sigla"
-                                        label="Sigla"
-                                        placeholder="Digite a sigla"
-                                        defaultValue={editingItem?.sigla}
-                                        required
-                                    />
-                                )}
-                            </>
-                        )}
+                    {category === 'Usuários' && (
+                        <>
+                            <Input
+                                label="Email"
+                                type="email"
+                                placeholder="usuario@exemplo.com"
+                                value={formData.email}
+                                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                                required
+                            />
 
-                        <div className="flex justify-end pt-4">
-                            <Button type="submit">Salvar</Button>
-                        </div>
-                    </form>
-                )}
+                            <Input
+                                label="Senha"
+                                type="password"
+                                placeholder={editingItem ? "Deixe em branco para manter a senha atual" : "Digite a senha"}
+                                value={formData.senha}
+                                onChange={(e) => setFormData({ ...formData, senha: e.target.value })}
+                                required={!editingItem}
+                            />
+
+                            <Select
+                                label="Tipo de Usuário"
+                                value={formData.tipo_usuario}
+                                onChange={(e) => setFormData({ ...formData, tipo_usuario: e.target.value })}
+                                required
+                            >
+                                <option value="">Selecionar tipo</option>
+                                <option value="admin">Administrador</option>
+                                <option value="staff">Staff</option>
+                                <option value="aluno">Aluno</option>
+                            </Select>
+                        </>
+                    )}
+
+                    <div className="flex justify-end gap-2 pt-4">
+                        <Button type="button" onClick={closeModal} className="bg-gray-500">
+                            Cancelar
+                        </Button>
+                        <Button type="submit">{editingItem ? 'Salvar' : 'Criar'}</Button>
+                    </div>
+                </form>
             </Modal>
         </>
     );

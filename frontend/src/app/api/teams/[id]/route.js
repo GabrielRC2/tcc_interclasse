@@ -1,103 +1,138 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma"; // Importa o cliente Prisma para interagir com o banco de dados
+import { prisma } from "@/lib/prisma";
 
-export async function GET(request, {params}) {
-    try {
-        const {id} = await params; // Obtém o ID do time a partir dos parâmetros da requisição
+// GET - Buscar um time específico por ID
+export async function GET(request, { params }) {
+  try {
+    const { id } = await params;
+    const timeId = parseInt(id, 10);
 
-        const idTime = parseInt(id, 10); // Converte o ID para um número inteiro
-        if (isNaN(idTime)) {
-        return NextResponse.json({ message: "ID inválido." }, { status: 400 });
-        }
-
-        // 1. Verifica se o time existe antes de tentar deletar
-        const teamExists = await prisma.times.findUnique({
-        where: {
-            id_times: idTime,
-        },
-        });
-        if (!teamExists) {
-        return NextResponse.json({ message: "Time não encontrado." }, { status: 404 });
-        }
-        //Retorna os times encontrados como uma resposta JSON com status 200 (OK).
-        return NextResponse.json(teamExists, { status: 200 });
-        
-    } catch (error) {
-        // 3. Se ocorrer qualquer erro no bloco 'try', o 'catch' é executado.
-        console.error("Erro ao buscar times:", error); // Mostra o erro no console do servidor para depuração.
-    
-        // Retorna uma mensagem de erro com status 500 (Erro Interno do Servidor).
-        return NextResponse.json({ message: "Não foi possível buscar os times." }, { status: 500 });
+    if (isNaN(timeId)) {
+      return NextResponse.json({ message: "ID inválido." }, { status: 400 });
     }
+
+    // Buscar o time com relacionamentos
+    const team = await prisma.times.findUnique({
+      where: { id_times: timeId },
+      include: {
+        curso: true,
+        categoria: {
+          include: {
+            modalidade: true
+          }
+        }
+      }
+    });
+
+    if (!team) {
+      return NextResponse.json({ message: "Time não encontrado." }, { status: 404 });
+    }
+
+    return NextResponse.json(team, { status: 200 });
+
+  } catch (error) {
+    console.error("Erro ao buscar time:", error);
+    return NextResponse.json({ message: "Não foi possível buscar o time." }, { status: 500 });
+  }
 }
 
-export async function PATCH(request, {params}) {
-    try {
-        const {id} = await params;
+// PUT - Atualizar um time
+export async function PUT(request, { params }) {
+  try {
+    const { id } = await params;
+    const timeId = parseInt(id, 10);
 
-        const idTime = parseInt(id, 10); // Converte o ID para um número inteiro
-        if (isNaN(idTime)) {
-        return NextResponse.json({ message: "ID inválido." }, { status: 400 });
-        }
-
-        // 1. Verifica se o time existe antes de atualizar
-        const teamExists = await prisma.times.findUnique({
-        where: {
-            id_times: idTime,
-        },
-        });
-        if (!teamExists) {
-        return NextResponse.json({ message: "Time não encontrado." }, { status: 404 });
-        }
-
-        // Recebe os dados do corpo da requisição
-        const body = await request.json();
-        const {nome_time} = body;
-
-        const updatedTeam = await prisma.times.update({
-            where: {id_times: idTime},
-            data: {nome_time}, 
-        });
-        return NextResponse.json(updatedTeam, { status: 200 });
-
-    } catch (error) {
-        // 3. Se ocorrer qualquer erro no bloco 'try', o 'catch' é executado.
-        console.error("Erro ao atualizar o time:", error); // Mostra o erro no console do servidor para depuração.
-    
-        // Retorna uma mensagem de erro com status 500 (Erro Interno do Servidor).
-        return NextResponse.json({ message: "Não foi possível atualizar o time." }, { status: 500 });
+    if (isNaN(timeId)) {
+      return NextResponse.json({ message: "ID inválido." }, { status: 400 });
     }
+
+    // Verificar se o time existe
+    const teamExists = await prisma.times.findUnique({
+      where: { id_times: timeId }
+    });
+
+    if (!teamExists) {
+      return NextResponse.json({ message: "Time não encontrado." }, { status: 404 });
+    }
+
+    const data = await request.json();
+
+    // Buscar ou criar curso se fornecido
+    let cursoId = teamExists.id_curso;
+    if (data.course) {
+      let curso = await prisma.cursos.findFirst({
+        where: { nome_curso: data.course }
+      });
+
+      if (!curso) {
+        curso = await prisma.cursos.create({
+          data: {
+            nome_curso: data.course,
+            sigla_curso: data.course.substring(0, 5).toUpperCase()
+          }
+        });
+      }
+      cursoId = curso.id_curso;
+    }
+
+    // Atualizar o time
+    const updatedTeam = await prisma.times.update({
+      where: { id_times: timeId },
+      data: {
+        nome_time: data.name || data.nome_time,
+        sala: data.year || data.sala,
+        id_curso: cursoId,
+        id_categoria: data.categoriaId || teamExists.id_categoria
+      },
+      include: {
+        curso: true,
+        categoria: {
+          include: {
+            modalidade: true
+          }
+        }
+      }
+    });
+
+    return NextResponse.json(updatedTeam, { status: 200 });
+
+  } catch (error) {
+    console.error("Erro ao atualizar time:", error);
+    return NextResponse.json({ message: "Não foi possível atualizar o time." }, { status: 500 });
+  }
 }
 
+// DELETE - Deletar um time
 export async function DELETE(request, { params }) {
-    try{
-        const {id} = await params; // Obtém o ID do time a partir dos parâmetros da requisição
+  try {
+    const { id } = await params;
+    const timeId = parseInt(id, 10);
 
-        const idTime = parseInt(id, 10); // Converte o ID para um número inteiro
-        if (isNaN(idTime)) {
-        return NextResponse.json({ message: "ID inválido." }, { status: 400 });
-        }
-        // 1. Verifica se o time existe antes de tentar deletar
-        const teamExists = await prisma.times.findUnique({
-        where: {
-            id_times: idTime,
-        },
-        });
-        if (!teamExists) {
-        return NextResponse.json({ message: "Time não encontrado." }, { status: 404 });
-        }
-        // 2. Se o time existir, prossegue para deletar o time
-        // O método 'delete' do Prisma é usado para remover o registro do banco de dados.   
-        // Deleta o time com o ID fornecido
-        const deletedTeam = await prisma.times.delete({
-        where: { id_times: idTime,},
-        });
-
-        // Retorna o time deletado como resposta
-        return NextResponse.json(deletedTeam, {message: "Time deletado com sucesso."},{ status: 200 });
-    
-    } catch (error) {
-        console.error("Erro ao deletar time:", error);
-        return NextResponse.json({ message: "Não foi possível deletar o time." }, { status: 500 });
+    if (isNaN(timeId)) {
+      return NextResponse.json({ message: "ID inválido." }, { status: 400 });
     }
+
+    // Verificar se o time existe
+    const teamExists = await prisma.times.findUnique({
+      where: { id_times: timeId }
+    });
+
+    if (!teamExists) {
+      return NextResponse.json({ message: "Time não encontrado." }, { status: 404 });
+    }
+
+    // Deletar o time (relacionamentos são tratados pelo Prisma schema)
+    const deletedTeam = await prisma.times.delete({
+      where: { id_times: timeId }
+    });
+
+    return NextResponse.json(
+      { message: "Time deletado com sucesso.", team: deletedTeam },
+      { status: 200 }
+    );
+
+  } catch (error) {
+    console.error("Erro ao deletar time:", error);
+    return NextResponse.json({ message: "Não foi possível deletar o time." }, { status: 500 });
+  }
 }

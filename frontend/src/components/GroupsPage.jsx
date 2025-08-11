@@ -1,209 +1,342 @@
-"use client";
-
-import React, { useState } from 'react';
-import { X } from 'lucide-react';
-
-import { Button, Select } from '../components/common';
-
-const courses = ['ETEL', 'ADA', 'DS', 'CNAT', 'EDA', 'ETIQ', 'EVE'];
-const years = ['1º', '2º', '3º'];
-let teamIdCounter = 1;
-const seededTeams = [];
-for (const course of courses) {
-    for (const year of years) {
-        seededTeams.push({
-            id: teamIdCounter++,
-            name: `${year} ${course}`,
-            course: course,
-            playersCount: Math.floor(Math.random() * 5) + 10,
-        });
-    }
-}
-
-const mockDataTeams = seededTeams;
+'use client';
+import React, { useState, useEffect } from 'react';
+import { Shuffle, Users, Trophy, Play } from 'lucide-react';
+import { Modal } from '@/components/Modal';
+import { Button, Select, CardSplat } from '@/components/common';
+import { useTournament } from '@/contexts/TournamentContext';
 
 export const GroupsPage = () => {
-    const [numGroups, setNumGroups] = useState('');
+    const { selectedTournament } = useTournament();
+    const [modalidades, setModalidades] = useState([]);
+    const [grupos, setGrupos] = useState([]);
+    const [timesDisponiveis, setTimesDisponiveis] = useState([]);
+    const [selectedModalidade, setSelectedModalidade] = useState('');
+    const [selectedGenero, setSelectedGenero] = useState('');
+    const [quantidadeGrupos, setQuantidadeGrupos] = useState(''); // NOVO
+    const [generos] = useState(['Masculino', 'Feminino']);
+    const [loading, setLoading] = useState(true);
 
-    const [availableTeams, setAvailableTeams] = useState(mockDataTeams);
+    useEffect(() => {
+        loadInitialData();
+    }, []);
 
-    const [selectedTeams, setSelectedTeams] = useState([]);
+    useEffect(() => {
+        loadTimesDisponiveis();
+    }, [selectedModalidade, selectedGenero]);
 
-    const [formedGroups, setFormedGroups] = useState({});
+    useEffect(() => {
+        loadGrupos();
+    }, [selectedModalidade, selectedGenero, selectedTournament]);
 
-    const groupOptions = [2, 4, 6, 8];
+    const loadInitialData = async () => {
+        try {
+            const [modalidadesRes] = await Promise.all([
+                fetch('/api/modalidades')
+            ]);
 
-    const handleSelectTeam = (teamToMove) => {
-        setSelectedTeams(prev => {
-            if (!prev.find(team => team.id === teamToMove.id)) {
-                return [...prev, teamToMove];
+            const modalidadesData = await modalidadesRes.json();
+
+            setModalidades(modalidadesData);
+        } catch (error) {
+            console.error('Erro ao carregar dados:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const loadGrupos = async () => {
+        if (!selectedTournament || !selectedModalidade || !selectedGenero) return;
+
+        try {
+            const response = await fetch(`/api/grupos?torneioId=${selectedTournament.id}&modalidadeId=${selectedModalidade}&genero=${selectedGenero}`);
+            const data = await response.json();
+            setGrupos(data);
+        } catch (error) {
+            console.error('Erro ao carregar grupos:', error);
+        }
+    };
+
+    const loadTimesDisponiveis = async () => {
+        if (!selectedModalidade || !selectedGenero || !selectedTournament) {
+            setTimesDisponiveis([]);
+            return;
+        }
+
+        try {
+            const response = await fetch(`/api/times-disponiveis?modalidadeId=${selectedModalidade}&genero=${selectedGenero}&torneioId=${selectedTournament.id}`);
+            const data = await response.json();
+            setTimesDisponiveis(data);
+            console.log(`Times disponíveis para ${selectedGenero}:`, data);
+            
+            // Sugerir quantidade de grupos baseado no número de times
+            if (data.length > 0) {
+                const gruposSugeridos = Math.ceil(data.length / 4); // 4 times por grupo
+                setQuantidadeGrupos(gruposSugeridos.toString());
             }
-            return prev;
-        });
-        setAvailableTeams(prev => prev.filter(team => team.id !== teamToMove.id));
-    };
-
-    const handleRemoveSelectedTeam = (teamToRemove) => {
-        setSelectedTeams(prev => prev.filter(team => team.id !== teamToRemove.id));
-        setAvailableTeams(prev => [...prev, teamToRemove].sort((a, b) => a.id - b.id));
-    };
-
-    const handleSelectAllAvailable = () => {
-        setSelectedTeams(prev => [...prev, ...availableTeams]);
-        setAvailableTeams([]);
-    };
-
-    const handleSelectAllSelected = () => {
-        setAvailableTeams(prev => [...prev, ...selectedTeams]);
-        setSelectedTeams([]);
-    };
-
-    const generateGroups = () => {
-        if (!numGroups || parseInt(numGroups) === 0) {
-            alert('Por favor, selecione a quantidade de grupos.');
-            return;
+        } catch (error) {
+            console.error('Erro ao carregar times disponíveis:', error);
+            setTimesDisponiveis([]);
         }
-        if (selectedTeams.length < parseInt(numGroups)) {
-            alert('Número insuficiente de equipes selecionadas para formar os grupos. Você precisa de pelo menos uma equipe por grupo.');
+    };
+
+    const handleSorteio = async () => {
+        if (!selectedTournament || !selectedModalidade || !selectedGenero) {
+            alert('Selecione Modalidade e Gênero (Torneio já selecionado no Dashboard)');
             return;
         }
 
-        const teamsToDistribute = [...selectedTeams];
-        const newGroups = {};
-
-        for (let i = 0; i < parseInt(numGroups); i++) {
-            newGroups[`GRUPO ${String.fromCharCode(65 + i)}`] = [];
+        if (!quantidadeGrupos || parseInt(quantidadeGrupos) < 1) {
+            alert('Selecione a quantidade de grupos');
+            return;
         }
 
-        let currentGroupIndex = 0;
-        while (teamsToDistribute.length > 0) {
-            const team = teamsToDistribute.shift();
-            const groupName = `GRUPO ${String.fromCharCode(65 + (currentGroupIndex % parseInt(numGroups)))}`;
-            newGroups[groupName].push(team);
-            currentGroupIndex++;
+        if (timesDisponiveis.length < parseInt(quantidadeGrupos)) {
+            alert(`Número insuficiente de times. Você tem ${timesDisponiveis.length} times e quer ${quantidadeGrupos} grupos.`);
+            return;
         }
 
-        setFormedGroups(newGroups);
+        // Verificar se já existe sorteio
+        const jaTemSorteio = grupos.length > 0;
+        const mensagem = jaTemSorteio 
+            ? `REFAZER sorteio de ${timesDisponiveis.length} times em ${quantidadeGrupos} grupos? O sorteio atual será substituído.`
+            : `Realizar sorteio de ${timesDisponiveis.length} times em ${quantidadeGrupos} grupos?`;
+
+        if (!confirm(mensagem)) {
+            return;
+        }
+
+        try {
+            const response = await fetch('/api/grupos/sorteio', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    torneioId: selectedTournament.id,
+                    modalidadeId: selectedModalidade,
+                    genero: selectedGenero,
+                    quantidadeGrupos: parseInt(quantidadeGrupos)
+                })
+            });
+
+            if (response.ok) {
+                await loadGrupos();
+                alert(jaTemSorteio ? 'Sorteio refeito com sucesso!' : 'Sorteio realizado com sucesso!');
+            } else {
+                const error = await response.json();
+                alert(error.error || 'Erro ao realizar sorteio');
+            }
+        } catch (error) {
+            console.error('Erro ao realizar sorteio:', error);
+            alert('Erro ao realizar sorteio');
+        }
     };
+
+    const gerarChaveamento = async () => {
+        if (grupos.length === 0) {
+            alert('Realize o sorteio primeiro');
+            return;
+        }
+
+        if (!confirm('Gerar chaveamento automático? Esta ação criará todas as partidas otimizadas.')) {
+            return;
+        }
+
+        try {
+            const response = await fetch('/api/matches/generate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    torneioId: selectedTournament.id,
+                    modalidadeId: selectedModalidade,
+                    genero: selectedGenero
+                })
+            });
+
+            if (response.ok) {
+                const result = await response.json();
+                alert(`Chaveamento gerado com sucesso! ${result.partidasGeradas} partidas criadas.`);
+            } else {
+                const error = await response.json();
+                alert(error.error || 'Erro ao gerar chaveamento');
+            }
+        } catch (error) {
+            console.error('Erro ao gerar chaveamento:', error);
+            alert('Erro ao gerar chaveamento');
+        }
+    };
+
+    if (loading) {
+        return <div className="flex justify-center items-center h-64">Carregando...</div>;
+    }
 
     return (
-        <div className="flex min-h-screen dark:bg-gray-900 text-gray-900 dark:text-gray-100">
-            <main className="flex-1">
-                <div className="container">
-                    <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-6">GRUPOS</h1>
+        <>
+            <div className="space-y-6">
+                <div className="flex flex-wrap justify-between items-center gap-4">
+                    <div>
+                        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">GRUPOS</h1>
+                        {selectedTournament && (
+                            <p className="text-gray-500 dark:text-gray-400">
+                                Torneio: {selectedTournament.name}
+                            </p>
+                        )}
+                    </div>
+                    <div className="flex gap-2">
+                        <Button onClick={handleSorteio} disabled={!selectedTournament || !selectedModalidade || !selectedGenero || !quantidadeGrupos}>
+                            <Shuffle size={20} className="mr-2" />
+                            Realizar Sorteio
+                        </Button>
+                        <Button onClick={gerarChaveamento} disabled={grupos.length === 0}>
+                            <Play size={20} className="mr-2" />
+                            Gerar Chaveamento
+                        </Button>
+                    </div>
+                </div>
 
-                    <div className="space-y-6">
-                        <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">MONTAR EQUIPES</h2>
-
-                        <div className="flex flex-col sm:flex-row items-start sm:items-end gap-4 mb-8">
-                            <div className="w-full sm:w-auto flex-grow">
+                {!selectedTournament ? (
+                    <div className="text-center py-12">
+                        <Trophy size={48} className="mx-auto text-gray-400 mb-4" />
+                        <p className="text-gray-500 dark:text-gray-400 text-lg">
+                            Selecione um torneio no Dashboard primeiro
+                        </p>
+                    </div>
+                ) : (
+                    <>
+                        {/* Filtros - modalidade, gênero e quantidade de grupos */}
+                        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm p-4">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <Select
-                                    label="QUANTIDADE DE GRUPOS"
-                                    value={numGroups}
-                                    onChange={(e) => setNumGroups(e.target.value)}
-                                    className="w-full sm:w-64"
+                                    label="Modalidade"
+                                    value={selectedModalidade}
+                                    onChange={(e) => {
+                                        setSelectedModalidade(e.target.value);
+                                        setSelectedGenero('');
+                                        setQuantidadeGrupos('');
+                                        setGrupos([]);
+                                        setTimesDisponiveis([]);
+                                    }}
                                 >
-                                    <option value="">Selecione a Quantidade de Grupos</option>
-                                    {groupOptions.map(num => (
-                                        <option key={num} value={num}>{num}</option>
+                                    <option value="">Selecione a modalidade</option>
+                                    {modalidades.map(m => (
+                                        <option key={m.id} value={m.id}>{m.nome}</option>
+                                    ))}
+                                </Select>
+
+                                <Select
+                                    label="Gênero"
+                                    value={selectedGenero}
+                                    onChange={(e) => {
+                                        setSelectedGenero(e.target.value);
+                                        setQuantidadeGrupos('');
+                                        loadTimesDisponiveis();
+                                        loadGrupos();
+                                    }}
+                                >
+                                    <option value="">Selecione o gênero</option>
+                                    {generos.map(g => (
+                                        <option key={g} value={g}>{g}</option>
+                                    ))}
+                                </Select>
+
+                                <Select
+                                    label="Quantidade de Grupos"
+                                    value={quantidadeGrupos}
+                                    onChange={(e) => setQuantidadeGrupos(e.target.value)}
+                                    disabled={timesDisponiveis.length === 0}
+                                >
+                                    <option value="">Selecione a quantidade</option>
+                                    {Array.from({ length: Math.max(1, Math.ceil(timesDisponiveis.length / 2)) }, (_, i) => i + 1).map(num => (
+                                        <option key={num} value={num}>
+                                            {num} grupo{num > 1 ? 's' : ''} ({Math.ceil(timesDisponiveis.length / num)} times/grupo)
+                                        </option>
                                     ))}
                                 </Select>
                             </div>
-                            <Button
-                                onClick={generateGroups}
-                                disabled={selectedTeams.length === 0 || !numGroups || parseInt(numGroups) === 0}
-                            >
-                                GERAR DISPOSIÇÃO
-                            </Button>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {/* Preview dos Times que Participarão do Sorteio */}
+                        {timesDisponiveis.length > 0 && (
                             <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm p-4">
-                                <div className="flex items-center gap-2 mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
-                                    <input
-                                        type="checkbox"
-                                        id="selectAllAvailable"
-                                        className="form-checkbox h-4 w-4 text-red-600 rounded border-gray-300 dark:border-gray-600 focus:ring-red-500 bg-white dark:bg-gray-900"
-                                        onChange={handleSelectAllAvailable}
-                                        checked={availableTeams.length === 0 && selectedTeams.length > 0}
-                                        disabled={availableTeams.length === 0}
-                                    />
-                                    <label htmlFor="selectAllAvailable" className="font-semibold text-gray-800 dark:text-gray-200">SELECIONAR EQUIPES</label>
+                                <div className="flex justify-between items-center mb-4">
+                                    <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">
+                                        Times que Participarão do Sorteio ({timesDisponiveis.length})
+                                    </h3>
+                                    <div className="text-sm text-gray-500 dark:text-gray-400">
+                                        {quantidadeGrupos && (
+                                            <span>
+                                                {quantidadeGrupos} grupos • ~{Math.ceil(timesDisponiveis.length / parseInt(quantidadeGrupos))} times por grupo
+                                            </span>
+                                        )}
+                                    </div>
                                 </div>
-                                <div className="space-y-2 max-h-96 overflow-y-auto pr-2">
-                                    {availableTeams.length === 0 ? (
-                                        <p className="text-gray-500 dark:text-gray-400 text-sm">Todas as equipes foram selecionadas ou não há equipes disponíveis.</p>
-                                    ) : (
-                                        availableTeams.map(team => (
-                                            <button
-                                                key={team.id}
-                                                onClick={() => handleSelectTeam(team)}
-                                                className="w-full text-left px-3 py-2 border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-200 rounded-md hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors"
-                                            >
-                                                {team.name}
-                                            </button>
-                                        ))
-                                    )}
-                                </div>
-                            </div>
-
-                            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm p-4">
-                                <div className="flex items-center gap-2 mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
-                                    <input
-                                        type="checkbox"
-                                        id="selectAllSelected"
-                                        className="form-checkbox h-4 w-4 text-red-600 rounded border-gray-300 dark:border-gray-600 focus:ring-red-500 bg-white dark:bg-gray-900"
-                                        onChange={handleSelectAllSelected}
-                                        checked={selectedTeams.length === 0 && availableTeams.length > 0}
-                                        disabled={selectedTeams.length === 0}
-                                    />
-                                    <label htmlFor="selectAllSelected" className="font-semibold text-gray-800 dark:text-gray-200">EQUIPES DISPOSTAS</label>
-                                </div>
-                                <div className="space-y-2 max-h-96 overflow-y-auto pr-2">
-                                    {selectedTeams.length === 0 ? (
-                                        <p className="text-gray-500 dark:text-gray-400 text-sm">Nenhuma equipe disposta ainda. Selecione equipes na coluna ao lado.</p>
-                                    ) : (
-                                        selectedTeams.map(team => (
-                                            <div key={team.id} className="flex justify-between items-center px-3 py-2 border border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-200 rounded-md">
-                                                <span>{team.name}</span>
-                                                <button onClick={() => handleRemoveSelectedTeam(team)} className="text-gray-500 hover:text-red-600 dark:hover:text-red-400 p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
-                                                    <X size={16} />
-                                                </button>
+                                
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                                    {timesDisponiveis.map(time => (
+                                        <div key={time.id} className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                                            <Trophy size={16} className="text-blue-500" />
+                                            <div className="flex-1">
+                                                <p className="font-semibold text-gray-900 dark:text-gray-100">{time.nome}</p>
+                                                <p className="text-sm text-gray-500 dark:text-gray-400">
+                                                    {time.curso} • {time.jogadoresCount} jogadores
+                                                </p>
                                             </div>
-                                        ))
-                                    )}
-                                </div>
-                            </div>
-
-                            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm p-4 col-span-1 lg:col-span-1">
-                                <h2 className="font-semibold text-gray-800 dark:text-gray-200 mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">GRUPOS FORMADOS</h2>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-h-96 overflow-y-auto pr-2">
-                                    {Object.keys(formedGroups).length === 0 ? (
-                                        <p className="col-span-full text-gray-500 dark:text-gray-400 text-sm">Nenhum grupo formado ainda. Clique em "Gerar Disposição".</p>
-                                    ) : (
-                                        Object.keys(formedGroups).map(groupName => (
-                                            <div key={groupName} className="border border-gray-200 dark:border-gray-700 rounded-md p-3">
-                                                <h3 className="font-bold text-gray-900 dark:text-gray-100 mb-2">{groupName}</h3>
-                                                <div className="space-y-1">
-                                                    {formedGroups[groupName].length === 0 ? (
-                                                        <p className="text-gray-500 dark:text-gray-400 text-xs">Nenhuma equipe neste grupo.</p>
-                                                    ) : (
-                                                        formedGroups[groupName].map(team => (
-                                                            <div key={team.id} className="bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-2 py-1 rounded text-sm">
-                                                                {team.name}
-                                                            </div>
-                                                        ))
-                                                    )}
-                                                </div>
+                                            <div className="text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 px-2 py-1 rounded">
+                                                #{time.id}
                                             </div>
-                                        ))
-                                    )}
+                                        </div>
+                                    ))}
                                 </div>
+
+                                {quantidadeGrupos && (
+                                    <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/30 rounded-lg">
+                                        <p className="text-sm text-blue-700 dark:text-blue-300">
+                                            <strong>Preview do Sorteio:</strong> {timesDisponiveis.length} times serão distribuídos em {quantidadeGrupos} grupos, 
+                                            com aproximadamente {Math.ceil(timesDisponiveis.length / parseInt(quantidadeGrupos))} times por grupo.
+                                        </p>
+                                    </div>
+                                )}
                             </div>
+                        )}
+
+                        {/* Exibir Grupos */}
+                        <div className="grid gap-6">
+                            {grupos.length === 0 ? (
+                                <div className="text-center py-12">
+                                    <Users size={48} className="mx-auto text-gray-400 mb-4" />
+                                    <p className="text-gray-500 dark:text-gray-400 text-lg">
+                                        {selectedTournament && selectedModalidade && selectedGenero
+                                            ? 'Nenhum grupo encontrado. Realize o sorteio.'
+                                            : 'Selecione Torneio, Modalidade e Gênero'
+                                        }
+                                    </p>
+                                </div>
+                            ) : (
+                                grupos.map(grupo => (
+                                    <div key={grupo.nome} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm p-6 relative overflow-hidden">
+                                        <div className="relative z-10">
+                                            <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">
+                                                GRUPO {grupo.nome}
+                                            </h3>
+                                            
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                {grupo.times.map(time => (
+                                                    <div key={time.id} className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                                                        <Trophy size={16} className="text-yellow-500" />
+                                                        <div>
+                                                            <p className="font-semibold text-gray-900 dark:text-gray-100">{time.nome}</p>
+                                                            <p className="text-sm text-gray-500 dark:text-gray-400">{time.curso.nome}</p>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                        <CardSplat />
+                                    </div>
+                                ))
+                            )}
                         </div>
-                    </div>
-                </div>
-            </main>
-        </div>
+                    </>
+                )}
+            </div>
+        </>
     );
 };
