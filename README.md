@@ -16,8 +16,12 @@ npm install
 
 # 4. Configurar banco
 npx prisma generate
+
 npx prisma db push
 
 
-# 5. Rodar o projeto
+# 5. Se quiser popular o banco de dados
+npx prisma db seed
+
+# 6. Rodar o projeto
 npm run dev
