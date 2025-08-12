@@ -3,13 +3,14 @@
 import React, { useState, useEffect } from 'react';
 import { Sidebar } from '@/components/Sidebar';
 import { LoginPage } from '@/components/LoginPage';
-import { DashboardPage } from '@/components/DashboardPage';
+import { Dashboard } from '@/components/DashboardPage';
 import { SeasonsPage } from '@/components/SeasonsPage';
 import { TeamsPage } from '@/components/TeamsPage';
 import { RegistrationsPage } from '@/components/RegistrationsPage';
 import { BracketsPage } from '@/components/BracketsPage';
 import { MatchesPage } from '@/components/MatchesPage';
 import { GroupsPage } from '@/components/GroupsPage';
+import { TournamentProvider } from '@/contexts/TournamentContext';
 
 export default function Home() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -31,33 +32,35 @@ export default function Home() {
 
   const renderPage = () => {
     switch (currentPage) {
-      case 'dashboard': return <DashboardPage />;
+      case 'dashboard': return <Dashboard />;
       case 'seasons': return <SeasonsPage />;
       case 'teams': return <TeamsPage />;
       case 'registrations': return <RegistrationsPage />;
       case 'brackets': return <BracketsPage />;
       case 'matches': return <MatchesPage />;
       case 'groups': return <GroupsPage />;
-      default: return <DashboardPage />;
+      default: return <Dashboard />;
     }
   };
 
   return (
-    <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
-      <Sidebar 
-        isSidebarOpen={isSidebarOpen}
-        toggleSidebar={toggleSidebar}
-        currentPage={currentPage}
-        setCurrentPage={setCurrentPage}
-        isDarkMode={isDarkMode}
-        toggleDarkMode={toggleDarkMode}
-        logout={() => setIsLoggedIn(false)}
-      />
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto">
-          {renderPage()}
-        </main>
+    <TournamentProvider>
+      <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
+        <Sidebar 
+          isSidebarOpen={isSidebarOpen}
+          toggleSidebar={toggleSidebar}
+          currentPage={currentPage}
+          setCurrentPage={setCurrentPage}
+          isDarkMode={isDarkMode}
+          toggleDarkMode={toggleDarkMode}
+          logout={() => setIsLoggedIn(false)}
+        />
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto">
+            {renderPage()}
+          </main>
+        </div>
       </div>
-    </div>
+    </TournamentProvider>
   );
 }

@@ -5,249 +5,300 @@ import { Modal } from '@/components/Modal';
 import { Button, Input, Select, CardSplat } from '@/components/common';
 
 export const RegistrationsPage = () => {
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingItem, setEditingItem] = useState(null);
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [editingItem, setEditingItem] = useState(null);
+    const [category, setCategory] = useState('');
+    
+    const [sports, setSports] = useState([]);
+    const [locations, setLocations] = useState([]);
+    const [courses, setCourses] = useState([]);
+    const [administrators, setAdministrators] = useState([
+        { id: 1, name: 'Admin Principal', email: 'admin@interclasse.com', role: 'Super Admin' },
+        { id: 2, name: 'João Silva', email: 'joao@interclasse.com', role: 'Moderador' },
+        { id: 3, name: 'Maria Santos', email: 'maria@interclasse.com', role: 'Editor' }
+    ]);
+    const [loading, setLoading] = useState(true);
 
-  // Estados para os dados do backend
-  const [sports, setSports] = useState([]);
-  const [places, setPlaces] = useState([]);
-  const [divisions, setDivisions] = useState([]);
+    const [formData, setFormData] = useState({
+        name: '',
+        sigla: ''
+    });
 
-  // Busca os dados do backend
-  async function fetchData() {
-    try {
-      const [sportsRes, placesRes, divisionsRes] = await Promise.all([
-        fetch('/api/sports').then(res => res.json()),
-        fetch('/api/places').then(res => res.json()),
-        fetch('/api/division').then(res => res.json()),
-      ]);
+    useEffect(() => {
+        loadAllData();
+    }, []);
 
-      setSports(sportsRes);
-      setPlaces(placesRes);
-      setDivisions(divisionsRes);
-    } catch (err) {
-      console.error('Erro ao carregar dados:', err);
-    }
-  }
+    const loadAllData = async () => {
+        try {
+            const [sportsRes, locationsRes, coursesRes] = await Promise.all([
+                fetch('/api/modalidades'),
+                fetch('/api/locais'),
+                fetch('/api/cursos')
+            ]);
 
-  // Carrega os dados quando o componente montar
-  useEffect(() => {
-    fetchData();
-  }, []);
+            const sportsData = await sportsRes.json();
+            const locationsData = await locationsRes.json();
+            const coursesData = await coursesRes.json();
 
-  const handleEdit = (item) => {
-    setEditingItem(item);
-    setIsModalOpen(true);
-  };
+            setSports(sportsData);
+            setLocations(locationsData);
+            setCourses(coursesData);
+        } catch (error) {
+            console.error('Erro ao carregar dados:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
 
-  const handleCreate = () => {
-    setEditingItem(null);
-    setIsModalOpen(true);
-  };
+    const handleEdit = (item, type) => {
+        setEditingItem(item);
+        setCategory(type);
+        setFormData({
+            name: item.nome || item.name || '',
+            sigla: item.sigla || ''
+        });
+        setIsModalOpen(true);
+    };
 
-  const closeModal = () => setIsModalOpen(false);
+    const handleCreate = () => {
+        setEditingItem(null);
+        setCategory('');
+        setFormData({ name: '', sigla: '' });
+        setIsModalOpen(true);
+    };
 
-  // Função para criar (POST)
-  const handleSave = async (e) => {
-    e.preventDefault();
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        
+        try {
+            let endpoint = '';
+            let body = {};
+            let method = editingItem ? 'PUT' : 'POST';
 
-    const type = e.target[0].value;  // Categoria (Select)
-    const name = e.target[1].value;  // Nome do cadastro (Input)
-
-    let endpoint = '';
-    let body = {};
-
-    if (type === 'Esportes') {
-      endpoint = '/api/sports';
-      body = { nome_modalidade: name };
-    } else if (type === 'Locais') {
-      endpoint = '/api/places';
-      body = { nome_local: name };
-    } else if (type === 'Categorias') {
-      endpoint = '/api/division';
-      body = { nome_categoria: name };
-    } else {
-      alert('Escolha uma categoria válida');
-      return;
-    }
-
-    try {
-      const res = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.message || 'Erro ao salvar');
-      }
-
-      await res.json(); // lê resposta (não está sendo usado, mas pode logar se quiser)
-
-      setIsModalOpen(false);  // Fecha modal
-      await fetchData();      // Atualiza listas
-    } catch (err) {
-      console.error(err);
-      alert(err.message);
-    }
-  };
-
-    const handleModify = async (e) => {
-    e.preventDefault();
-    const type = e.target[0].value;
-    const name = e.target[1].value;
-    let endpoint = '';
-    let body = {};
-
-    if (type === 'Esportes') {
-      endpoint = `/api/sports/${editingItem.id_modalidade}`;
-      body = { nome_modalidade: name };
-    } else if (type === 'Locais') {
-      endpoint = `/api/places/${editingItem.id_local}`;
-      body = { nome_local: name };
-    } else if (type === 'Categorias') {
-      endpoint = `/api/division/${editingItem.id_categoria}`;
-      body = { nome_categoria: name };
-    } else {
-      alert('Escolha uma categoria válida');
-      return;
-    }
-
-    try {
-      const res = await fetch(endpoint, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-      if (!res.ok) throw new Error('Erro ao atualizar');
-      setIsModalOpen(false);
-      await fetchData();
-    } catch (err) {
-      alert(err.message);
-    }
-  };
-
-  const handleDeleteById = async (item) => {
-    let endpoint = '';
-    if (item.nome_modalidade) {
-      endpoint = `/api/sports/${item.id_modalidade}`;
-    } else if (item.nome_local) {
-      endpoint = `/api/places/${item.id_local}`;
-    } else if (item.nome_categoria) {
-      endpoint = `/api/division/${item.id_categoria}`;
-    } else {
-      alert('Tipo desconhecido');
-      return;
-    }
-
-    try {
-      const res = await fetch(endpoint, { method: 'DELETE' });
-      if (!res.ok) throw new Error('Erro ao excluir');
-      await fetchData();
-    } catch (err) {
-      alert(err.message);
-    }
-  };
-
-
-  return (
-    <>
-      <div className="space-y-8">
-        <div className="flex flex-wrap justify-between items-center gap-4">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">CADASTROS</h1>
-          <div className="flex items-center gap-4">
-            <button className="text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400">
-              <Trash2 size={24} />
-            </button>
-            <Button onClick={handleCreate}>Cadastrar Novo</Button>
-          </div>
-        </div>
-
-        {/* ESPORTES */}
-        <div>
-          <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">ESPORTES</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {sports.map(item => (
-              <div key={item.id_modalidade} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm p-4 relative overflow-hidden">
-                <div className="relative z-10">
-                  <h3 className="font-bold text-lg mb-2 text-gray-900 dark:text-gray-100">{item.nome_modalidade}</h3>
-                  <div className="flex gap-2">
-                    <Button onClick={() => handleEdit(item)}>Editar</Button>
-                    <Button variant="secondary" onClick={() => handleDeleteById(item)}>Excluir</Button>
-                  </div>
-                </div>
-                <CardSplat />
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* LOCAIS */}
-        <div>
-          <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">LOCAIS</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {places.map(item => (
-              <div key={item.id_local} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm p-4 relative overflow-hidden">
-                <div className="relative z-10">
-                  <h3 className="font-bold text-lg mb-2 text-gray-900 dark:text-gray-100">{item.nome_local}</h3>
-                  <div className="flex gap-2">
-                    <Button onClick={() => handleEdit(item)}>Editar</Button>
-                    <Button variant="secondary"onClick={() => handleDeleteById(item)}>Excluir</Button>
-                  </div>
-                </div>
-                <CardSplat />
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Categorias */}
-        <div>
-          <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">CATEGORIAS</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {divisions.map(item => (
-              <div key={item.id_categoria} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm p-4 relative overflow-hidden">
-                <div className="relative z-10">
-                  <h3 className="font-bold text-lg mb-2 text-gray-900 dark:text-gray-100">{item.nome_categoria}</h3>
-                  <div className="flex gap-2">
-                    <Button onClick={() => handleEdit(item)}>Editar</Button>
-                    <Button variant="secondary" onClick={() => handleDeleteById(item)}>Excluir</Button>
-                  </div>
-                </div>
-                <CardSplat />
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      
-
-      {/* MODAL DE CRIAÇÃO/EDIÇÃO */}
-      <Modal isOpen={isModalOpen} onClose={closeModal} title={editingItem ? "EDITAR CADASTRO" : "CRIAR CADASTRO"}>
-        <form className="space-y-4" onSubmit={editingItem ? handleModify : handleSave}>
-          <Select label="Categoria" defaultValue={editingItem ? editingItem.nome_modalidade ? 'Esportes' : editingItem.nome_local ? 'Locais' : editingItem.nome_categoria ? 'Categorias' : '' : ''}>
-            <option>Selecionar</option>
-            <option>Esportes</option>
-            <option>Locais</option>
-            <option>Categorias</option>
-          </Select>
-          <Input
-            label="Nome do Cadastro"
-            placeholder="Placeholder"
-            defaultValue={
-              editingItem?.nome_local ||
-              editingItem?.nome_modalidade ||
-              editingItem?.nome_categoria ||
-              ''
+            switch (category) {
+                case 'Esportes':
+                    endpoint = editingItem ? `/api/modalidades/${editingItem.id}` : '/api/modalidades';
+                    body = { name: formData.name };
+                    break;
+                case 'Locais':
+                    endpoint = editingItem ? `/api/locais/${editingItem.id}` : '/api/locais';
+                    body = { name: formData.name };
+                    break;
+                case 'Cursos':
+                    endpoint = editingItem ? `/api/cursos/${editingItem.id}` : '/api/cursos';
+                    body = { name: formData.name, sigla: formData.sigla };
+                    break;
+                default:
+                    alert('Selecione uma categoria');
+                    return;
             }
-          />
-          <div className="flex justify-end pt-4">
-            <Button type="submit">Salvar</Button>
-          </div>
-        </form>
-      </Modal>
-    </>
-  );
+
+            const response = await fetch(endpoint, {
+                method: method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            });
+
+            if (response.ok) {
+                await loadAllData();
+                setIsModalOpen(false);
+                alert(`${category.slice(0, -1)} ${editingItem ? 'editado' : 'criado'} com sucesso!`);
+            } else {
+                alert(`Erro ao ${editingItem ? 'editar' : 'criar'} cadastro`);
+            }
+        } catch (error) {
+            console.error('Erro ao salvar:', error);
+            alert('Erro ao salvar cadastro');
+        }
+    };
+
+    const handleDelete = async (item, type) => {
+        if (!confirm(`Tem certeza que deseja excluir "${item.nome || item.name}"?`)) {
+            return;
+        }
+
+        try {
+            let endpoint = '';
+            switch (type) {
+                case 'Esportes':
+                    endpoint = `/api/modalidades/${item.id}`;
+                    break;
+                case 'Locais':
+                    endpoint = `/api/locais/${item.id}`;
+                    break;
+                case 'Cursos':
+                    endpoint = `/api/cursos/${item.id}`;
+                    break;
+                default:
+                    return;
+            }
+
+            const response = await fetch(endpoint, {
+                method: 'DELETE'
+            });
+
+            if (response.ok) {
+                await loadAllData();
+                alert(`${type.slice(0, -1)} excluído com sucesso!`);
+            } else {
+                alert('Erro ao excluir cadastro');
+            }
+        } catch (error) {
+            console.error('Erro ao excluir:', error);
+            alert('Erro ao excluir cadastro');
+        }
+    };
+
+    const closeModal = () => {
+        setIsModalOpen(false);
+        setFormData({ name: '', sigla: '' });
+        setCategory('');
+        setEditingItem(null);
+    };
+
+    if (loading) {
+        return <div className="flex justify-center items-center h-64">Carregando...</div>;
+    }
+
+    return (
+        <>
+            <div className="space-y-8">
+                <div className="flex flex-wrap justify-between items-center gap-4">
+                    <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">CADASTROS</h1>
+                    <Button onClick={handleCreate}>Cadastrar Novo</Button>
+                </div>
+
+                <div>
+                    <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">ESPORTES</h2>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {sports.map(item => (
+                            <div key={item.id} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm p-4 relative overflow-hidden">
+                                <div className="relative z-10">
+                                    <h3 className="font-bold text-lg mb-4 text-gray-900 dark:text-gray-100">{item.nome}</h3>
+                                    <div className="flex gap-2">
+                                        <Button onClick={() => handleEdit(item, 'Esportes')}>Editar</Button>
+                                        <Button 
+                                            onClick={() => handleDelete(item, 'Esportes')}
+                                            className="bg-red-600 hover:bg-red-700"
+                                        >
+                                            Excluir
+                                        </Button>
+                                    </div>
+                                </div>
+                                <CardSplat />
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                <div>
+                    <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">LOCAIS</h2>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {locations.map(item => (
+                            <div key={item.id} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm p-4 relative overflow-hidden">
+                                <div className="relative z-10">
+                                    <h3 className="font-bold text-lg mb-4 text-gray-900 dark:text-gray-100">{item.nome}</h3>
+                                    <div className="flex gap-2">
+                                        <Button onClick={() => handleEdit(item, 'Locais')}>Editar</Button>
+                                        <Button 
+                                            onClick={() => handleDelete(item, 'Locais')}
+                                            className="bg-red-600 hover:bg-red-700"
+                                        >
+                                            Excluir
+                                        </Button>
+                                    </div>
+                                </div>
+                                <CardSplat />
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                <div>
+                    <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">CURSOS</h2>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {courses.map(item => (
+                            <div key={item.id} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm p-4 relative overflow-hidden">
+                                <div className="relative z-10">
+                                    <h3 className="font-bold text-lg mb-2 text-gray-900 dark:text-gray-100">{item.nome}</h3>
+                                    <p className="text-gray-600 dark:text-gray-300 text-sm mb-4">Sigla: {item.sigla}</p>
+                                    <div className="flex gap-2">
+                                        <Button onClick={() => handleEdit(item, 'Cursos')}>Editar</Button>
+                                        <Button 
+                                            onClick={() => handleDelete(item, 'Cursos')}
+                                            className="bg-red-600 hover:bg-red-700"
+                                        >
+                                            Excluir
+                                        </Button>
+                                    </div>
+                                </div>
+                                <CardSplat />
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                <div>
+                    <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">ADMINISTRADORES</h2>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {administrators.map(admin => (
+                            <div key={admin.id} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm p-4 relative overflow-hidden">
+                                <div className="relative z-10">
+                                    <h3 className="font-bold text-lg mb-2 text-gray-900 dark:text-gray-100">{admin.name}</h3>
+                                    <p className="text-gray-600 dark:text-gray-300 text-sm mb-1">{admin.email}</p>
+                                    <p className="text-gray-500 dark:text-gray-400 text-xs mb-4">{admin.role}</p>
+                                    <div className="flex gap-2">
+                                        <Button>Editar</Button>
+                                        <Button className="bg-red-600 hover:bg-red-700">Excluir</Button>
+                                    </div>
+                                </div>
+                                <CardSplat />
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </div>
+
+            <Modal isOpen={isModalOpen} onClose={closeModal} title={editingItem ? "EDITAR CADASTRO" : "CRIAR CADASTRO"}>
+                <form onSubmit={handleSubmit} className="space-y-4">
+                    <Select
+                        label="Categoria"
+                        value={category}
+                        onChange={(e) => setCategory(e.target.value)}
+                        required
+                    >
+                        <option value="">Selecionar categoria</option>
+                        <option value="Esportes">Esportes</option>
+                        <option value="Locais">Locais</option>
+                        <option value="Cursos">Cursos</option>
+                    </Select>
+                    
+                    <Input 
+                        label="Nome" 
+                        placeholder="Digite o nome" 
+                        value={formData.name}
+                        onChange={(e) => setFormData({...formData, name: e.target.value})}
+                        required
+                    />
+                    
+                    {category === 'Cursos' && (
+                        <Input 
+                            label="Sigla" 
+                            placeholder="Digite a sigla" 
+                            value={formData.sigla}
+                            onChange={(e) => setFormData({...formData, sigla: e.target.value})}
+                            required
+                        />
+                    )}
+                    
+                    <div className="flex justify-end gap-2 pt-4">
+                        <Button type="button" onClick={closeModal} className="bg-gray-500">
+                            Cancelar
+                        </Button>
+                        <Button type="submit">{editingItem ? 'Salvar' : 'Criar'}</Button>
+                    </div>
+                </form>
+            </Modal>
+        </>
+    );
 };
