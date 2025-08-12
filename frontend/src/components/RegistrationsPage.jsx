@@ -3,12 +3,16 @@ import React, { useState, useEffect } from 'react';
 import { Trash2 } from 'lucide-react';
 import { Modal } from '@/components/Modal';
 import { Button, Input, Select, Textarea, CardSplat } from '@/components/common';
+// import { TournamentContext } from '@/contexts/TournamentContext';
 
 export const RegistrationsPage = () => {
+    // Estados de controle
+    const [currentUser, setCurrentUser] = useState(null);
+    const [userLoading, setUserLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingItem, setEditingItem] = useState(null);
     const [category, setCategory] = useState('');
-    const [selectedUserCategory, setSelectedUserCategory] = useState('Administradores');
+    const [selectedUserCategory, setSelectedUserCategory] = useState('');
 
     // Estados para dados principais
     const [sports, setSports] = useState([]);
@@ -34,7 +38,28 @@ export const RegistrationsPage = () => {
 
     useEffect(() => {
         loadAllData();
+        loadCurrentUser();
     }, []);
+
+    // Função para buscar dados do usuário logado
+    const loadCurrentUser = async () => {
+        try {
+            const response = await fetch('/api/users/me');
+            
+            if (response.ok) {
+                const userData = await response.json();
+                setCurrentUser(userData);
+            } else {
+                console.error('Erro ao buscar dados do usuário');
+                setCurrentUser(null);
+            }
+        } catch (error) {
+            console.error('Erro ao buscar dados do usuário:', error);
+            setCurrentUser(null);
+        } finally {
+            setUserLoading(false);
+        }
+    };
 
     // Função para carregar todos os dados (cadastros + usuários)
     const loadAllData = async () => {
@@ -239,8 +264,23 @@ export const RegistrationsPage = () => {
         setEditingItem(null);
     };
 
-    if (loading) {
+    if (loading || userLoading) {
         return <div className="flex justify-center items-center h-64">Carregando...</div>;
+    }
+
+    // Bloquear acesso para usuários do tipo 'staff'
+    if (currentUser && currentUser.tipo_usuario === 'staff') {
+        return (
+            <div className="flex flex-col items-center justify-center h-64 text-center">
+                <h2 className="text-2xl font-bold text-red-600 mb-2">Acesso Negado</h2>
+                <p className="text-gray-700 dark:text-gray-300">
+                    Usuários do tipo <b>staff</b> não têm permissão para acessar a área de cadastros.
+                </p>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
+                    Entre em contato com um administrador se precisar de acesso.
+                </p>
+            </div>
+        );
     }
 
     return (

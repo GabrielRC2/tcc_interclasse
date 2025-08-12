@@ -11,6 +11,7 @@ import { BracketsPage } from '@/components/BracketsPage';
 import { MatchesPage } from '@/components/MatchesPage';
 import { GroupsPage } from '@/components/GroupsPage';
 import { TournamentProvider } from '@/contexts/TournamentContext';
+import { User } from 'lucide-react';
 
 export default function Home() {
   const [isLoggedIn, setIsLoggedIn] = useState(true);
@@ -41,7 +42,6 @@ export default function Home() {
       }
     }
 
-    // Se o usuário ESTÁ logado:
     switch (currentPage) {
       case 'dashboard': return <Dashboard />;
       case 'seasons': return <SeasonsPage />;

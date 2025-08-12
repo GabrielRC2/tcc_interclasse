@@ -5,6 +5,10 @@ import { Modal } from '@/components/Modal';
 import { Button, Input, Select, CardSplat } from '@/components/common';
 
 export const SeasonsPage = () => {
+    // Estados de controle de usuário
+    const [currentUser, setCurrentUser] = useState(null);
+    const [userLoading, setUserLoading] = useState(true);
+    
     const [seasons, setSeasons] = useState([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingSeason, setEditingSeason] = useState(null);
@@ -28,7 +32,28 @@ export const SeasonsPage = () => {
 
     useEffect(() => {
         loadSeasons();
+        loadCurrentUser();
     }, []);
+
+    // Função para buscar dados do usuário logado
+    const loadCurrentUser = async () => {
+        try {
+            const response = await fetch('/api/users/me');
+            
+            if (response.ok) {
+                const userData = await response.json();
+                setCurrentUser(userData);
+            } else {
+                console.error('Erro ao buscar dados do usuário');
+                setCurrentUser(null);
+            }
+        } catch (error) {
+            console.error('Erro ao buscar dados do usuário:', error);
+            setCurrentUser(null);
+        } finally {
+            setUserLoading(false);
+        }
+    };
 
     useEffect(() => {
         // Atualizar modalidades quando o nome do torneio mudar
@@ -172,8 +197,23 @@ export const SeasonsPage = () => {
         setExpandedYears(newExpanded);
     };
 
-    if (loading) {
+    if (loading || userLoading) {
         return <div className="flex justify-center items-center h-64">Carregando...</div>;
+    }
+
+    // Bloquear acesso para usuários do tipo 'staff'
+    if (currentUser && currentUser.tipo_usuario === 'staff') {
+        return (
+            <div className="flex flex-col items-center justify-center h-64 text-center">
+                <h2 className="text-2xl font-bold text-red-600 mb-2">Acesso Negado</h2>
+                <p className="text-gray-700 dark:text-gray-300">
+                    Usuários do tipo <b>staff</b> não têm permissão para acessar a área de temporadas.
+                </p>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
+                    Entre em contato com um administrador se precisar de acesso.
+                </p>
+            </div>
+        );
     }
 
     const groupedSeasons = groupSeasonsByYear();
