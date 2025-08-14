@@ -15,7 +15,7 @@ export async function GET(request, { params }) {
       );
     }
 
-    const usuario = await prisma.usuarios.findUnique({
+    const usuario = await prisma.usuario.findUnique({
       where: { id_usuario: idUsuario },
       select: {
         id_usuario: true,
@@ -57,10 +57,21 @@ export async function PUT(request, { params }) {
       );
     }
 
+    // Mapear tipo_usuario se fornecido
+    let tipoUsuarioMapeado = tipo_usuario;
+    if (tipo_usuario) {
+      const tipoUsuarioEnum = {
+        'admin': 'ADMIN',
+        'staff': 'STAFF',
+        'aluno': 'ALUNO'
+      };
+      tipoUsuarioMapeado = tipoUsuarioEnum[tipo_usuario.toLowerCase()] || tipo_usuario;
+    }
+
     const data = {
       ...(nome_usuario && { nome_usuario }),
       ...(email_usuario && { email_usuario }),
-      ...(tipo_usuario && { tipo_usuario }),
+      ...(tipoUsuarioMapeado && { tipo_usuario: tipoUsuarioMapeado }),
     };
 
     if (senha) {
@@ -68,7 +79,7 @@ export async function PUT(request, { params }) {
       data.senha_hash = await bcrypt.hash(senha, salt);
     }
 
-    const usuarioAtualizado = await prisma.usuarios.update({
+    const usuarioAtualizado = await prisma.usuario.update({
       where: { id_usuario: idUsuario },
       data,
       select: {
@@ -108,7 +119,7 @@ export async function DELETE(request, { params }) {
       );
     }
 
-    await prisma.usuarios.delete({
+    await prisma.usuario.delete({
       where: { id_usuario: idUsuario },
     });
 

@@ -12,7 +12,7 @@ export const RegistrationsPage = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingItem, setEditingItem] = useState(null);
     const [category, setCategory] = useState('');
-    const [selectedUserCategory, setSelectedUserCategory] = useState('');
+    const [selectedUserCategory, setSelectedUserCategory] = useState('Administradores');
 
     // Estados para dados principais
     const [sports, setSports] = useState([]);
@@ -45,7 +45,7 @@ export const RegistrationsPage = () => {
     const loadCurrentUser = async () => {
         try {
             const response = await fetch('/api/users/me');
-            
+
             if (response.ok) {
                 const userData = await response.json();
                 setCurrentUser(userData);
@@ -373,7 +373,8 @@ export const RegistrationsPage = () => {
                                 <Button onClick={() => {
                                     setEditingItem(null);
                                     setCategory('Usuários');
-                                    setFormData({ name: '', sigla: '', email: '', senha: '', tipo_usuario: '' });
+                                    setSelectedUserCategory('Administradores'); // Set default user category
+                                    setFormData({ name: '', sigla: '', email: '', senha: '', tipo_usuario: 'admin' });
                                     setIsModalOpen(true);
                                 }}>
                                     Cadastrar Novo Usuário
@@ -445,7 +446,7 @@ export const RegistrationsPage = () => {
                                             }}
                                             className="mt-2"
                                         >
-                                            Criar Primeiro {selectedUserCategory.slice(0, -1)}
+                                            Criar Primeiro {selectedUserCategory === 'Administradores' ? 'Administrador' : selectedUserCategory === 'Staff' ? 'Staff' : 'Aluno'}
                                         </Button>
                                     </div>
                                 )}

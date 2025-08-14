@@ -20,12 +20,21 @@ export async function POST(request) {
     const salt = await bcrypt.genSalt(10);
     const senha_hash = await bcrypt.hash(senha, salt);
 
-    const novoUsuario = await prisma.usuarios.create({
+    // Mapear tipo_usuario para o enum correto
+    const tipoUsuarioEnum = {
+      'admin': 'ADMIN',
+      'staff': 'STAFF',
+      'aluno': 'ALUNO'
+    };
+
+    const tipoUsuarioMapeado = tipoUsuarioEnum[tipo_usuario.toLowerCase()] || 'ALUNO';
+
+    const novoUsuario = await prisma.usuario.create({
       data: {
         nome_usuario,
         email_usuario,
         senha_hash,
-        tipo_usuario,
+        tipo_usuario: tipoUsuarioMapeado,
       },
       select: {
         id_usuario: true,
@@ -54,7 +63,7 @@ export async function POST(request) {
 // GET: Retorna todos os usuários
 export async function GET() {
   try {
-    const users = await prisma.usuarios.findMany({
+    const users = await prisma.usuario.findMany({
       select: {
         id_usuario: true,
         nome_usuario: true,

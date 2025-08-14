@@ -17,7 +17,7 @@ const authOptions: NextAuthOptions = {
                         return null;
                     }
 
-                    const user = await prisma.usuarios.findUnique({
+                    const user = await prisma.usuario.findUnique({
                         where: {
                             email_usuario: credentials.email,
                         },

@@ -69,7 +69,7 @@ export async function POST(request) {
 
     // Buscar curso
     let curso = await prisma.curso.findFirst({
-      where: {
+      where: { 
         OR: [
           { nome: course },
           { sigla: course }

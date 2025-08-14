@@ -7,7 +7,7 @@ export async function GET(request) {
   try {
     // Obter sessão do usuário logado
     const session = await getServerSession();
-    
+
     if (!session || !session.user || !session.user.email) {
       return NextResponse.json(
         { message: "Usuário não autenticado" },
@@ -16,7 +16,7 @@ export async function GET(request) {
     }
 
     // Buscar dados do usuário no banco pelo email
-    const usuario = await prisma.usuarios.findUnique({
+    const usuario = await prisma.usuario.findUnique({
       where: {
         email_usuario: session.user.email
       },

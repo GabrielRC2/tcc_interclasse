@@ -1,237 +1,227 @@
-import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { PrismaClient } from '@prisma/client';
 
-// ====================================
-// === FUNÇÕES DE GERAÇÃO DE PARTIDAS ===
-// ====================================
+const prisma = new PrismaClient();
 
-// === Gerar rodízio de partidas por grupo ===
-// Recebe um objeto onde as chaves são nomes de grupo e os valores são arrays de IDs de Inscrição (times).
-function rodizio(gruposComInscricoes) {
-  const todas_partidas_por_grupo = {};
-
-  for (const grupoNome in gruposComInscricoes) {
-    let inscricoes = [...gruposComInscricoes[grupoNome]]; // Copia a array para não modificar o original
-
-    // Se o número de times no grupo for ímpar, adiciona uma "folga" temporária.
-    if (inscricoes.length % 2 === 1) {
-      inscricoes.push(null); // Usamos null para representar a folga
-    }
-
-    const n = inscricoes.length;
-    const num_rodadas = n - 1;
-    const jogos_por_rodada = n / 2;
-
-    todas_partidas_por_grupo[grupoNome] = [];
-
-    for (let rodada = 0; rodada < num_rodadas; rodada++) {
-      const rodada_partidas = [];
-
-      for (let i = 0; i < jogos_por_rodada; i++) {
-        const inscricao1 = inscricoes[i];
-        const inscricao2 = inscricoes[n - 1 - i];
-
-        // Apenas adiciona a partida se ambos os "times" não forem folga
-        if (inscricao1 !== null && inscricao2 !== null) {
-          rodada_partidas.push({ time_A_inscricao_id: inscricao1, time_B_inscricao_id: inscricao2 });
-        }
-      }
-
-      todas_partidas_por_grupo[grupoNome].push(rodada_partidas);
-
-      // Rotaciona as inscrições (exceto a primeira)
-      const fixo = inscricoes.shift();
-      const segundo = inscricoes.shift();
-      inscricoes.push(segundo);
-      inscricoes.unshift(fixo);
-    }
-  }
-
-  return todas_partidas_por_grupo;
-}
-
-// === Achatar as partidas em lista única ===
-// Recebe o resultado de rodizio() e retorna uma lista plana de partidas.
-function achatarPartidas(todas_partidas_por_grupo) {
-  const lista = [];
-  for (const grupo in todas_partidas_por_grupo) {
-    for (const rodada of todas_partidas_por_grupo[grupo]) {
-      for (const jogo of rodada) {
-        // Adiciona o nome do grupo à partida para referência futura
-        lista.push({ ...jogo, grupo_nome: grupo });
-      }
-    }
-  }
-  return lista;
-}
-
-// === Organizar partidas com melhor distribuição de descanso ===
-// Adaptada para usar IDs de Inscrição
-function ordenarPartidasComDescanso(partidas) {
-  const todas_inscricoes_ids = new Set();
-  for (const jogo of partidas) {
-    todas_inscricoes_ids.add(jogo.time_A_inscricao_id);
-    todas_inscricoes_ids.add(jogo.time_B_inscricao_id);
-  }
-
-  const ultimaPosicao = {};
-  const carga = {};
-  for (const inscricaoId of todas_inscricoes_ids) {
-    ultimaPosicao[inscricaoId] = 0;
-    carga[inscricaoId] = 0;
-  }
-
-  let remanescentes = [...partidas];
-  const sequencia = [];
-  let pos = 1;
-
-  while (remanescentes.length > 0) {
-    let bestIndex = -1;
-    let bestMinGap = -1;
-    let bestSumGap = -1;
-    let bestCargaSum = Infinity;
-
-    for (let idx = 0; idx < remanescentes.length; idx++) {
-      const jogo = remanescentes[idx];
-      const t1_id = jogo.time_A_inscricao_id;
-      const t2_id = jogo.time_B_inscricao_id;
-
-      const gap1 = (ultimaPosicao[t1_id] === 0) ? Infinity : (pos - ultimaPosicao[t1_id]);
-      const gap2 = (ultimaPosicao[t2_id] === 0) ? Infinity : (pos - ultimaPosicao[t2_id]);
-
-      const minGap = Math.min(gap1, gap2);
-      const sumGap = gap1 + gap2;
-      const cargaSum = carga[t1_id] + carga[t2_id];
-
-      if (
-        bestIndex === -1 ||
-        minGap > bestMinGap ||
-        (minGap === bestMinGap && sumGap > bestSumGap) ||
-        (minGap === bestMinGap && sumGap === bestSumGap && cargaSum < bestCargaSum)
-      ) {
-        bestIndex = idx;
-        bestMinGap = minGap;
-        bestSumGap = sumGap;
-        bestCargaSum = cargaSum;
-      }
-    }
-
-    const jogoEscolhido = remanescentes[bestIndex];
-    remanescentes.splice(bestIndex, 1);
-
-    const t1_id = jogoEscolhido.time_A_inscricao_id;
-    const t2_id = jogoEscolhido.time_B_inscricao_id;
-
-    const gap1Atual = (ultimaPosicao[t1_id] === 0) ? Infinity : (pos - ultimaPosicao[t1_id]);
-    const gap2Atual = (ultimaPosicao[t2_id] === 0) ? Infinity : (pos - ultimaPosicao[t2_id]);
-
-    if (gap1Atual <= 1) {
-      carga[t1_id]++;
-    } else {
-      carga[t1_id] = 0;
-    }
-    if (gap2Atual <= 1) {
-      carga[t2_id]++;
-    } else {
-      carga[t2_id] = 0;
-    }
-
-    ultimaPosicao[t1_id] = pos;
-    ultimaPosicao[t2_id] = pos;
-
-    sequencia.push(jogoEscolhido);
-    pos++;
-  }
-
-  return sequencia;
-}
-
-
-// Rota POST: Gera a ordem das partidas para TODOS os grupos de um torneio e as persiste no banco de dados
 export async function POST(request) {
   try {
-    const body = await request.json();
-    // Agora, espera apenas o ID do torneio
-    // {
-    //   idTorneio: <ID_DO_TORNEIO>,
-    // }
-    const { idTorneio } = body;
+    const { torneioId, modalidadeId, genero } = await request.json();
 
-    if (!idTorneio) {
-      return NextResponse.json({ message: "O ID do Torneio é obrigatório." }, { status: 400 });
+    if (!torneioId || !modalidadeId || !genero) {
+      return Response.json({ error: 'Parâmetros obrigatórios em falta' }, { status: 400 });
     }
 
-    const parsedTournamentId = parseInt(idTorneio, 10);
-    if (isNaN(parsedTournamentId)) {
-      return NextResponse.json({ message: "ID do Torneio inválido." }, { status: 400 });
-    }
+    console.log('Gerando partidas para:', { torneioId, modalidadeId, genero });
 
-    // 1. Buscar TODOS os grupos associados a este torneio
-    const gruposDoTorneio = await prisma.grupos.findMany({
+    // 1. Buscar grupos com times da modalidade/gênero específicos
+    const grupos = await prisma.grupo.findMany({
       where: {
-        fk_id_torneio: parsedTournamentId
+        torneioId: parseInt(torneioId),
+        modalidadeId: parseInt(modalidadeId)
       },
       include: {
-        inscricoes_no_grupo: {
-          select: {
-            id_inscricao: true
+        times: {
+          include: {
+            time: {
+              include: {
+                categoria: true,
+                curso: true
+              }
+            }
+          },
+          where: {
+            time: {
+              categoria: {
+                genero: genero
+              }
+            }
           }
         }
       }
     });
 
-    if (gruposDoTorneio.length === 0) {
-      return NextResponse.json({ message: "Nenhum grupo encontrado para o torneio especificado. Certifique-se de que os grupos foram formados e atribuídos." }, { status: 404 });
+    if (grupos.length === 0) {
+      return Response.json({ error: 'Nenhum grupo encontrado. Realize o sorteio primeiro.' }, { status: 404 });
     }
 
-    const gruposParaAlgoritmo = {};
-    const grupoIdMap = {}; // Para mapear nome do grupo de volta para ID do grupo
-    for (const grupo of gruposDoTorneio) {
-      gruposParaAlgoritmo[grupo.nome_grupo] = grupo.inscricoes_no_grupo.map(inc => inc.id_inscricao);
-      grupoIdMap[grupo.nome_grupo] = grupo.id_grupo;
+    // 2. Verificar se já existem partidas e remover na ORDEM CORRETA
+    const gruposIds = grupos.map(g => g.id);
+    
+    // 2.1 Primeiro: Deletar PartidaTime (FK)
+    await prisma.partidaTime.deleteMany({
+      where: {
+        partida: {
+          grupoId: { in: gruposIds }
+        }
+      }
+    });
+    console.log('PartidaTime deletados');
+
+    // 2.2 Depois: Deletar Partidas
+    await prisma.partida.deleteMany({
+      where: {
+        grupoId: { in: gruposIds }
+      }
+    });
+    console.log('Partidas deletadas');
+
+    // 3. Gerar partidas para cada grupo
+    const todasPartidas = [];
+    
+    for (const grupo of grupos) {
+      const times = grupo.times.map(gt => gt.time);
+      console.log(`Grupo ${grupo.nome}: ${times.length} times`);
+      
+      if (times.length < 2) {
+        console.log(`Grupo ${grupo.nome} tem menos de 2 times, pulando`);
+        continue;
+      }
+
+      const partidasGrupo = gerarRodizioPartidas(times, grupo.id);
+      todasPartidas.push(...partidasGrupo);
     }
 
-    // 2. Executar os algoritmos de geração de partidas
-    const todas_partidas_por_grupo = rodizio(gruposParaAlgoritmo);
-    const lista_bruta = achatarPartidas(todas_partidas_por_grupo);
-    const lista_ordenada_final = ordenarPartidasComDescanso(lista_bruta);
+    // 4. Otimizar ordem das partidas
+    const partidasOtimizadas = otimizarOrdemPartidas(todasPartidas);
 
-    // 3. Persistir as partidas geradas no banco de dados
-    const partidasCriadas = await prisma.$transaction(
-      lista_ordenada_final.map(jogo =>
-        prisma.partidas.create({
+    // 5. Buscar local padrão
+    const localPadrao = await prisma.local.findFirst();
+    if (!localPadrao) {
+      return Response.json({ error: 'Nenhum local cadastrado no sistema' }, { status: 400 });
+    }
+
+    // 6. Salvar partidas no banco
+    const partidasCriadas = [];
+    
+    for (let i = 0; i < partidasOtimizadas.length; i++) {
+      const partida = partidasOtimizadas[i];
+      
+      // Criar partida
+      const novaPartida = await prisma.partida.create({
+        data: {
+          dataHora: new Date(Date.now() + (i * 60 * 60 * 1000)), // Intervalos de 1 hora
+          statusPartida: 'AGENDADA',
+          grupoId: partida.grupoId,
+          localId: localPadrao.id,
+          torneioId: parseInt(torneioId)
+        }
+      });
+
+      // Criar relações com times
+      await Promise.all([
+        prisma.partidaTime.create({
           data: {
-            // O local ainda não é definido na geração da ordem, pode ser null ou um ID padrão
-            fk_id_local: null,
-            fk_id_torneio: parsedTournamentId,
-            // Agora usamos o grupoIdMap para associar a partida ao ID do grupo correto
-            fk_id_grupo: grupoIdMap[jogo.grupo_nome],
-
-            inscricoes_na_partida: {
-              create: [
-                {
-                  fk_id_inscricao: jogo.time_A_inscricao_id,
-                  identificador_time: "Time_A"
-                },
-                {
-                  fk_id_inscricao: jogo.time_B_inscricao_id,
-                  identificador_time: "Time_B"
-                }
-              ]
-            }
+            partidaId: novaPartida.id,
+            timeId: partida.time1Id,
+            ehCasa: true
+          }
+        }),
+        prisma.partidaTime.create({
+          data: {
+            partidaId: novaPartida.id,
+            timeId: partida.time2Id,
+            ehCasa: false
           }
         })
-      )
-    );
+      ]);
 
-    return NextResponse.json({
-      message: "Ordem de partidas gerada e salva com sucesso para todos os grupos do torneio!",
-      partidasGeradas: partidasCriadas.length
-    }, { status: 201 });
+      partidasCriadas.push(novaPartida);
+    }
+
+    console.log(`${partidasCriadas.length} partidas criadas com sucesso`);
+
+    return Response.json({ 
+      message: 'Chaveamento gerado com sucesso!',
+      partidasGeradas: partidasCriadas.length,
+      grupos: grupos.length
+    });
 
   } catch (error) {
-    console.error("Erro ao gerar ordem de partidas:", error);
-    return NextResponse.json({ message: "Não foi possível gerar a ordem de partidas." }, { status: 500 });
+    console.error('Erro ao gerar chaveamento:', error);
+    return Response.json({ error: 'Erro interno do servidor: ' + error.message }, { status: 500 });
+  }
+}
+
+// Gerar partidas rodízio para um grupo
+function gerarRodizioPartidas(times, grupoId) {
+  const partidas = [];
+  const timesCopy = [...times];
+
+  // Se número ímpar, adicionar folga
+  if (timesCopy.length % 2 === 1) {
+    timesCopy.push(null); // Folga
   }
 
+  const numRodadas = timesCopy.length - 1;
+
+  for (let r = 0; r < numRodadas; r++) {
+    for (let i = 0; i < timesCopy.length / 2; i++) {
+      const time1 = timesCopy[i];
+      const time2 = timesCopy[timesCopy.length - 1 - i];
+
+      // Não incluir partidas com folga
+      if (time1 && time2) {
+        partidas.push({
+          time1Id: time1.id,
+          time2Id: time2.id,
+          time1Nome: time1.nome,
+          time2Nome: time2.nome,
+          grupoId: grupoId,
+          rodada: r + 1
+        });
+      }
+    }
+
+    // Rotacionar times (fixar o primeiro)
+    const primeiro = timesCopy.shift();
+    const segundo = timesCopy.shift();
+    timesCopy.push(segundo);
+    timesCopy.unshift(primeiro);
+  }
+
+  return partidas;
+}
+
+// Otimizar ordem das partidas para maximizar descanso
+function otimizarOrdemPartidas(partidas) {
+  const times = new Set();
+  partidas.forEach(p => {
+    times.add(p.time1Id);
+    times.add(p.time2Id);
+  });
+
+  const ultimaPartida = {};
+  times.forEach(timeId => ultimaPartida[timeId] = -1);
+
+  const partidasRestantes = [...partidas];
+  const resultado = [];
+  let posicao = 0;
+
+  while (partidasRestantes.length > 0) {
+    let melhorIdx = 0;
+    let melhorDescanso = -1;
+
+    partidasRestantes.forEach((partida, idx) => {
+      const descanso1 = posicao - ultimaPartida[partida.time1Id];
+      const descanso2 = posicao - ultimaPartida[partida.time2Id];
+      const menorDescanso = Math.min(descanso1, descanso2);
+
+      if (menorDescanso > melhorDescanso) {
+        melhorDescanso = menorDescanso;
+        melhorIdx = idx;
+      }
+    });
+
+    const partidaEscolhida = partidasRestantes.splice(melhorIdx, 1)[0];
+    ultimaPartida[partidaEscolhida.time1Id] = posicao;
+    ultimaPartida[partidaEscolhida.time2Id] = posicao;
+    
+    resultado.push({
+      ...partidaEscolhida,
+      ordem: posicao + 1
+    });
+    
+    posicao++;
+  }
+
+  return resultado;
 }

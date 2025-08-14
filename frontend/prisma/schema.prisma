@@ -1,219 +1,241 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
+// Este é o seu arquivo de esquema Prisma.
+// Saiba mais em https://pris.ly/d/prisma-schema
 
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
+// 1. Define o gerador de cliente. O Prisma Client é o ORM que você usará no seu código.
 generator client {
   provider = "prisma-client-js"
-  output   = "../src/generated/prisma"
 }
 
+// 2. Define a fonte de dados. Aqui, configuramos para usar MySQL.
+//    Você precisará definir a variável de ambiente DATABASE_URL no seu arquivo .env.
 datasource db {
   provider = "mysql"
   url      = env("DATABASE_URL")
 }
 
-
-// ---
-// Definições de Tipos Enumerados (ENUMs)
-// ---
+// Adicione esta parte logo depois do datasource db
 enum TipoUsuario {
-  admin
-  representante
-  staff
+  ADMIN
+  STAFF  
+  ALUNO
 }
 
-enum StatusTorneio {
-  Planejamento
-  Em_Andamento
-  Finalizado
-}
+// ------------------------------------------
+// 1. ENTIDADES PRINCIPAIS
+// ------------------------------------------
 
-enum StatusPartida {
-  Agendada
-  Em_Andamento
-  Finalizada
-}
-
-enum IdentificadorTime {
-  Time_A
-  Time_B
-}
-
-enum TipoEvento {
-  Gol
-  Ponto
-  Cartao_Amarelo
-  Cartao_Vermelho
-}
-
-
-// ---
-// Definição dos Modelos (Tabelas)
-// ---
-
-model Usuarios {
-  id_usuario   Int         @id @default(autoincrement())
-  nome_usuario String      @db.VarChar(100)
-  email_usuario String     @unique @db.VarChar(255)
-  senha_hash   String      @db.VarChar(255)
-  tipo_usuario TipoUsuario
-}
-
+// Tabela: Torneio
+// Descrição: Armazena as informações gerais sobre cada torneio.
 model Torneio {
-  id_torneio     Int          @id @default(autoincrement())
-  nome_torneio   String       @db.VarChar(150)
-  inicio_torneio DateTime     @db.Date
-  fim_torneio    DateTime     @db.Date
-  status_torneio StatusTorneio
+  id                 Int                 @id @default(autoincrement()) @map("id_torneio")
+  nome               String              @map("nome_torneio") @db.VarChar(200)
+  status             String              @map("status_torneio") @db.VarChar(20)
+  inicio             DateTime            @map("inicio_torneio") @db.DateTime
+  fim                DateTime            @map("fim_torneio") @db.DateTime
+  times              Time[]              // ADICIONAR ESTA LINHA
+  grupos             Grupo[]
+  partidas           Partida[]
+  torneioModalidades TorneioModalidade[]
 
-  // Relacionamentos inversos
-  inscricoes     Inscricoes[]
-  grupos         Grupos[]
-  partidas       Partidas[]
+  @@map("Torneio")
 }
 
-model Modalidades {
-  id_modalidade   Int      @id @default(autoincrement())
-  nome_modalidade String   @unique @db.VarChar(50)
+// Tabela: Modalidade
+// Descrição: Define as modalidades esportivas ou de jogos.
+model Modalidade {
+  id                 Int                   @id @default(autoincrement()) @map("id_modalidade")
+  nome               String                @map("nome_modalidade") @db.VarChar(50)
+  categorias         Categoria[]
+  grupos             Grupo[]
+  torneioModalidades TorneioModalidade[]
 
-  // Relacionamentos inversos
-  inscricoes      Inscricoes[]
-  grupos          Grupos[]
+  @@map("Modalidade")
 }
 
-model Categorias {
-  id_categoria   Int      @id @default(autoincrement())
-  nome_categoria String   @unique @db.VarChar(50)
+// Tabela: Categoria
+// Descrição: Define as categorias dentro de cada modalidade.
+model Categoria {
+  id            Int      @id @default(autoincrement()) @map("id_categoria")
+  nome          String   @map("nome_categoria") @db.VarChar(50)
+  genero        String   @map("genero_categoria") @db.VarChar(10) // ADICIONAR ESTA LINHA
+  modalidadeId  Int      @map("fk_id_modalidade")
+  modalidade    Modalidade @relation(fields: [modalidadeId], references: [id])
+  times         Time[]
 
-  // Relacionamentos inversos
-  inscricoes     Inscricoes[]
-  grupos         Grupos[]
+  @@map("Categoria")
 }
 
-model Locais {
-  id_local   Int      @id @default(autoincrement())
-  nome_local String   @unique @db.VarChar(100)
+// Tabela: Curso
+// Descrição: Armazena os cursos de origem dos jogadores.
+model Curso {
+  id      Int       @id @default(autoincrement()) @map("id_curso")
+  nome    String    @map("nome_curso") @db.VarChar(100)
+  sigla   String    @unique @map("sigla_curso") @db.VarChar(10)
+  jogadores Jogador[]
+  times     Time[]
 
-  // Relacionamentos inversos
-  partidas   Partidas[]
+  @@map("Curso")
 }
 
-model Times {
-  id_times    Int      @id @default(autoincrement())
-  nome_time   String   @unique @db.VarChar(100)
+// Tabela: Jogador
+// Descrição: Armazena os dados da pessoa que joga.
+model Jogador {
+  id             Int             @id @default(autoincrement()) @map("id_jogador")
+  nome           String          @map("nome_jogador") @db.VarChar(70)
+  sala           String          @map("sala_jogador") @db.VarChar(10)
+  genero         String          @map("genero_jogador") @db.VarChar(10) // NOVO CAMPO
+  cursoId        Int             @map("fk_id_curso")
+  curso          Curso           @relation(fields: [cursoId], references: [id])
+  eventosPartida EventoPartida[]
+  times          TimeJogador[]
 
-  // Relacionamentos inversos
-  participantes Participantes[]
-  inscricoes    Inscricoes[]
-  eventos       Eventos_Partida[]
+  @@map("Jogador")
 }
 
-model Jogadores {
-  id_jogador            Int       @id @default(autoincrement())
-  nome_jogador          String    @db.VarChar(100)
-  numero_camisa_jogador Int?
+// Tabela: Time
+// Descrição: Define uma equipe específica.
+model Time {
+  id           Int            @id @default(autoincrement()) @map("id_time")
+  nome         String         @map("nome_time") @db.VarChar(100)
+  sala         String         @map("sala_time") @db.VarChar(10)
+  cursoId      Int            @map("fk_id_curso")
+  categoriaId  Int            @map("fk_id_categoria")
+  torneioId    Int            @map("fk_id_torneio") // ADICIONAR ESTA LINHA
+  curso        Curso          @relation(fields: [cursoId], references: [id])
+  categoria    Categoria      @relation(fields: [categoriaId], references: [id])
+  torneio      Torneio        @relation(fields: [torneioId], references: [id]) // ADICIONAR ESTA LINHA
+  jogadores    TimeJogador[]
+  partidas     PartidaTime[]
+  grupos       GrupoTime[]
 
-  // Relacionamentos inversos
-  participantes         Participantes[]
-  eventos               Eventos_Partida[]
+  @@map("Time")
 }
 
-model Participantes {
-  fk_id_jogador Int
-  fk_id_times   Int
+// Tabela: Grupo
+// Descrição: Organiza os times dentro de um torneio.
+model Grupo {
+  id            Int         @id @default(autoincrement()) @map("id_grupo")
+  nome          String      @map("nome_grupo") @db.VarChar(50)
+  modalidadeId  Int         @map("fk_id_modalidade")
+  torneioId     Int         @map("fk_id_torneio")
+  modalidade    Modalidade  @relation(fields: [modalidadeId], references: [id])
+  torneio       Torneio     @relation(fields: [torneioId], references: [id])
+  partidas      Partida[]
+  times         GrupoTime[]
 
-  jogador Jogadores @relation(fields: [fk_id_jogador], references: [id_jogador], onDelete: Cascade)
-  time    Times     @relation(fields: [fk_id_times], references: [id_times], onDelete: Cascade)
-
-  @@id([fk_id_jogador, fk_id_times])
+  @@map("Grupo")
 }
 
-model Inscricoes {
-  id_inscricao      Int    @id @default(autoincrement())
-  fk_id_torneio     Int
-  fk_id_times       Int
-  fk_id_modalidades Int
-  fk_id_categoria   Int
+// Tabela: Local
+// Descrição: Armazena os locais onde as partidas podem acontecer.
+model Local {
+  id        Int       @id @default(autoincrement()) @map("id_local")
+  nome      String    @map("nome_local") @db.VarChar(100)
+  partidas  Partida[]
 
-  torneio    Torneio     @relation(fields: [fk_id_torneio], references: [id_torneio], onDelete: Cascade)
-  time       Times       @relation(fields: [fk_id_times], references: [id_times], onDelete: Cascade)
-  modalidade Modalidades @relation(fields: [fk_id_modalidades], references: [id_modalidade])
-  categoria  Categorias  @relation(fields: [fk_id_categoria], references: [id_categoria])
-  
-  // Relacionamentos inversos
-  grupo_inscrito    Grupos_Inscricoes? // Uma inscrição só pode estar em um grupo
-  partidas_jogadas  Partida_Inscricoes[]
-
-  @@unique([fk_id_torneio, fk_id_times, fk_id_modalidades, fk_id_categoria], name: "inscricao_unica")
+  @@map("Local")
 }
 
-model Grupos {
-  id_grupo          Int      @id @default(autoincrement())
-  nome_grupo        String   @db.VarChar(50)
-  fk_id_torneio     Int
-  fk_id_modalidades Int
-  fk_id_categoria   Int
+// Tabela: Partida
+// Descrição: Registra cada partida que ocorre.
+model Partida {
+  id               Int               @id @default(autoincrement()) @map("id_partida")
+  dataHora         DateTime          @map("data_hora_partida") @db.DateTime
+  statusPartida    String            @map("status_partida") @db.VarChar(20)
+  pontosCasa       Int?              @map("pontos_casa")
+  pontosVisitante  Int?              @map("pontos_visitante")
+  grupoId          Int               @map("fk_id_grupo")
+  localId          Int               @map("fk_id_local")
+  torneioId        Int               @map("fk_id_torneio")
+  grupo            Grupo             @relation(fields: [grupoId], references: [id])
+  local            Local             @relation(fields: [localId], references: [id])
+  torneio          Torneio           @relation(fields: [torneioId], references: [id])
+  eventosPartida   EventoPartida[]
+  times            PartidaTime[]     // ADICIONADO: relacionamento com times
 
-  torneio    Torneio     @relation(fields: [fk_id_torneio], references: [id_torneio], onDelete: Cascade)
-  modalidade Modalidades @relation(fields: [fk_id_modalidades], references: [id_modalidade])
-  categoria  Categorias  @relation(fields: [fk_id_categoria], references: [id_categoria])
-
-  // Relacionamentos inversos
-  inscricoes_no_grupo Grupos_Inscricoes[]
-  partidas_no_grupo   Partidas[]
+  @@map("Partida")
 }
 
-model Grupos_Inscricoes {
-  fk_id_grupo     Int
-  fk_id_inscricao Int @unique // Garante que uma inscrição só pode ser alocada a um grupo
+// Tabela: EventoPartida
+// Descrição: Registra eventos específicos durante uma partida.
+model EventoPartida {
+  id            Int      @id @default(autoincrement()) @map("id_evento")
+  tipo          String   @map("tipo_evento") @db.VarChar(30)
+  pontosGerados Int      @map("pontos_gerados")
+  tempoPartida  DateTime @map("tempo_partida") @db.Time
+  partidaId     Int      @map("fk_id_partida")
+  jogadorId     Int      @map("fk_id_jogador")
+  partida       Partida  @relation(fields: [partidaId], references: [id])
+  jogador       Jogador  @relation(fields: [jogadorId], references: [id])
 
-  grupo     Grupos     @relation(fields: [fk_id_grupo], references: [id_grupo], onDelete: Cascade)
-  inscricao Inscricoes @relation(fields: [fk_id_inscricao], references: [id_inscricao], onDelete: Cascade)
-
-  @@id([fk_id_grupo, fk_id_inscricao])
+  @@map("EventoPartida")
 }
 
-model Partidas {
-  id_partidas     Int            @id @default(autoincrement())
-  placar_time_A   Int?
-  placar_time_B   Int?
-  status_partida  StatusPartida  @default(Agendada)
-  fk_id_local     Int
-  fk_id_torneio   Int
-  fk_id_grupo     Int?
+// Tabela: Usuario
+// Descrição: Controla o acesso ao sistema.
+model Usuario {
+  id_usuario    Int         @id @default(autoincrement()) @map("id_usuario")
+  nome_usuario  String      @map("nome_usuario") @db.VarChar(100)
+  email_usuario String      @unique @map("email_usuario") @db.VarChar(255)
+  senha_hash    String      @map("senha_hash") @db.VarChar(255)
+  tipo_usuario  TipoUsuario @map("tipo_usuario")
+  createdAt     DateTime    @default(now()) @map("created_at")
+  updatedAt     DateTime    @updatedAt @map("updated_at")
 
-  local   Locais   @relation(fields: [fk_id_local], references: [id_local])
-  torneio Torneio  @relation(fields: [fk_id_torneio], references: [id_torneio], onDelete: Cascade)
-  grupo   Grupos?  @relation(fields: [fk_id_grupo], references: [id_grupo])
-  
-  // Relacionamentos inversos
-  inscricoes_na_partida Partida_Inscricoes[]
-  eventos_da_partida    Eventos_Partida[]
+  @@map("Usuario")
 }
 
-model Partida_Inscricoes {
-  fk_id_partida     Int
-  fk_id_inscricao   Int
-  identificador_time IdentificadorTime
 
-  partida   Partidas   @relation(fields: [fk_id_partida], references: [id_partidas], onDelete: Cascade)
-  inscricao Inscricoes @relation(fields: [fk_id_inscricao], references: [id_inscricao], onDelete: Cascade)
+// ----------------------------------------------------
+// 2. TABELAS ASSOCIATIVAS (RELACIONAMENTOS N:M)
+// ----------------------------------------------------
 
-  @@id([fk_id_partida, fk_id_inscricao])
+// Tabela: Torneio_Modalidades
+// Descrição: Associa Torneios a Modalidades.
+model TorneioModalidade {
+  torneioId    Int @map("fk_id_torneio")
+  modalidadeId Int @map("fk_id_modalidade")
+  torneio      Torneio    @relation(fields: [torneioId], references: [id])
+  modalidade   Modalidade @relation(fields: [modalidadeId], references: [id])
+
+  @@id([torneioId, modalidadeId])
+  @@map("Torneio_Modalidades")
 }
 
-model Eventos_Partida {
-  id_evento     Int         @id @default(autoincrement())
-  tempo_partida Int?
-  tipo_evento   TipoEvento
-  pontos_gerados Int?
-  fk_id_partida Int
-  fk_id_jogador Int
-  fk_id_time    Int
+// Tabela: Grupo_Times
+// Descrição: Define quais Times pertencem a quais Grupos.
+model GrupoTime {
+  grupoId Int   @map("fk_id_grupo")
+  timeId  Int   @map("fk_id_time")
+  grupo   Grupo @relation(fields: [grupoId], references: [id])
+  time    Time  @relation(fields: [timeId], references: [id])
 
-  partida Partidas  @relation(fields: [fk_id_partida], references: [id_partidas], onDelete: Cascade)
-  jogador Jogadores @relation(fields: [fk_id_jogador], references: [id_jogador])
-  time    Times     @relation(fields: [fk_id_time], references: [id_times])
+  @@id([grupoId, timeId])
+  @@map("GrupoTime")
+}
+
+// Tabela: Time_Jogadores
+// Descrição: Representa a inscrição de um Jogador em um Time específico.
+model TimeJogador {
+  timeId       Int     @map("fk_id_time")
+  jogadorId    Int     @map("fk_id_jogador")
+  numeroCamisa Int     @map("numero_camisa")
+  time         Time    @relation(fields: [timeId], references: [id])
+  jogador      Jogador @relation(fields: [jogadorId], references: [id])
+
+  @@id([timeId, jogadorId])
+  @@map("Time_Jogadores")
+}
+
+// Tabela: Partida_Times
+// Descrição: Registra os Times que disputam uma Partida.
+model PartidaTime {
+  partidaId     Int     @map("fk_id_partida")
+  timeId        Int     @map("fk_id_time")
+  ehCasa        Boolean @map("eh_casa") // true = casa, false = visitante
+  partida       Partida @relation(fields: [partidaId], references: [id])
+  time          Time    @relation(fields: [timeId], references: [id])
+
+  @@id([partidaId, timeId])
+  @@map("PartidaTime")
 }
