@@ -1,206 +1,251 @@
 import React from 'react';
-import { Document, Page, Text, View, StyleSheet, Image } from '@react-pdf/renderer';
+import { Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer';
 
-// Estilos para o PDF
+// Estilos para o PDF (tabela semelhante à SumulaModal)
 const styles = StyleSheet.create({
   page: {
     flexDirection: 'column',
     backgroundColor: '#FFFFFF',
-    padding: 30,
+    padding: 20,
     fontFamily: 'Helvetica',
+    fontSize: 10,
+    color: '#111'
   },
   header: {
     textAlign: 'center',
-    marginBottom: 20,
+    marginBottom: 10,
     borderBottomWidth: 1,
     borderBottomColor: '#000',
-    paddingBottom: 10,
+    paddingBottom: 8,
   },
   title: {
-    fontSize: 20,
+    fontSize: 16,
     fontWeight: 'bold',
-    marginBottom: 5,
+    marginBottom: 2,
   },
   subtitle: {
-    fontSize: 12,
+    fontSize: 9,
     color: '#666',
-    marginBottom: 3,
+    marginBottom: 2,
   },
   scoreSection: {
     flexDirection: 'row',
     justifyContent: 'space-around',
     alignItems: 'center',
-    marginVertical: 20,
-    paddingVertical: 20,
+    marginVertical: 10,
   },
   teamContainer: {
     alignItems: 'center',
     flex: 1,
   },
   teamName: {
-    fontSize: 16,
+    fontSize: 12,
     fontWeight: 'bold',
-    marginBottom: 10,
+    marginBottom: 4,
     textAlign: 'center',
   },
   score: {
-    fontSize: 48,
+    fontSize: 36,
     fontWeight: 'bold',
-    textAlign: 'center',
-  },
-  separator: {
-    fontSize: 48,
-    fontWeight: 'bold',
-    marginHorizontal: 20,
   },
   infoSection: {
     flexDirection: 'row',
-    marginVertical: 15,
-    borderTopWidth: 1,
-    borderTopColor: '#ccc',
-    paddingTop: 15,
-  },
-  infoColumn: {
-    flex: 1,
-    paddingRight: 10,
+    justifyContent: 'space-between',
+    marginVertical: 8,
   },
   infoText: {
-    fontSize: 11,
-    marginBottom: 3,
+    fontSize: 9,
     color: '#333',
   },
-  playersSection: {
-    marginTop: 20,
+
+  // tabela
+  tabela: {
+    marginTop: 8,
+    borderWidth: 0.5,
+    borderColor: '#e6e6e6',
+    borderRadius: 4,
+    overflow: 'hidden',
   },
-  playersTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    marginBottom: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: '#ccc',
-    paddingBottom: 5,
-  },
-  playersGrid: {
+  tabelaCabecalho: {
     flexDirection: 'row',
-    gap: 20,
-  },
-  playersList: {
-    flex: 1,
-  },
-  teamHeader: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    marginBottom: 10,
-    backgroundColor: '#f5f5f5',
-    padding: 8,
-  },
-  playerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    fontSize: 10,
-    marginBottom: 4,
-    paddingVertical: 3,
-    paddingHorizontal: 5,
+    backgroundColor: '#f3f4f6',
+    paddingVertical: 6,
+    paddingHorizontal: 6,
     borderBottomWidth: 0.5,
-    borderBottomColor: '#eee',
+    borderBottomColor: '#e6e6e6',
   },
-  playerName: {
-    flex: 1,
+  th: {
+    fontSize: 9,
+    fontWeight: 'bold',
+    color: '#111',
   },
-  playerStats: {
+  linha: {
     flexDirection: 'row',
-    gap: 10,
+    paddingVertical: 6,
+    paddingHorizontal: 6,
+    borderBottomWidth: 0.5,
+    borderBottomColor: '#f0f0f0',
     alignItems: 'center',
   },
-  cardContainer: {
-    flexDirection: 'row',
-    gap: 3,
+  celulaNome: {
+    flex: 1.0,
+    paddingRight: 6,
   },
-  yellowCard: {
+  celulaCamisa: {
+    width: 40,
+    textAlign: 'center',
+  },
+  celulaGols: {
+    width: 40,
+    textAlign: 'center',
+    fontWeight: 'bold',
+  },
+  celulaCartao: {
+    width: 36,
+    textAlign: 'center',
+  },
+  cardAmarelo: {
     backgroundColor: '#fbbf24',
     color: '#000',
-    fontSize: 8,
+    paddingVertical: 2,
     paddingHorizontal: 4,
-    paddingVertical: 1,
     borderRadius: 2,
-    fontWeight: 'bold',
+    fontSize: 8,
+    textAlign: 'center'
   },
-  redCard: {
+  cardVermelho: {
     backgroundColor: '#dc2626',
     color: '#fff',
-    fontSize: 8,
+    paddingVertical: 2,
     paddingHorizontal: 4,
-    paddingVertical: 1,
     borderRadius: 2,
-    fontWeight: 'bold',
+    fontSize: 8,
+    textAlign: 'center'
   },
-  penaltiesSection: {
-    marginVertical: 15,
-    borderTopWidth: 1,
-    borderTopColor: '#ccc',
-    paddingTop: 15,
+
+  playersSection: {
+    marginTop: 12,
   },
-  penaltiesTitle: {
-    fontSize: 14,
+  playersTitle: {
+    fontSize: 11,
     fontWeight: 'bold',
     textAlign: 'center',
-    marginBottom: 10,
+    marginBottom: 8,
   },
-  penaltiesScore: {
+
+  // novos estilos para exibir os dois times lado a lado no PDF
+  playersRow: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 12,
   },
-  penaltyScore: {
-    fontSize: 32,
-    fontWeight: 'bold',
+  playersColumn: {
+    width: '48%',
   },
+
   footer: {
     position: 'absolute',
-    bottom: 30,
-    left: 30,
-    right: 30,
+    bottom: 20,
+    left: 20,
+    right: 20,
     textAlign: 'center',
     fontSize: 8,
     color: '#666',
-    borderTopWidth: 1,
-    borderTopColor: '#ccc',
-    paddingTop: 10,
+    borderTopWidth: 0.5,
+    borderTopColor: '#e6e6e6',
+    paddingTop: 6,
   },
 });
 
-export const SumulaPDF = ({ match, tournament, showPenalties }) => {
-  // Mesma lógica de buscar dados dos times
+/**
+ * SumulaPDF
+ * Props:
+ *  - match: objeto da partida (team1, team2, result, time, modality, category, location, status, etc.)
+ *  - tournament: objeto do torneio
+ *  - showPenalties: boolean
+ *  - team1Data: { name, players: [...] }  (opcional — quando fornecido usa estes dados)
+ *  - team2Data: { name, players: [...] }  (opcional)
+ *
+ * Players: cada player pode ter campos em português ou inglês:
+ *  - id, nome|name, numeroCamisa|numero|number, points|pontos|gols, yellow|amarelos, red|vermelhos
+ */
+export const SumulaPDF = ({ match = {}, tournament = {}, showPenalties = false, team1Data = null, team2Data = null }) => {
+  // fallback: se não recebeu dados de times, tenta usar mock (como antes)
   const mockData = {
     teams: [
       {
         name: match?.team1,
         players: [
-          { id: 1, name: "João Silva", points: 2, yellow: 1, red: 0 },
-          { id: 2, name: "Carlos Santos", points: 1, yellow: 0, red: 0 },
-          { id: 3, name: "Pedro Lima", points: 0, yellow: 2, red: 1 },
-          { id: 4, name: "Lucas Oliveira", points: 1, yellow: 0, red: 0 },
-          { id: 5, name: "Rafael Costa", points: 1, yellow: 1, red: 0 },
+          { id: 1, name: "João Silva", points: 2, yellow: 1, red: 0, numero: 10 },
+          { id: 2, name: "Carlos Santos", points: 1, yellow: 0, red: 0, numero: 7 },
+          { id: 3, name: "Pedro Lima", points: 0, yellow: 2, red: 1, numero: 5 },
         ]
       },
       {
         name: match?.team2,
         players: [
-          { id: 6, name: "Ana Maria", points: 1, yellow: 0, red: 0 },
-          { id: 7, name: "Beatriz Silva", points: 2, yellow: 1, red: 0 },
-          { id: 8, name: "Carla Santos", points: 0, yellow: 0, red: 0 },
-          { id: 9, name: "Diana Lima", points: 0, yellow: 1, red: 0 },
-          { id: 10, name: "Elena Costa", points: 0, yellow: 0, red: 0 },
+          { id: 4, name: "Ana Maria", points: 1, yellow: 0, red: 0, numero: 9 },
+          { id: 5, name: "Beatriz Silva", points: 2, yellow: 1, red: 0, numero: 11 },
+          { id: 6, name: "Carla Santos", points: 0, yellow: 0, red: 0, numero: 8 },
         ]
       }
     ]
   };
 
-  const team1Data = mockData.teams.find(t => t.name === match?.team1) || { players: [] };
-  const team2Data = mockData.teams.find(t => t.name === match?.team2) || { players: [] };
+  const t1 = team1Data || mockData.teams[0];
+  const t2 = team2Data || mockData.teams[1];
+
+  const obterNomeJogador = (p) => p.nome ?? p.name ?? '-';
+  const obterNumeroCamisa = (p) => (p.numeroCamisa ?? p.numero ?? p.number ?? '-');
+  const obterGols = (p) => (p.points ?? p.pontos ?? p.gols ?? 0);
+  const obterAmarelos = (p) => (p.yellow ?? p.amarelos ?? 0);
+  const obterVermelhos = (p) => (p.red ?? p.vermelhos ?? 0);
+
+  // helper para renderizar lista de jogadores como "tabela"
+  const renderListaJogadores = (timeData) => {
+    const players = (timeData?.players || []).map(p => ({
+      id: p.id,
+      nome: obterNomeJogador(p),
+      camisa: obterNumeroCamisa(p),
+      gols: obterGols(p),
+      amarelos: obterAmarelos(p),
+      vermelhos: obterVermelhos(p),
+    }));
+
+    return (
+      <View style={styles.tabela}>
+        <View style={styles.tabelaCabecalho}>
+          <Text style={[styles.th, styles.celulaNome]}>Jogador</Text>
+          <Text style={[styles.th, styles.celulaCamisa]}>Camisa</Text>
+          <Text style={[styles.th, styles.celulaGols]}>Gols</Text>
+          <Text style={[styles.th, styles.celulaCartao]}>🟨</Text>
+          <Text style={[styles.th, styles.celulaCartao]}>🟥</Text>
+        </View>
+
+        {players.length === 0 ? (
+          <View style={styles.linha}>
+            <Text style={styles.celulaNome}>Nenhum jogador cadastrado</Text>
+          </View>
+        ) : players.map(player => (
+          <View key={String(player.id)} style={styles.linha}>
+            <Text style={styles.celulaNome}>{player.nome}</Text>
+            <Text style={styles.celulaCamisa}>{player.camisa ?? '-'}</Text>
+            <Text style={styles.celulaGols}>{String(player.gols)}</Text>
+            <View style={styles.celulaCartao}>
+              {player.amarelos > 0 ? <Text style={styles.cardAmarelo}>{String(player.amarelos)}</Text> : <Text>-</Text>}
+            </View>
+            <View style={styles.celulaCartao}>
+              {player.vermelhos > 0 ? <Text style={styles.cardVermelho}>{String(player.vermelhos)}</Text> : <Text>-</Text>}
+            </View>
+          </View>
+        ))}
+      </View>
+    );
+  };
+
+  // Placar principal (tenta extrair de match.result)
+  const placarA = (match?.result && typeof match.result === 'string') ? (match.result.split(':')[0] ?? '0') : (match?.pontosCasa ?? '0');
+  const placarB = (match?.result && typeof match.result === 'string') ? (match.result.split(':')[1] ?? '0') : (match?.pontosVisitante ?? '0');
 
   return (
     <Document>
@@ -210,110 +255,64 @@ export const SumulaPDF = ({ match, tournament, showPenalties }) => {
           <Text style={styles.title}>SÚMULA DE PARTIDA</Text>
           <Text style={styles.subtitle}>{tournament?.name || 'Torneio Interclasse'}</Text>
           <Text style={styles.subtitle}>
-            Data: {new Date().toLocaleDateString('pt-BR')} | 
-            Horário: {match?.time} | 
-            Local: {match?.location}
+            Data: {new Date().toLocaleDateString('pt-BR')} • Horário: {match?.time || '-'} • Local: {match?.location || '-'}
           </Text>
         </View>
 
-        {/* Placar Principal */}
+        {/* Placar */}
         <View style={styles.scoreSection}>
           <View style={styles.teamContainer}>
             <Text style={styles.teamName}>{match?.team1}</Text>
-            <Text style={styles.score}>{match?.result?.split(':')[0] || '0'}</Text>
+            <Text style={styles.score}>{placarA}</Text>
           </View>
-          <Text style={styles.separator}>:</Text>
+
+          <Text style={{ fontSize: 28, fontWeight: 'bold', color: '#666' }}>:</Text>
+
           <View style={styles.teamContainer}>
             <Text style={styles.teamName}>{match?.team2}</Text>
-            <Text style={styles.score}>{match?.result?.split(':')[1] || '0'}</Text>
+            <Text style={styles.score}>{placarB}</Text>
           </View>
         </View>
 
-        {/* Informações da Partida */}
+        {/* Informações */}
         <View style={styles.infoSection}>
-          <View style={styles.infoColumn}>
-            <Text style={styles.infoText}>
-              <Text style={{ fontWeight: 'bold' }}>Esporte:</Text> {match?.modality}
-            </Text>
-            <Text style={styles.infoText}>
-              <Text style={{ fontWeight: 'bold' }}>Categoria:</Text> {match?.category}
-            </Text>
-          </View>
-          <View style={styles.infoColumn}>
-            <Text style={styles.infoText}>
-              <Text style={{ fontWeight: 'bold' }}>Status:</Text> {match?.status}
-            </Text>
-            <Text style={styles.infoText}>
-              <Text style={{ fontWeight: 'bold' }}>Fase:</Text> {match?.phase || 'Grupos'}
-            </Text>
+          <Text style={styles.infoText}><Text style={{ fontWeight: 'bold' }}>Esporte: </Text>{match?.modality ?? match?.modalidade ?? '-'}</Text>
+          <Text style={styles.infoText}><Text style={{ fontWeight: 'bold' }}>Categoria: </Text>{match?.category ?? match?.categoria ?? '-'}</Text>
+        </View>
+        <View style={styles.infoSection}>
+          <Text style={styles.infoText}><Text style={{ fontWeight: 'bold' }}>Status: </Text>{match?.status ?? '-'}</Text>
+          <Text style={styles.infoText}><Text style={{ fontWeight: 'bold' }}>Fase: </Text>{match?.phase ?? match?.fase ?? 'Grupos'}</Text>
+        </View>
+
+        {/* Jogadores e estatísticas — tabelas lado a lado */}
+        <View style={styles.playersSection}>
+          <Text style={styles.playersTitle}>JOGADORES E ESTATÍSTICAS</Text>
+
+          <View style={styles.playersRow}>
+            <View style={styles.playersColumn}>
+              <Text style={[styles.playersTitle, { marginBottom: 6 }]}>{t1.name}</Text>
+              {renderListaJogadores(t1)}
+            </View>
+
+            <View style={styles.playersColumn}>
+              <Text style={[styles.playersTitle, { marginBottom: 6 }]}>{t2.name}</Text>
+              {renderListaJogadores(t2)}
+            </View>
           </View>
         </View>
 
-        {/* Pênaltis (se habilitado) */}
+        {/* Pênaltis (opcional) */}
         {showPenalties && (
-          <View style={styles.penaltiesSection}>
-            <Text style={styles.penaltiesTitle}>PÊNALTIS</Text>
-            <View style={styles.penaltiesScore}>
-              <Text style={styles.penaltyScore}>
-                {match?.penaltyResult?.split(':')[0] || '0'}
-              </Text>
-              <Text style={styles.penaltyScore}>:</Text>
-              <Text style={styles.penaltyScore}>
-                {match?.penaltyResult?.split(':')[1] || '0'}
-              </Text>
+          <View style={{ marginTop: 10 }}>
+            <Text style={{ fontSize: 11, fontWeight: 'bold', marginBottom: 6, textAlign: 'center' }}>PÊNALTIS</Text>
+            <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center' }}>
+              <Text style={{ fontSize: 24, fontWeight: 'bold' }}>{(match?.penaltyResult || '0:0').split(':')[0]}</Text>
+              <Text style={{ fontSize: 24, fontWeight: 'bold', marginHorizontal: 8 }}>:</Text>
+              <Text style={{ fontSize: 24, fontWeight: 'bold' }}>{(match?.penaltyResult || '0:0').split(':')[1]}</Text>
             </View>
           </View>
         )}
 
-        {/* Jogadores */}
-        <View style={styles.playersSection}>
-          <Text style={styles.playersTitle}>JOGADORES E ESTATÍSTICAS</Text>
-          <View style={styles.playersGrid}>
-            {/* Time 1 */}
-            <View style={styles.playersList}>
-              <Text style={styles.teamHeader}>{match?.team1}</Text>
-              {team1Data.players.map(player => (
-                <View key={player.id} style={styles.playerRow}>
-                  <Text style={styles.playerName}>{player.name}</Text>
-                  <View style={styles.playerStats}>
-                    <Text style={{ fontWeight: 'bold' }}>{player.points} gols</Text>
-                    <View style={styles.cardContainer}>
-                      {player.yellow > 0 && (
-                        <Text style={styles.yellowCard}>{player.yellow}</Text>
-                      )}
-                      {player.red > 0 && (
-                        <Text style={styles.redCard}>{player.red}</Text>
-                      )}
-                    </View>
-                  </View>
-                </View>
-              ))}
-            </View>
-
-            {/* Time 2 */}
-            <View style={styles.playersList}>
-              <Text style={styles.teamHeader}>{match?.team2}</Text>
-              {team2Data.players.map(player => (
-                <View key={player.id} style={styles.playerRow}>
-                  <Text style={styles.playerName}>{player.name}</Text>
-                  <View style={styles.playerStats}>
-                    <Text style={{ fontWeight: 'bold' }}>{player.points} gols</Text>
-                    <View style={styles.cardContainer}>
-                      {player.yellow > 0 && (
-                        <Text style={styles.yellowCard}>{player.yellow}</Text>
-                      )}
-                      {player.red > 0 && (
-                        <Text style={styles.redCard}>{player.red}</Text>
-                      )}
-                    </View>
-                  </View>
-                </View>
-              ))}
-            </View>
-          </View>
-        </View>
-
-        {/* Footer */}
         <Text style={styles.footer}>
           Documento gerado automaticamente pelo Sistema de Gerenciamento de Torneios{'\n'}
           Gerado em: {new Date().toLocaleString('pt-BR')}

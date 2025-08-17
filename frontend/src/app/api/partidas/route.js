@@ -73,6 +73,8 @@ export async function GET(request) {
         ordem: index + 1,
         team1: timeCasa?.nome || 'TBD',
         team2: timeVisitante?.nome || 'TBD',
+        team1Id: timeCasa.id,
+        team2Id: timeVisitante.id,
         team1Course: timeCasa?.curso.sigla || '',
         team2Course: timeVisitante?.curso.sigla || '',
         result: partida.pontosCasa !== null && partida.pontosVisitante !== null 

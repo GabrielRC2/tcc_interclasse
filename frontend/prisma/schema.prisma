@@ -155,7 +155,6 @@ model EventoPartida {
   id            Int      @id @default(autoincrement()) @map("id_evento")
   tipo          String   @map("tipo_evento") @db.VarChar(30)
   pontosGerados Int      @map("pontos_gerados")
-  tempoPartida  DateTime @map("tempo_partida") @db.Time
   partidaId     Int      @map("fk_id_partida")
   jogadorId     Int      @map("fk_id_jogador")
   partida       Partida  @relation(fields: [partidaId], references: [id])

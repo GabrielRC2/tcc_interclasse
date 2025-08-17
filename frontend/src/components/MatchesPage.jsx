@@ -1,272 +1,348 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, MapPin, Users, Trophy, Filter } from 'lucide-react';
+import { Calendar, Clock, MapPin, Trophy, Filter } from 'lucide-react';
 import { Button, Select } from '@/components/common';
 import { useTournament } from '@/contexts/TournamentContext';
+import { SumulaModal } from '@/components/SumulaModal';
 
 export const MatchesPage = () => {
-    const { selectedTournament } = useTournament();
-    const [matches, setMatches] = useState([]);
-    const [filteredMatches, setFilteredMatches] = useState([]);
-    const [modalidades, setModalidades] = useState([]);
-    const [selectedModalidade, setSelectedModalidade] = useState('');
-    const [selectedGenero, setSelectedGenero] = useState('');
-    const [selectedStatus, setSelectedStatus] = useState('');
-    const [generos] = useState(['Masculino', 'Feminino']);
-    const [statusOptions] = useState(['Agendada', 'Em andamento', 'Finalizada', 'Cancelada']);
-    const [loading, setLoading] = useState(true);
+  const { selectedTournament } = useTournament();
 
-    useEffect(() => {
-        loadInitialData();
-    }, []);
+  // estados (nomes em português)
+  const [partidas, setPartidas] = useState([]);
+  const [partidasFiltradas, setPartidasFiltradas] = useState([]);
+  const [modalidades, setModalidades] = useState([]);
+  const [modalidadeSelecionada, setModalidadeSelecionada] = useState('');
+  const [generoSelecionado, setGeneroSelecionado] = useState('');
+  const [statusSelecionado, setStatusSelecionado] = useState('');
+  const [generos] = useState(['Masculino', 'Feminino']);
+  const [partidaSelecionada, setPartidaSelecionada] = useState(null);
+  const [opcoesStatus] = useState(['Agendada', 'Em andamento', 'Encerrada', 'Cancelada']);
+  const [carregando, setCarregando] = useState(true);
 
-    useEffect(() => {
-        loadMatches();
-    }, [selectedTournament, selectedModalidade, selectedGenero]);
+  useEffect(() => {
+    carregarDadosIniciais();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-    useEffect(() => {
-        applyFilters();
-    }, [matches, selectedStatus]);
+  useEffect(() => {
+    carregarPartidas();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedTournament, modalidadeSelecionada, generoSelecionado]);
 
-    const loadInitialData = async () => {
-        try {
-            const response = await fetch('/api/modalidades');
-            const data = await response.json();
-            setModalidades(data);
-        } catch (error) {
-            console.error('Erro ao carregar modalidades:', error);
-        } finally {
-            setLoading(false);
-        }
+  useEffect(() => {
+    aplicarFiltros();
+  }, [partidas, statusSelecionado]);
+
+  // carrega modalidades (exemplo)
+  const carregarDadosIniciais = async () => {
+    try {
+      const res = await fetch('/api/modalidades');
+      const data = res.ok ? await res.json() : [];
+      setModalidades(data);
+    } catch (err) {
+      console.error('Erro ao carregar modalidades:', err);
+    } finally {
+      setCarregando(false);
+    }
+  };
+
+  // carrega partidas do torneio
+  const carregarPartidas = async () => {
+    if (!selectedTournament) {
+      setPartidas([]);
+      return;
+    }
+    try {
+      let url = `/api/partidas?torneioId=${selectedTournament.id}`;
+      if (modalidadeSelecionada) url += `&modalidadeId=${modalidadeSelecionada}`;
+      if (generoSelecionado) url += `&genero=${generoSelecionado}`;
+      const res = await fetch(url);
+      const data = res.ok ? await res.json() : [];
+      setPartidas(data);
+    } catch (err) {
+      console.error('Erro ao carregar partidas:', err);
+      setPartidas([]);
+    }
+  };
+
+  // aplica filtros e remove partidas encerradas
+  const aplicarFiltros = () => {
+    let lista = [...partidas];
+    // remover partidas com status "Finalizada" ou "Encerrada" do listagem
+    lista = lista.filter(p => {
+      const st = (p.status || '').toLowerCase();
+      return st !== 'finalizada' && st !== 'encerrada';
+    });
+    if (statusSelecionado) {
+      lista = lista.filter(p => p.status === statusSelecionado);
+    }
+    setPartidasFiltradas(lista);
+  };
+
+  // cor para badge de status
+  const obterCorStatus = (status) => {
+    switch (status) {
+      case 'Finalizada':
+      case 'Encerrada':
+        return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
+      case 'Em andamento':
+        return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200';
+      case 'Agendada':
+        return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200';
+      case 'Cancelada':
+        return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200';
+      default:
+        return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200';
+    }
+  };
+
+  // mapeia status de exibição para valor aceito pelo servidor
+  const mapearStatusParaServidor = (statusPortugues) => {
+    const m = {
+      'Agendada': 'AGENDADA',
+      'Em andamento': 'EM_ANDAMENTO',
+      'Finalizada': 'FINALIZADA',
+      'Encerrada': 'FINALIZADA', // enviar FINALIZADA quando usuário quer "Encerrada"
+      'Cancelada': 'CANCELADA'
     };
+    return m[statusPortugues] ?? statusPortugues;
+  };
 
-    const loadMatches = async () => {
-        if (!selectedTournament) {
-            setMatches([]);
-            return;
-        }
+  // atualiza status no servidor (envia valor que o servidor espera)
+  const atualizarStatusNoServidor = async (partidaId, statusPortugues) => {
+    try {
+      const servidorStatus = (() => {
+        // servidor PATCH handler aceita várias formas mas usamos português mapeado
+        if (statusPortugues === 'Encerrada') return 'Finalizada';
+        return statusPortugues;
+      })();
+      const res = await fetch(`/api/partidas/${partidaId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: servidorStatus })
+      });
+      if (!res.ok) {
+        const txt = await res.text().catch(() => '');
+        throw new Error(txt || `Falha ao atualizar status (${res.status})`);
+      }
+      const atualizado = await res.json().catch(() => null);
+      return atualizado;
+    } catch (err) {
+      console.warn('Falha ao atualizar status no servidor:', err);
+      return null;
+    }
+  };
 
-        try {
-            let url = `/api/partidas?torneioId=${selectedTournament.id}`;
-            
-            if (selectedModalidade && selectedGenero) {
-                url += `&modalidadeId=${selectedModalidade}&genero=${selectedGenero}`;
-            }
+  // clique no badge de status: alterna entre Agendada <-> Em andamento (ou escolhe)
+  const tratarCliqueStatus = async (partida) => {
+    if (!partida) return;
+    const atual = partida.status || 'Agendada';
+    let desejado = atual === 'Agendada' ? 'Em andamento' : (atual === 'Em andamento' ? 'Agendada' : null);
 
-            const response = await fetch(url);
-            const data = await response.json();
-            
-            console.log('Partidas carregadas:', data.length);
-            setMatches(data);
-        } catch (error) {
-            console.error('Erro ao carregar partidas:', error);
-            setMatches([]);
-        }
-    };
-
-    const applyFilters = () => {
-        let filtered = [...matches];
-
-        if (selectedStatus) {
-            filtered = filtered.filter(match => match.status === selectedStatus);
-        }
-
-        setFilteredMatches(filtered);
-    };
-
-    const getStatusColor = (status) => {
-        switch (status) {
-            case 'Finalizada': return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
-            case 'Em andamento': return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200';
-            case 'Agendada': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200';
-            case 'Cancelada': return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200';
-            default: return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200';
-        }
-    };
-
-    if (loading) {
-        return <div className="flex justify-center items-center h-64">Carregando...</div>;
+    if (!desejado) {
+      const escolha = window.confirm('Definir status como "Em andamento"? OK = Em andamento, Cancel = Agendada');
+      desejado = escolha ? 'Em andamento' : 'Agendada';
+    } else {
+      const msg = desejado === 'Em andamento'
+        ? 'Deseja iniciar a partida e abrir a súmula em modo AO VIVO?'
+        : 'Deseja marcar a partida como AGENDADA?';
+      if (!window.confirm(msg)) return;
     }
 
-    return (
-        <div className="space-y-6">
-            <div className="flex flex-wrap justify-between items-center gap-4">
-                <div>
-                    <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">PARTIDAS</h1>
-                    {selectedTournament && (
-                        <p className="text-gray-500 dark:text-gray-400">
-                            Torneio: {selectedTournament.name} • {filteredMatches.length} partidas
-                        </p>
-                    )}
-                </div>
-            </div>
+    // atualização otimista na UI
+    setPartidas(prev => prev.map(p => p.id === partida.id ? { ...p, status: desejado } : p));
+    setPartidasFiltradas(prev => prev.map(p => p.id === partida.id ? { ...p, status: desejado } : p));
 
-            {!selectedTournament ? (
-                <div className="text-center py-12">
-                    <Trophy size={48} className="mx-auto text-gray-400 mb-4" />
-                    <p className="text-gray-500 dark:text-gray-400 text-lg">
-                        Selecione um torneio no Dashboard primeiro
-                    </p>
-                </div>
-            ) : (
-                <>
-                    {/* Filtros */}
-                    <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm p-4">
-                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                            <Select
-                                label="Modalidade"
-                                value={selectedModalidade}
-                                onChange={(e) => {
-                                    setSelectedModalidade(e.target.value);
-                                    setSelectedGenero('');
-                                }}
-                            >
-                                <option value="">Todas as modalidades</option>
-                                {modalidades.map(m => (
-                                    <option key={m.id} value={m.id}>{m.nome}</option>
-                                ))}
-                            </Select>
+    // tentar persistir no servidor (convertendo 'Encerrada' local para 'Finalizada' para o servidor)
+    const servidorRes = await atualizarStatusNoServidor(partida.id, desejado);
+    if (servidorRes) {
+      setPartidas(prev => prev.map(p => p.id === partida.id ? { ...p, ...(servidorRes || {}) } : p));
+      setPartidasFiltradas(prev => prev.map(p => p.id === partida.id ? { ...p, ...(servidorRes || {}) } : p));
+    }
 
-                            <Select
-                                label="Gênero"
-                                value={selectedGenero}
-                                onChange={(e) => setSelectedGenero(e.target.value)}
-                                disabled={!selectedModalidade}
-                            >
-                                <option value="">Todos os gêneros</option>
-                                {generos.map(g => (
-                                    <option key={g} value={g}>{g}</option>
-                                ))}
-                            </Select>
+    // se virou Em andamento, abrir modal em modo live
+    if (desejado === 'Em andamento') {
+      setPartidaSelecionada({ ...partida, status: 'Em andamento' });
+    } else {
+      // se voltou para agendada e modal aberto para essa partida, fechar
+      if (partidaSelecionada?.id === partida.id) setPartidaSelecionada(null);
+    }
+  };
 
-                            <Select
-                                label="Status"
-                                value={selectedStatus}
-                                onChange={(e) => setSelectedStatus(e.target.value)}
-                            >
-                                <option value="">Todos os status</option>
-                                {statusOptions.map(s => (
-                                    <option key={s} value={s}>{s}</option>
-                                ))}
-                            </Select>
+  // quando a súmula é enviada (SumulaModal -> onSumulaEnviada)
+  // atualizamos status local para "Encerrada" e persistimos como "Finalizada" no servidor
+  const tratarSumulaEnviada = async (partidaId) => {
+    // atualização otimista local: colocar "Encerrada" para remoção da listagem
+    setPartidas(prev => prev.map(p => p.id === partidaId ? { ...p, status: 'Encerrada' } : p));
+    setPartidasFiltradas(prev => prev.filter(p => p.id !== partidaId));
 
-                            <div className="flex items-end">
-                                <Button 
-                                    onClick={() => {
-                                        setSelectedModalidade('');
-                                        setSelectedGenero('');
-                                        setSelectedStatus('');
-                                    }}
-                                    variant="outline"
-                                    className="w-full"
-                                >
-                                    <Filter size={16} className="mr-2" />
-                                    Limpar Filtros
-                                </Button>
-                            </div>
-                        </div>
-                    </div>
+    // enviar como "Finalizada" ao servidor
+    await atualizarStatusNoServidor(partidaId, 'Finalizada');
 
-                    {/* Lista de Partidas */}
-                    {filteredMatches.length === 0 ? (
-                        <div className="text-center py-12">
-                            <Calendar size={48} className="mx-auto text-gray-400 mb-4" />
-                            <p className="text-gray-500 dark:text-gray-400 text-lg">
-                                {matches.length === 0 
-                                    ? 'Nenhuma partida encontrada. Gere o chaveamento primeiro.'
-                                    : 'Nenhuma partida corresponde aos filtros selecionados.'
-                                }
-                            </p>
-                        </div>
-                    ) : (
-                        <div className="space-y-4">
-                            <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-                                <h3 className="font-semibold text-blue-900 dark:text-blue-100 mb-2">
-                                    📋 Ordem Otimizada de Partidas
-                                </h3>
-                                <p className="text-sm text-blue-700 dark:text-blue-300">
-                                    As partidas abaixo foram organizadas automaticamente para maximizar o tempo de descanso entre jogos dos times, 
-                                    garantindo uma distribuição equilibrada ao longo do torneio.
-                                </p>
-                            </div>
+    // recarregar partidas para garantir consistência em dashboard
+    await carregarPartidas();
+  };
 
-                            {filteredMatches.map((match) => (
-                                <div key={match.id} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm p-6">
-                                    <div className="flex flex-wrap justify-between items-start gap-4">
-                                        {/* Info da Partida */}
-                                        <div className="flex-1 min-w-0">
-                                            <div className="flex items-center gap-3 mb-3">
-                                                <span className="text-sm font-medium text-gray-500 dark:text-gray-400">
-                                                    Partida #{match.ordem}
-                                                </span>
-                                                <span className="text-sm text-gray-500 dark:text-gray-400">
-                                                    Grupo {match.grupo}
-                                                </span>
-                                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(match.status)}`}>
-                                                    {match.status}
-                                                </span>
-                                            </div>
+  if (carregando) {
+    return <div className="flex justify-center items-center h-64">Carregando...</div>;
+  }
 
-                                            {/* Times */}
-                                            <div className="flex items-center justify-center gap-4 mb-4">
-                                                <div className="text-center">
-                                                    <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">
-                                                        {match.team1}
-                                                    </h3>
-                                                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                                                        {match.team1Course}
-                                                    </p>
-                                                </div>
-
-                                                <div className="text-center px-4">
-                                                    {match.result ? (
-                                                        <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                                                            {match.result}
-                                                        </div>
-                                                    ) : (
-                                                        <div className="text-xl font-bold text-gray-400">
-                                                            VS
-                                                        </div>
-                                                    )}
-                                                </div>
-
-                                                <div className="text-center">
-                                                    <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">
-                                                        {match.team2}
-                                                    </h3>
-                                                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                                                        {match.team2Course}
-                                                    </p>
-                                                </div>
-                                            </div>
-
-                                            {/* Detalhes */}
-                                            <div className="flex flex-wrap gap-4 text-sm text-gray-500 dark:text-gray-400">
-                                                <div className="flex items-center gap-1">
-                                                    <Trophy size={14} />
-                                                    <span>{match.modality} • {match.category}</span>
-                                                </div>
-                                                <div className="flex items-center gap-1">
-                                                    <Calendar size={14} />
-                                                    <span>{match.date}</span>
-                                                </div>
-                                                <div className="flex items-center gap-1">
-                                                    <Clock size={14} />
-                                                    <span>{match.time}</span>
-                                                </div>
-                                                <div className="flex items-center gap-1">
-                                                    <MapPin size={14} />
-                                                    <span>{match.location}</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-                </>
-            )}
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-wrap justify-between items-center gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">PARTIDAS</h1>
+          {selectedTournament && (
+            <p className="text-gray-500 dark:text-gray-400">
+              Torneio: {selectedTournament.name} • {partidasFiltradas.length} partidas
+            </p>
+          )}
         </div>
-    );
+      </div>
+
+      {!selectedTournament ? (
+        <div className="text-center py-12">
+          <Trophy size={48} className="mx-auto text-gray-400 mb-4" />
+          <p className="text-gray-500 dark:text-gray-400 text-lg">Selecione um torneio no Dashboard primeiro</p>
+        </div>
+      ) : (
+        <>
+          {/* filtros */}
+          <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm p-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <Select
+                label="Modalidade"
+                value={modalidadeSelecionada}
+                onChange={(e) => { setModalidadeSelecionada(e.target.value); setGeneroSelecionado(''); }}
+              >
+                <option value="">Todas as modalidades</option>
+                {modalidades.map(m => <option key={m.id} value={m.id}>{m.nome}</option>)}
+              </Select>
+
+              <Select
+                label="Gênero"
+                value={generoSelecionado}
+                onChange={(e) => setGeneroSelecionado(e.target.value)}
+                disabled={!modalidadeSelecionada}
+              >
+                <option value="">Todos os gêneros</option>
+                {generos.map(g => <option key={g} value={g}>{g}</option>)}
+              </Select>
+
+              <Select
+                label="Status"
+                value={statusSelecionado}
+                onChange={(e) => setStatusSelecionado(e.target.value)}
+              >
+                <option value="">Todos os status</option>
+                {opcoesStatus.map(s => <option key={s} value={s}>{s}</option>)}
+              </Select>
+
+              <div className="flex items-end">
+                <Button
+                  onClick={() => { setModalidadeSelecionada(''); setGeneroSelecionado(''); setStatusSelecionado(''); }}
+                  variant="outline"
+                  className="w-full"
+                >
+                  <Filter size={16} className="mr-2" />
+                  Limpar Filtros
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          {/* lista de partidas */}
+          {partidasFiltradas.length === 0 ? (
+            <div className="text-center py-12">
+              <Calendar size={48} className="mx-auto text-gray-400 mb-4" />
+              <p className="text-gray-500 dark:text-gray-400 text-lg">
+                {partidas.length === 0 ? 'Nenhuma partida encontrada. Gere o chaveamento primeiro.' : 'Nenhuma partida corresponde aos filtros selecionados.'}
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                <h3 className="font-semibold text-blue-900 dark:text-blue-100 mb-2">📋 Ordem Otimizada de Partidas</h3>
+                <p className="text-sm text-blue-700 dark:text-blue-300">As partidas abaixo foram organizadas automaticamente para maximizar o tempo de descanso entre jogos dos times, garantindo uma distribuição equilibrada ao longo do torneio.</p>
+              </div>
+
+              {partidasFiltradas.map(p => (
+                <div key={p.id} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm p-6">
+                  <div className="flex flex-wrap justify-between items-start gap-4">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-3 mb-3">
+                        <span className="text-sm font-medium text-gray-500 dark:text-gray-400">Partida #{p.ordem}</span>
+                        <span className="text-sm text-gray-500 dark:text-gray-400">Grupo {p.grupo}</span>
+
+                        <span
+                          onClick={() => tratarCliqueStatus(p)}
+                          className={`px-2 py-1 rounded-full text-xs font-medium cursor-pointer ${obterCorStatus(p.status)}`}
+                          title="Clique para alternar Agendada / Em andamento"
+                        >
+                          {p.status || 'Agendada'}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center justify-center gap-4 mb-4">
+                        <div className="text-center">
+                          <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">{p.team1}</h3>
+                          <p className="text-sm text-gray-500 dark:text-gray-400">{p.team1Course}</p>
+                        </div>
+
+                        <div className="text-center px-4">
+                          {p.result ? (
+                            <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{p.result}</div>
+                          ) : (
+                            <div className="text-xl font-bold text-gray-400">VS</div>
+                          )}
+                        </div>
+
+                        <div className="text-center">
+                          <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">{p.team2}</h3>
+                          <p className="text-sm text-gray-500 dark:text-gray-400">{p.team2Course}</p>
+                        </div>
+
+                        {/* botão acessar eventos aparece somente se Em andamento */}
+                        {p.status === 'Em andamento' && (
+                          <Button onClick={() => setPartidaSelecionada(p)}>Acessar Eventos</Button>
+                        )}
+                      </div>
+
+                      <div className="flex flex-wrap gap-4 text-sm text-gray-500 dark:text-gray-400">
+                        <div className="flex items-center gap-1">
+                          <Trophy size={14} />
+                          <span>{p.modality} • {p.category}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Calendar size={14} />
+                          <span>{p.date}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Clock size={14} />
+                          <span>{p.time}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <MapPin size={14} />
+                          <span>{p.location}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <SumulaModal
+            isOpen={!!partidaSelecionada}
+            onClose={() => setPartidaSelecionada(null)}
+            match={partidaSelecionada}
+            mode={partidaSelecionada?.status === 'Em andamento' ? 'live' : 'final'}
+            onSumulaEnviada={(id) => tratarSumulaEnviada(id)}
+          />
+        </>
+      )}
+    </div>
+  );
 };

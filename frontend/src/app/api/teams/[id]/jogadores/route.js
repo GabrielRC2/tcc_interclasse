@@ -1,10 +1,41 @@
 import { PrismaClient } from '@prisma/client';
+import { NextResponse } from 'next/server';
 
 const prisma = new PrismaClient();
 
+export async function GET(request, { params }) {
+  try {
+    const { id } = await params;
+    const timeId = parseInt(id);
+
+    const jogadoresDoTime = await prisma.timeJogador.findMany({
+      where: { timeId },
+      include: {
+        jogador: {
+          include: { curso: true }
+        }
+      }
+    });
+
+    const formattedJogadores = jogadoresDoTime.map(tj => ({
+      id: tj.jogador.id,
+      nome: tj.jogador.nome,
+      numeroCamisa: tj.numeroCamisa, // <-- aqui!
+      curso: tj.jogador.curso?.nome || '',
+      sala: tj.jogador.sala
+    }));
+
+    return NextResponse.json(formattedJogadores);
+  } catch (error) {
+    console.error('Erro ao buscar jogadores do time:', error);
+    return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 });
+  }
+}
+
 export async function POST(request, { params }) {
   try {
-    const timeId = parseInt(params.id);
+    const {id} = await params;
+    const timeId = parseInt(id);
     const data = await request.json();
 
     console.log('Adicionando jogador ao time:', { timeId, data });
