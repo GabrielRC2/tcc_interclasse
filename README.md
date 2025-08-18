@@ -12,6 +12,7 @@ cp .env.example .env
 
 # 3. Instalar dependências
 npm install
+
 yarn add @react-pdf/renderer
 
 
