@@ -131,14 +131,20 @@ export const GroupsPage = () => {
     };
 
     const gerarChaveamento = async () => {
+        if (!selectedTournament || !selectedModalidade || !selectedGenero) {
+            alert('Selecione Modalidade e Gênero primeiro');
+            return;
+        }
+
         if (grupos.length === 0) {
             alert('Realize o sorteio primeiro');
             return;
         }
 
-        if (!confirm('Gerar chaveamento automático? Esta ação criará todas as partidas otimizadas.')) {
-            return;
-        }
+        const modalidadeNome = modalidades.find(m => m.id == selectedModalidade)?.nome;
+        const confirm = window.confirm(`Gerar chaveamento para ${modalidadeNome} ${selectedGenero}? Partidas antigas desta modalidade/gênero serão substituídas.`);
+        
+        if (!confirm) return;
 
         try {
             const response = await fetch('/api/matches/generate', {
@@ -153,14 +159,14 @@ export const GroupsPage = () => {
 
             if (response.ok) {
                 const result = await response.json();
-                alert(`Chaveamento gerado com sucesso! ${result.partidasGeradas} partidas criadas.`);
+                alert(`✅ ${result.partidasGeradas} partidas de ${result.modalidade} ${result.genero} geradas!`);
             } else {
                 const error = await response.json();
-                alert(error.error || 'Erro ao gerar chaveamento');
+                alert('❌ ' + (error.error || 'Erro ao gerar chaveamento'));
             }
         } catch (error) {
             console.error('Erro ao gerar chaveamento:', error);
-            alert('Erro ao gerar chaveamento');
+            alert('❌ Erro ao gerar chaveamento');
         }
     };
 
@@ -185,7 +191,11 @@ export const GroupsPage = () => {
                             <Shuffle size={20} className="mr-2" />
                             Realizar Sorteio
                         </Button>
-                        <Button onClick={gerarChaveamento} disabled={grupos.length === 0}>
+                        <Button 
+                            onClick={gerarChaveamento} 
+                            disabled={grupos.length === 0}
+                            className="bg-green-600 hover:bg-green-700"
+                        >
                             <Play size={20} className="mr-2" />
                             Gerar Chaveamento
                         </Button>

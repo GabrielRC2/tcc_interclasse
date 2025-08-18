@@ -43,26 +43,50 @@ export async function POST(request) {
       return Response.json({ error: 'Nenhum grupo encontrado. Realize o sorteio primeiro.' }, { status: 404 });
     }
 
-    // 2. Verificar se já existem partidas e remover na ORDEM CORRETA
+    // 2. CORREÇÃO: Deletar apenas partidas da modalidade/gênero específica
     const gruposIds = grupos.map(g => g.id);
     
-    // 2.1 Primeiro: Deletar PartidaTime (FK)
+    // 2.1 Deletar PartidaTime das partidas específicas
     await prisma.partidaTime.deleteMany({
       where: {
         partida: {
-          grupoId: { in: gruposIds }
+          grupoId: { in: gruposIds },
+          // ADICIONAR: Filtro por times do gênero específico
+          times: {
+            some: {
+              time: {
+                categoria: {
+                  genero: genero,
+                  modalidadeId: parseInt(modalidadeId)
+                }
+              }
+            }
+          }
         }
       }
     });
-    console.log('PartidaTime deletados');
 
-    // 2.2 Depois: Deletar Partidas
+    // 2.2 Deletar Partidas apenas dos grupos específicos
     await prisma.partida.deleteMany({
       where: {
-        grupoId: { in: gruposIds }
+        grupoId: { in: gruposIds },
+        // VERIFICAR: Se o grupo realmente tem times do gênero específico
+        grupo: {
+          times: {
+            some: {
+              time: {
+                categoria: {
+                  genero: genero,
+                  modalidadeId: parseInt(modalidadeId)
+                }
+              }
+            }
+          }
+        }
       }
     });
-    console.log('Partidas deletadas');
+
+    console.log(`🗑️ Partidas antigas de ${genero} ${modalidadeId} removidas`);
 
     // 3. Gerar partidas para cada grupo
     const todasPartidas = [];
@@ -83,11 +107,22 @@ export async function POST(request) {
     // 4. Otimizar ordem das partidas
     const partidasOtimizadas = otimizarOrdemPartidas(todasPartidas);
 
-    // 5. Buscar local padrão
-    const localPadrao = await prisma.local.findFirst();
+    // 5. Buscar local padrão baseado na modalidade
+    const modalidade = await prisma.modalidade.findUnique({
+      where: { id: parseInt(modalidadeId) }
+    });
+
+    const localPadrao = await prisma.local.findFirst({
+      where: {
+        nome: getLocalPorModalidade(modalidade?.nome)
+      }
+    }) || await prisma.local.findFirst();
+
     if (!localPadrao) {
       return Response.json({ error: 'Nenhum local cadastrado no sistema' }, { status: 400 });
     }
+
+    console.log(`📍 Local selecionado: ${localPadrao.nome} para ${modalidade?.nome}`);
 
     // 6. Salvar partidas no banco
     const partidasCriadas = [];
@@ -127,18 +162,31 @@ export async function POST(request) {
       partidasCriadas.push(novaPartida);
     }
 
-    console.log(`${partidasCriadas.length} partidas criadas com sucesso`);
+    console.log(`✅ ${partidasCriadas.length} partidas de ${genero} criadas com sucesso`);
 
     return Response.json({ 
       message: 'Chaveamento gerado com sucesso!',
       partidasGeradas: partidasCriadas.length,
-      grupos: grupos.length
+      grupos: grupos.length,
+      modalidade: modalidade?.nome,
+      genero: genero
     });
 
   } catch (error) {
     console.error('Erro ao gerar chaveamento:', error);
     return Response.json({ error: 'Erro interno do servidor: ' + error.message }, { status: 500 });
   }
+}
+
+// Determinar local baseado na modalidade
+function getLocalPorModalidade(modalidade) {
+  const configuracao = {
+    'Vôlei': 'Quadra de Baixo',
+    'Handebol': 'Quadra de Cima',
+    'Basquete': 'Quadra de Baixo',
+    'Futsal': 'Quadra de Cima'
+  };
+  return configuracao[modalidade] || 'Quadra de Baixo';
 }
 
 // Gerar partidas rodízio para um grupo
