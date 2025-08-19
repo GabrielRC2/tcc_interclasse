@@ -6,7 +6,7 @@ import { useTournament } from '@/contexts/TournamentContext';
 import { PDFDownloadLink } from '@react-pdf/renderer';
 import { SumulaPDF } from './SumulaPDF';
 
-export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEnviada = () => {} }) => {
+export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEnviada = () => { } }) => {
   if (!match) return null;
 
   const estaAoVivo = mode === 'live';
@@ -164,6 +164,51 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEn
         const txt = await res.text().catch(() => '');
         throw new Error(txt || 'Erro ao enviar eventos');
       }
+
+      // ====== NOVA LÓGICA: CALCULAR VENCEDOR ======
+      // Calcular placar final
+      const placarTimeA = (edicaoTimeA || []).reduce((s, p) => s + (p.points || 0), 0);
+      const placarTimeB = (edicaoTimeB || []).reduce((s, p) => s + (p.points || 0), 0);
+      const resultado = `${placarTimeA}:${placarTimeB}`;
+
+      // Buscar dados completos da partida para obter IDs dos times
+      const partidaCompleta = await fetch(`/api/partidas/${match.id}`);
+      const partidaData = partidaCompleta.ok ? await partidaCompleta.json() : null;
+
+      // Determinar vencedor
+      let vencedorId = null;
+      let empate = false;
+
+      if (placarTimeA > placarTimeB) {
+        vencedorId = partidaData?.team1Id || match.team1Id; // Time da casa venceu
+      } else if (placarTimeB > placarTimeA) {
+        vencedorId = partidaData?.team2Id || match.team2Id; // Time visitante venceu
+      } else {
+        empate = true; // Empate
+      }
+
+      console.log(`🏆 Resultado: ${resultado}, Vencedor ID: ${vencedorId}, Empate: ${empate}`);
+
+      // Atualizar partida com resultado e vencedor
+      const resultadoRes = await fetch(`/api/partidas/${match.id}/resultado`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          pontosCasa: placarTimeA,
+          pontosVisitante: placarTimeB,
+          resultado: resultado,
+          vencedorId: vencedorId,
+          empate: empate
+        })
+      });
+
+      if (!resultadoRes.ok) {
+        console.warn('Eventos salvos, mas falha ao atualizar resultado da partida');
+      } else {
+        const resultData = await resultadoRes.json();
+        console.log(`✅ Resultado salvo: ${resultData.resultado}, Vencedor: ${resultData.vencedor}`);
+      }
+      // ====== FIM NOVA LÓGICA ======
 
       // após salvar eventos, atualiza status da partida para "Finalizada"
       const patchRes = await fetch(`/api/partidas/${match.id}`, {

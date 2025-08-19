@@ -137,6 +137,10 @@ model Partida {
   statusPartida    String            @map("status_partida") @db.VarChar(20)
   pontosCasa       Int?              @map("pontos_casa")
   pontosVisitante  Int?              @map("pontos_visitante")
+  vencedorId       Int?              @map("vencedor_id") // ID do time vencedor
+  empate           Boolean?          @map("empate") @default(false) // Se foi empate
+  resultado        String?           @map("resultado") @db.VarChar(20) // Ex: "3:1"
+  fase             String?           @map("fase") @db.VarChar(50) @default("Grupos") // Grupos, Quartas, Semifinal, Final
   grupoId          Int               @map("fk_id_grupo")
   localId          Int               @map("fk_id_local")
   torneioId        Int               @map("fk_id_torneio")

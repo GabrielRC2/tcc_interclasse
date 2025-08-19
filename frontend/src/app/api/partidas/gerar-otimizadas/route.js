@@ -40,6 +40,18 @@ export async function POST(request) {
     locais.forEach(local => localMap[local.nome] = local.id);
 
     // 3. Limpar partidas existentes
+    // Ordem correta: EventoPartida -> PartidaTime -> Partida
+
+    // 3.1. Deletar EventoPartida primeiro
+    await prisma.eventoPartida.deleteMany({
+      where: {
+        partida: {
+          torneioId: parseInt(torneioId)
+        }
+      }
+    });
+
+    // 3.2. Deletar PartidaTime
     await prisma.partidaTime.deleteMany({
       where: {
         partida: {
@@ -48,6 +60,7 @@ export async function POST(request) {
       }
     });
 
+    // 3.3. Finalmente deletar Partida
     await prisma.partida.deleteMany({
       where: { torneioId: parseInt(torneioId) }
     });
@@ -56,10 +69,10 @@ export async function POST(request) {
 
     // 4. Gerar TODAS as partidas de TODAS as modalidades
     const todasPartidas = [];
-    
+
     for (const grupo of grupos) {
       const times = grupo.times.map(gt => gt.time);
-      
+
       if (times.length < 2) continue;
 
       const partidasGrupo = gerarRodizioPartidas(times, grupo);
@@ -75,10 +88,10 @@ export async function POST(request) {
 
     // 6. Salvar partidas no banco
     const partidasCriadas = [];
-    
+
     for (let i = 0; i < partidasOtimizadas.length; i++) {
       const partida = partidasOtimizadas[i];
-      
+
       // Criar partida
       const novaPartida = await prisma.partida.create({
         data: {
@@ -113,7 +126,7 @@ export async function POST(request) {
 
     console.log(`✅ ${partidasCriadas.length} partidas criadas com sucesso`);
 
-    return Response.json({ 
+    return Response.json({
       message: 'Partidas otimizadas geradas com sucesso!',
       partidasGeradas: partidasCriadas.length,
       slots: Math.max(...partidasOtimizadas.map(p => p.slot)) + 1,
@@ -203,10 +216,10 @@ function otimizarPartidasGlobalmente(partidas, configuracaoLocais, localMap) {
 
     // Tentar agendar 2 partidas simultâneas (uma por quadra)
     const locaisUsados = new Set();
-    
+
     for (const modalidadeKey of modalidadesKeys) {
       if (slot.partidas.length >= 2) break; // Máximo 2 partidas simultâneas
-      
+
       const partidasDisp = partidasPorModalidade[modalidadeKey];
       if (partidasDisp.length === 0) continue;
 
@@ -236,7 +249,7 @@ function otimizarPartidasGlobalmente(partidas, configuracaoLocais, localMap) {
       const partidaEscolhida = partidasDisp.splice(melhorIdx, 1)[0];
       ultimaPartidaTime[partidaEscolhida.time1Id] = slotAtual;
       ultimaPartidaTime[partidaEscolhida.time2Id] = slotAtual;
-      
+
       slot.partidas.push({
         ...partidaEscolhida,
         slot: slotAtual,

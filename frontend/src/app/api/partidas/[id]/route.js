@@ -56,7 +56,7 @@ export async function GET(request) {
     // Filtrar por gênero se especificado
     let partidasFiltradas = partidas;
     if (genero) {
-      partidasFiltradas = partidas.filter(partida => 
+      partidasFiltradas = partidas.filter(partida =>
         partida.times.some(pt => pt.time.categoria.genero === genero)
       );
     }
@@ -64,7 +64,7 @@ export async function GET(request) {
     const partidasFormatadas = partidasFiltradas.map((partida, index) => {
       const timesCasa = partida.times.filter(pt => pt.ehCasa);
       const timesVisitante = partida.times.filter(pt => !pt.ehCasa);
-      
+
       const timeCasa = timesCasa[0]?.time;
       const timeVisitante = timesVisitante[0]?.time;
 
@@ -75,8 +75,8 @@ export async function GET(request) {
         team2: timeVisitante?.nome || 'TBD',
         team1Course: timeCasa?.curso.sigla || '',
         team2Course: timeVisitante?.curso.sigla || '',
-        result: partida.pontosCasa !== null && partida.pontosVisitante !== null 
-          ? `${partida.pontosCasa}:${partida.pontosVisitante}` 
+        result: partida.pontosCasa !== null && partida.pontosVisitante !== null
+          ? `${partida.pontosCasa}:${partida.pontosVisitante}`
           : null,
         modality: partida.grupo?.modalidade?.nome || 'N/A',
         category: timeCasa?.categoria?.genero || timeVisitante?.categoria?.genero || 'N/A',
@@ -155,11 +155,11 @@ export async function POST(request) {
 
     // 3. Gerar partidas para cada grupo
     const todasPartidas = [];
-    
+
     for (const grupo of grupos) {
       const times = grupo.times.map(gt => gt.time);
       console.log(`Grupo ${grupo.nome}: ${times.length} times`);
-      
+
       if (times.length < 2) {
         console.log(`Grupo ${grupo.nome} tem menos de 2 times, pulando`);
         continue;
@@ -180,10 +180,10 @@ export async function POST(request) {
 
     // 6. Salvar partidas no banco
     const partidasCriadas = [];
-    
+
     for (let i = 0; i < partidasOtimizadas.length; i++) {
       const partida = partidasOtimizadas[i];
-      
+
       // Criar partida
       const novaPartida = await prisma.partida.create({
         data: {
@@ -218,7 +218,7 @@ export async function POST(request) {
 
     console.log(`${partidasCriadas.length} partidas criadas com sucesso`);
 
-    return Response.json({ 
+    return Response.json({
       message: 'Chaveamento gerado com sucesso!',
       partidasGeradas: partidasCriadas.length,
       grupos: grupos.length
@@ -230,7 +230,7 @@ export async function POST(request) {
   }
 }
 
-export async function PATCH(request, {params}) {
+export async function PATCH(request, { params }) {
   try {
     // Next.js dynamic route params must be awaited
     const { id } = await params;
@@ -297,6 +297,8 @@ export async function PATCH(request, {params}) {
       ordem: partidaAtualizada.ordem ?? null,
       team1: timeCasa?.nome || 'TBD',
       team2: timeVisitante?.nome || 'TBD',
+      team1Id: timeCasa?.id, // ADICIONADO
+      team2Id: timeVisitante?.id, // ADICIONADO
       team1Course: timeCasa?.curso?.sigla || '',
       team2Course: timeVisitante?.curso?.sigla || '',
       result: (partidaAtualizada.pontosCasa !== null && partidaAtualizada.pontosVisitante !== null)
@@ -307,7 +309,7 @@ export async function PATCH(request, {params}) {
       location: partidaAtualizada.local?.nome || 'TBD',
       status: getStatusPortugues(partidaAtualizada.statusPartida),
       date: partidaAtualizada.dataHora ? partidaAtualizada.dataHora.toISOString().split('T')[0] : null,
-      time: partidaAtualizada.dataHora ? partidaAtualizada.dataHora.toTimeString().slice(0,5) : null,
+      time: partidaAtualizada.dataHora ? partidaAtualizada.dataHora.toTimeString().slice(0, 5) : null,
       grupo: partidaAtualizada.grupo?.nome || 'N/A'
     };
 
@@ -391,12 +393,12 @@ function otimizarOrdemPartidas(partidas) {
     const partidaEscolhida = partidasRestantes.splice(melhorIdx, 1)[0];
     ultimaPartida[partidaEscolhida.time1Id] = posicao;
     ultimaPartida[partidaEscolhida.time2Id] = posicao;
-    
+
     resultado.push({
       ...partidaEscolhida,
       ordem: posicao + 1
     });
-    
+
     posicao++;
   }
 

@@ -56,7 +56,7 @@ export async function GET(request) {
     // Filtrar por gênero se especificado
     let partidasFiltradas = partidas;
     if (genero) {
-      partidasFiltradas = partidas.filter(partida => 
+      partidasFiltradas = partidas.filter(partida =>
         partida.times.some(pt => pt.time.categoria.genero === genero)
       );
     }
@@ -64,7 +64,7 @@ export async function GET(request) {
     const partidasFormatadas = partidasFiltradas.map((partida, index) => {
       const timesCasa = partida.times.filter(pt => pt.ehCasa);
       const timesVisitante = partida.times.filter(pt => !pt.ehCasa);
-      
+
       const timeCasa = timesCasa[0]?.time;
       const timeVisitante = timesVisitante[0]?.time;
 
@@ -77,9 +77,17 @@ export async function GET(request) {
         team2Id: timeVisitante.id,
         team1Course: timeCasa?.curso.sigla || '',
         team2Course: timeVisitante?.curso.sigla || '',
-        result: partida.pontosCasa !== null && partida.pontosVisitante !== null 
-          ? `${partida.pontosCasa}:${partida.pontosVisitante}` 
+        result: partida.pontosCasa !== null && partida.pontosVisitante !== null
+          ? `${partida.pontosCasa}:${partida.pontosVisitante}`
           : null,
+        // NOVAS INFORMAÇÕES DO VENCEDOR
+        vencedorId: partida.vencedorId,
+        empate: partida.empate,
+        vencedor: partida.empate ? 'Empate' :
+          partida.vencedorId === timeCasa?.id ? timeCasa?.nome :
+            partida.vencedorId === timeVisitante?.id ? timeVisitante?.nome : null,
+        fase: partida.fase || 'Grupos',
+        // FIM NOVAS INFORMAÇÕES
         modality: partida.grupo?.modalidade?.nome || 'N/A',
         category: timeCasa?.categoria?.genero || timeVisitante?.categoria?.genero || 'N/A',
         location: partida.local?.nome || 'TBD',
