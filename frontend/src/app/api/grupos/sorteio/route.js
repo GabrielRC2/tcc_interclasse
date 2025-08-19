@@ -31,34 +31,50 @@ export async function POST(request) {
       }, { status: 400 });
     }
 
-    // 2. LIMPAR grupos existentes na ORDEM CORRETA (FK primeiro)
-    
-    // 2.1 Primeiro: Deletar todas as relações GrupoTime
-    await prisma.grupoTime.deleteMany({
-      where: {
-        grupo: {
-          modalidadeId: parseInt(modalidadeId),
-          torneioId: parseInt(torneioId)
-        }
-      }
-    });
-    console.log('GrupoTime deletados');
-
-    // 2.2 Depois: Deletar grupos
-    await prisma.grupo.deleteMany({
+    // 2. LIMPAR dados existentes APENAS DO GÊNERO ESPECÍFICO
+    const gruposExistentes = await prisma.grupo.findMany({
       where: {
         modalidadeId: parseInt(modalidadeId),
-        torneioId: parseInt(torneioId)
-      }
+        torneioId: parseInt(torneioId),
+        times: {
+          some: {
+            time: {
+              categoria: {
+                genero: genero
+              }
+            }
+          }
+        }
+      },
+      select: { id: true }
     });
-    console.log('Grupos deletados');
+    
+    const gruposIds = gruposExistentes.map(g => g.id);
+    
+    if (gruposIds.length > 0) {
+      // Deletar apenas GrupoTime (não precisa deletar partidas pois não criamos elas aqui)
+      await prisma.grupoTime.deleteMany({
+        where: {
+          grupoId: { in: gruposIds }
+        }
+      });
+      console.log('GrupoTime deletados');
+
+      // Deletar grupos específicos
+      await prisma.grupo.deleteMany({
+        where: {
+          id: { in: gruposIds }
+        }
+      });
+      console.log('Grupos deletados');
+    }
 
     // 3. Criar novos grupos
     const numGrupos = parseInt(quantidadeGrupos);
     const gruposCriados = [];
     
     for (let i = 0; i < numGrupos; i++) {
-      const nomeGrupo = String.fromCharCode(65 + i); // A, B, C, D...
+      const nomeGrupo = `${String.fromCharCode(65 + i)}-${genero.charAt(0).toUpperCase()}`;
       
       const grupo = await prisma.grupo.create({
         data: {
@@ -89,12 +105,13 @@ export async function POST(request) {
       console.log(`Time ${timesEmbaralhados[i].nome} adicionado ao Grupo ${gruposCriados[grupoIndex].nome}`);
     }
 
-    console.log('Sorteio concluído com sucesso!');
+    console.log('Sorteio e chaveamento concluídos com sucesso!');
 
     return Response.json({ 
-      message: 'Sorteio realizado com sucesso!',
+      message: 'Sorteio e chaveamento realizados com sucesso!',
       grupos: numGrupos,
       times: times.length,
+      genero: genero,
       distribuicao: gruposCriados.map((g, i) => ({
         grupo: g.nome,
         quantidade: Math.floor(times.length / numGrupos) + (i < times.length % numGrupos ? 1 : 0)
@@ -102,11 +119,6 @@ export async function POST(request) {
     });
   } catch (error) {
     console.error('Erro detalhado ao realizar sorteio:', error);
-    
-    // Log mais detalhado do erro
-    if (error.code === 'P2003') {
-      console.error('Erro de Foreign Key:', error.meta);
-    }
     
     return Response.json({ 
       error: 'Erro ao realizar sorteio: ' + error.message 

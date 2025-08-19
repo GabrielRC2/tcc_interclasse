@@ -1,22 +1,19 @@
-# tcc_interclasse
-backend e frontend do tcc
+1. Copiar o arquivo de exemplo
+cd frontend
+cp .env.example .env
 
-Para o backend (Laravel)
-No diretório backend:
+2. Editar o .env com suas configurações
 
+3. Instalar dependências
+npm install
+npm i @react-pdf/renderer
 
-  cd backend
+4. Configurar banco
+npx prisma generate
+npx prisma db push
 
-  composer install
+5. Se quiser popular o banco de dados
+npx prisma db seed
 
-  npm install
-
-
-
-Para o frontend (Next.js)
-No diretório frontend:
-
-
-  cd frontend
-
-  npm install
+6. Rodar o projeto
+npm run dev

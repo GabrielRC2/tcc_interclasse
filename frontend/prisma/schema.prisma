@@ -133,7 +133,7 @@ model Local {
 // Descrição: Registra cada partida que ocorre.
 model Partida {
   id               Int               @id @default(autoincrement()) @map("id_partida")
-  dataHora         DateTime          @map("data_hora_partida") @db.DateTime
+  dataHora         DateTime?         @map("data_hora_partida") @db.DateTime
   statusPartida    String            @map("status_partida") @db.VarChar(20)
   pontosCasa       Int?              @map("pontos_casa")
   pontosVisitante  Int?              @map("pontos_visitante")

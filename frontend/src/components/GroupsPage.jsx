@@ -12,9 +12,10 @@ export const GroupsPage = () => {
     const [timesDisponiveis, setTimesDisponiveis] = useState([]);
     const [selectedModalidade, setSelectedModalidade] = useState('');
     const [selectedGenero, setSelectedGenero] = useState('');
-    const [quantidadeGrupos, setQuantidadeGrupos] = useState(''); // NOVO
+    const [quantidadeGrupos, setQuantidadeGrupos] = useState(2);
     const [generos] = useState(['Masculino', 'Feminino']);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState('');
 
     useEffect(() => {
         loadInitialData();
@@ -48,11 +49,15 @@ export const GroupsPage = () => {
         if (!selectedTournament || !selectedModalidade || !selectedGenero) return;
 
         try {
+            setLoading(true);
             const response = await fetch(`/api/grupos?torneioId=${selectedTournament.id}&modalidadeId=${selectedModalidade}&genero=${selectedGenero}`);
             const data = await response.json();
             setGrupos(data);
         } catch (error) {
             console.error('Erro ao carregar grupos:', error);
+            setError('Erro ao carregar grupos');
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -190,14 +195,6 @@ export const GroupsPage = () => {
                         <Button onClick={handleSorteio} disabled={!selectedTournament || !selectedModalidade || !selectedGenero || !quantidadeGrupos}>
                             <Shuffle size={20} className="mr-2" />
                             Realizar Sorteio
-                        </Button>
-                        <Button 
-                            onClick={gerarChaveamento} 
-                            disabled={grupos.length === 0}
-                            className="bg-green-600 hover:bg-green-700"
-                        >
-                            <Play size={20} className="mr-2" />
-                            Gerar Chaveamento
                         </Button>
                     </div>
                 </div>
