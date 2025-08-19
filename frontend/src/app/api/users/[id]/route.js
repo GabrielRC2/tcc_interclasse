@@ -63,7 +63,7 @@ export async function PUT(request, { params }) {
       const tipoUsuarioEnum = {
         'admin': 'ADMIN',
         'staff': 'STAFF',
-        'aluno': 'ALUNO'
+        'representante': 'REPRESENTANTE'
       };
       tipoUsuarioMapeado = tipoUsuarioEnum[tipo_usuario.toLowerCase()] || tipo_usuario;
     }

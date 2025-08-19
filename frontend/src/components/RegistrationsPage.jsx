@@ -23,7 +23,7 @@ export const RegistrationsPage = () => {
     const [users, setUsers] = useState({
         administradores: [],
         staff: [],
-        alunos: []
+        representantes: []
     });
 
     const [loading, setLoading] = useState(true);
@@ -103,17 +103,21 @@ export const RegistrationsPage = () => {
             setUsers({
                 administradores: usersData.filter(u => u.tipo_usuario?.toLowerCase() === 'admin'),
                 staff: usersData.filter(u => u.tipo_usuario?.toLowerCase() === 'staff'),
-                alunos: usersData.filter(u => u.tipo_usuario?.toLowerCase() === 'aluno')
+                representantes: usersData.filter(u => u.tipo_usuario?.toLowerCase() === 'representante')
             });
         } catch (error) {
             console.error('Erro ao carregar usuários:', error);
             // Se a API não existe ainda, usar dados mock
             setUsers({
                 administradores: [
-                    { id: 1, nome_usuario: 'Admin Principal', email_usuario: 'admin@interclasse.com', tipo_usuario: 'admin' }
+                    { id: 1, nome_usuario: 'Admin Principal', email_usuario: 'admin@icm.com', tipo_usuario: 'admin' }
                 ],
-                staff: [],
-                alunos: []
+                staff: [
+                    { id: 1, nome_usuario: 'Staff Principal', email_usuario: 'staff@icm.com', tipo_usuario: 'staff' }
+                ],
+                representantes: [
+                    { id: 1, nome_usuario: 'Representante Principal', email_usuario: 'representante@icm.com', tipo_usuario: 'representante' }
+                ]
             });
         }
     };
@@ -124,6 +128,7 @@ export const RegistrationsPage = () => {
 
         if (type === 'Usuários') {
             // Para usuários (importante para login)
+
             setFormData({
                 name: item.nome_usuario || '',
                 sigla: '',
@@ -373,8 +378,10 @@ export const RegistrationsPage = () => {
                                 <Button onClick={() => {
                                     setEditingItem(null);
                                     setCategory('Usuários');
-                                    setSelectedUserCategory('Administradores'); // Set default user category
-                                    setFormData({ name: '', sigla: '', email: '', senha: '', tipo_usuario: 'admin' });
+                                    // Manter a categoria atualmente selecionada
+                                    const tipoUsuario = selectedUserCategory === 'Administradores' ? 'admin' : 
+                                                       selectedUserCategory === 'Staff' ? 'staff' : 'representante';
+                                    setFormData({ name: '', sigla: '', email: '', senha: '', tipo_usuario: tipoUsuario });
                                     setIsModalOpen(true);
                                 }}>
                                     Cadastrar Novo Usuário
@@ -383,7 +390,7 @@ export const RegistrationsPage = () => {
 
                             {/* Tabs para tipos de usuários */}
                             <div className="flex border-b border-gray-200 dark:border-gray-700 mb-4">
-                                {['Administradores', 'Staff', 'Alunos'].map((tab) => (
+                                {['Administradores', 'Staff', 'Representantes'].map((tab) => (
                                     <button
                                         key={tab}
                                         onClick={() => setSelectedUserCategory(tab)}
@@ -441,12 +448,12 @@ export const RegistrationsPage = () => {
                                             onClick={() => {
                                                 setEditingItem(null);
                                                 setCategory('Usuários');
-                                                setFormData({ name: '', sigla: '', email: '', senha: '', tipo_usuario: selectedUserCategory === 'Administradores' ? 'admin' : selectedUserCategory === 'Staff' ? 'staff' : 'aluno' });
+                                                setFormData({ name: '', sigla: '', email: '', senha: '', tipo_usuario: selectedUserCategory === 'Administradores' ? 'admin' : selectedUserCategory === 'Staff' ? 'staff' : 'representante'});
                                                 setIsModalOpen(true);
                                             }}
                                             className="mt-2"
                                         >
-                                            Criar Primeiro {selectedUserCategory === 'Administradores' ? 'Administrador' : selectedUserCategory === 'Staff' ? 'Staff' : 'Aluno'}
+                                            Criar Primeiro {selectedUserCategory === 'Administradores' ? 'Administrador' : selectedUserCategory === 'Staff' ? 'Staff' : 'Representante'}
                                         </Button>
                                     </div>
                                 )}
@@ -519,7 +526,7 @@ export const RegistrationsPage = () => {
                                 <option value="">Selecionar tipo</option>
                                 <option value="admin">Administrador</option>
                                 <option value="staff">Staff</option>
-                                <option value="aluno">Aluno</option>
+                                <option value="representante">Representante</option>
                             </Select>
                         </>
                     )}

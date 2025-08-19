@@ -24,10 +24,10 @@ export async function POST(request) {
     const tipoUsuarioEnum = {
       'admin': 'ADMIN',
       'staff': 'STAFF',
-      'aluno': 'ALUNO'
+      'representante': 'REPRESENTANTE'
     };
 
-    const tipoUsuarioMapeado = tipoUsuarioEnum[tipo_usuario.toLowerCase()] || 'ALUNO';
+    const tipoUsuarioMapeado = tipoUsuarioEnum[tipo_usuario.toLowerCase()] || 'REPRESENTANTE';
 
     const novoUsuario = await prisma.usuario.create({
       data: {
