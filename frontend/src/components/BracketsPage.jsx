@@ -15,19 +15,27 @@ export const BracketsPage = () => {
 
     useEffect(() => {
         loadModalidades();
-    }, []);
+    }, [selectedTournament]);
 
     useEffect(() => {
         loadChaveamento();
     }, [selectedModalidade, selectedGenero, selectedTournament]);
 
     const loadModalidades = async () => {
+        if (!selectedTournament) {
+            setModalidades([]);
+            return;
+        }
+
         try {
-            const response = await fetch('/api/modalidades');
+            const response = await fetch(`/api/modalidades/por-torneio?torneioId=${selectedTournament.id}`);
             const data = await response.json();
+            
+            console.log(`📊 Modalidades do torneio ${selectedTournament.name}:`, data);
             setModalidades(data);
         } catch (error) {
             console.error('Erro ao carregar modalidades:', error);
+            setModalidades([]);
         } finally {
             setLoading(false);
         }

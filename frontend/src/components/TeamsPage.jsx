@@ -35,6 +35,10 @@ function TeamsPage() {
     loadModalidades();
   }, []);
 
+  useEffect(() => {
+    loadModalidades();
+}, [selectedTournament]);
+
   const loadTeams = async () => {
     if (!selectedTournament) {
       setTeams([]);
@@ -58,6 +62,7 @@ function TeamsPage() {
 
   const [cursos, setCursos] = useState([]);
   const [modalidades, setModalidades] = useState([]);
+  const [selectedModalidade, setSelectedModalidade] = useState('');
 
   const loadCursos = async () => {
     try {
@@ -73,17 +78,25 @@ function TeamsPage() {
   };
 
   const loadModalidades = async () => {
-    try {
-      const response = await fetch('/api/modalidades');
-      const modalidadesData = await response.json();
-      setModalidades(modalidadesData);
-
-      const sportNames = ['Todos', ...modalidadesData.map(m => m.nome)];
-      setSportOptions(sportNames);
-    } catch (error) {
-      console.error('Erro ao carregar modalidades:', error);
+    if (!selectedTournament) {
+        setModalidades([]);
+        return;
     }
-  };
+
+    try {
+        const response = await fetch(`/api/modalidades/por-torneio?torneioId=${selectedTournament.id}`);
+        const data = await response.json();
+        
+        console.log(`📊 Modalidades do torneio ${selectedTournament.name}:`, data);
+        setModalidades(data);
+        
+        // Resetar filtro de modalidade quando torneio muda
+        setSelectedModalidade('');
+    } catch (error) {
+        console.error('Erro ao carregar modalidades:', error);
+        setModalidades([]);
+    }
+};
 
   // Adicionar novos estados
   const [isEditing, setIsEditing] = useState(false);
@@ -421,6 +434,22 @@ function TeamsPage() {
       alert('Erro ao excluir times selecionados');
     }
   };
+
+  // ADICIONAR no TeamsPage.jsx onde já existe loadInitialData():
+const loadInitialData = async () => {
+    if (!selectedTournament) return;
+    
+    try {
+        // ADICIONAR esta linha:
+        const modalidadesRes = await fetch(`/api/modalidades/por-torneio?torneioId=${selectedTournament.id}`);
+        const modalidadesData = await modalidadesRes.json();
+        setModalidades(modalidadesData);
+        
+        // ...resto do código existente...
+    } catch (error) {
+        console.error('Erro:', error);
+    }
+};
 
   // Adicionar verificação de torneio
   if (!selectedTournament) {

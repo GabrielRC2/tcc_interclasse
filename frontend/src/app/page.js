@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Sidebar } from '@/components/Sidebar';
 import { LoginPage } from '@/components/LoginPage';
-import { Dashboard } from '@/components/DashboardPage';
+import { DashboardPage } from '@/components/DashboardPage';
 import { SeasonsPage } from '@/components/SeasonsPage';
 import { TeamsPage } from '@/components/TeamsPage';
 import { RegistrationsPage } from '@/components/RegistrationsPage';
@@ -32,14 +32,14 @@ export default function Home() {
 
   const renderPage = () => {
     switch (currentPage) {
-      case 'dashboard': return <Dashboard />;
+      case 'dashboard': return <DashboardPage />;
       case 'seasons': return <SeasonsPage />;
       case 'teams': return <TeamsPage />;
       case 'registrations': return <RegistrationsPage />;
       case 'brackets': return <BracketsPage />;
       case 'matches': return <MatchesPage />;
       case 'groups': return <GroupsPage />;
-      default: return <Dashboard />;
+      default: return <DashboardPage />;
     }
   };
 

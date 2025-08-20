@@ -6,104 +6,91 @@ export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);
     const torneioId = searchParams.get('torneioId');
-    const modalidadeId = searchParams.get('modalidadeId');
-    const genero = searchParams.get('genero');
+
+    console.log(`🔍 Buscando partidas para torneio: ${torneioId}`);
 
     if (!torneioId) {
       return Response.json([]);
     }
 
-    const whereClause = {
-      torneioId: parseInt(torneioId)
-    };
-
-    // Filtros opcionais
-    if (modalidadeId && genero) {
-      whereClause.grupo = {
-        modalidadeId: parseInt(modalidadeId)
-      };
-    }
-
     const partidas = await prisma.partida.findMany({
-      where: whereClause,
+      where: {
+        torneioId: parseInt(torneioId)
+      },
       include: {
-        times: {
-          include: {
-            time: {
-              include: {
-                curso: true,
-                categoria: {
-                  include: {
-                    modalidade: true
-                  }
-                }
-              }
-            }
-          }
-        },
         grupo: {
           include: {
             modalidade: true
           }
         },
-        local: true
+        local: true,
+        times: {
+          include: {
+            time: {
+              include: {
+                categoria: true,
+                curso: true
+              }
+            }
+          }
+        }
       },
-      orderBy: {
-        id: 'asc' // Ordem otimizada
-      }
+      orderBy: { dataHora: 'asc' }
     });
 
-    // Filtrar por gênero se especificado
-    let partidasFiltradas = partidas;
-    if (genero) {
-      partidasFiltradas = partidas.filter(partida => 
-        partida.times.some(pt => pt.time.categoria.genero === genero)
-      );
-    }
+    console.log(`📊 Encontradas ${partidas.length} partidas brutas`);
 
-    const partidasFormatadas = partidasFiltradas.map((partida, index) => {
-      const timesCasa = partida.times.filter(pt => pt.ehCasa);
-      const timesVisitante = partida.times.filter(pt => !pt.ehCasa);
-      
-      const timeCasa = timesCasa[0]?.time;
-      const timeVisitante = timesVisitante[0]?.time;
+    const partidasFormatadas = partidas.map((partida, index) => {
+      const timeCasa = partida.times.find(pt => pt.ehCasa)?.time;
+      const timeVisitante = partida.times.find(pt => !pt.ehCasa)?.time;
 
-      return {
+      const partidaFormatada = {
         id: partida.id,
         ordem: index + 1,
-        team1: timeCasa?.nome || 'TBD',
-        team2: timeVisitante?.nome || 'TBD',
-        team1Id: timeCasa.id,
-        team2Id: timeVisitante.id,
-        team1Course: timeCasa?.curso.sigla || '',
-        team2Course: timeVisitante?.curso.sigla || '',
-        result: partida.pontosCasa !== null && partida.pontosVisitante !== null 
-          ? `${partida.pontosCasa}:${partida.pontosVisitante}` 
-          : null,
+        // Dados dos times
+        time1: timeCasa?.nome || 'Time A',
+        time2: timeVisitante?.nome || 'Time B',
+        team1: timeCasa?.nome || 'Time A',
+        team2: timeVisitante?.nome || 'Time B',
+        team1Course: timeCasa?.curso?.sigla || 'N/A',
+        team2Course: timeVisitante?.curso?.sigla || 'N/A',
+        // Modalidade e categoria
+        modalidade: {
+          id: partida.grupo?.modalidade?.id,
+          nome: partida.grupo?.modalidade?.nome
+        },
         modality: partida.grupo?.modalidade?.nome || 'N/A',
-        category: timeCasa?.categoria?.genero || timeVisitante?.categoria?.genero || 'N/A',
-        location: partida.local?.nome || 'TBD',
-        status: getStatusPortugues(partida.statusPartida),
-        date: partida.dataHora.toISOString().split('T')[0],
-        time: partida.dataHora.toTimeString().slice(0, 5),
-        grupo: partida.grupo?.nome || 'N/A'
+        category: timeCasa?.categoria?.genero || 'N/A',
+        categoria: {
+          id: timeCasa?.categoria?.id,
+          genero: timeCasa?.categoria?.genero,
+          nome: timeCasa?.categoria?.nome
+        },
+        // Local e horário
+        local: partida.local?.nome || 'A definir',
+        location: partida.local?.nome || 'A definir',
+        dataHora: partida.dataHora,
+        date: partida.dataHora ? new Date(partida.dataHora).toLocaleDateString('pt-BR') : 'A definir',
+        time: partida.dataHora ? new Date(partida.dataHora).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : 'A definir',
+        // Status e placar
+        status: partida.statusPartida || 'Agendada',
+        placarTime1: partida.pontosCasa,
+        placarTime2: partida.pontosVisitante,
+        result: (partida.pontosCasa !== null && partida.pontosVisitante !== null) 
+          ? `${partida.pontosCasa} x ${partida.pontosVisitante}` 
+          : null,
+        // Grupo
+        grupo: partida.grupo?.nome || 'A'
       };
+
+      console.log(`🏆 Partida ${partida.id}:`, partidaFormatada);
+      return partidaFormatada;
     });
 
+    console.log(`✅ Retornando ${partidasFormatadas.length} partidas formatadas`);
     return Response.json(partidasFormatadas);
-
   } catch (error) {
-    console.error('Erro ao buscar partidas:', error);
-    return Response.json({ error: 'Erro interno do servidor' }, { status: 500 });
+    console.error('❌ Erro na API partidas:', error);
+    return Response.json([]);
   }
-}
-
-function getStatusPortugues(status) {
-  const statusMap = {
-    'AGENDADA': 'Agendada',
-    'EM_ANDAMENTO': 'Em andamento',
-    'FINALIZADA': 'Finalizada',
-    'CANCELADA': 'Cancelada'
-  };
-  return statusMap[status] || status;
 }

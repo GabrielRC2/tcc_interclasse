@@ -19,7 +19,7 @@ export const GroupsPage = () => {
 
     useEffect(() => {
         loadInitialData();
-    }, []);
+    }, [selectedTournament]);
 
     useEffect(() => {
         loadTimesDisponiveis();
@@ -30,16 +30,21 @@ export const GroupsPage = () => {
     }, [selectedModalidade, selectedGenero, selectedTournament]);
 
     const loadInitialData = async () => {
-        try {
-            const [modalidadesRes] = await Promise.all([
-                fetch('/api/modalidades')
-            ]);
+        if (!selectedTournament) {
+            setModalidades([]);
+            return;
+        }
 
+        try {
+            // MUDANÇA: Buscar modalidades específicas do torneio
+            const modalidadesRes = await fetch(`/api/modalidades/por-torneio?torneioId=${selectedTournament.id}`);
             const modalidadesData = await modalidadesRes.json();
 
+            console.log(`📊 Modalidades do torneio ${selectedTournament.name}:`, modalidadesData);
             setModalidades(modalidadesData);
         } catch (error) {
             console.error('Erro ao carregar dados:', error);
+            setModalidades([]);
         } finally {
             setLoading(false);
         }
@@ -146,7 +151,7 @@ export const GroupsPage = () => {
             return;
         }
 
-        const modalidadeNome = modalidades.find(m => m.id == selectedModalidade)?.nome;
+        const modalidadeNome = modalidades?.find(m => m.id == selectedModalidade)?.nome || 'Modalidade';
         const confirm = window.confirm(`Gerar chaveamento para ${modalidadeNome} ${selectedGenero}? Partidas antigas desta modalidade/gênero serão substituídas.`);
         
         if (!confirm) return;
@@ -223,7 +228,7 @@ export const GroupsPage = () => {
                                     }}
                                 >
                                     <option value="">Selecione a modalidade</option>
-                                    {modalidades.map(m => (
+                                    {modalidades && modalidades.map(m => (
                                         <option key={m.id} value={m.id}>{m.nome}</option>
                                     ))}
                                 </Select>
@@ -325,14 +330,14 @@ export const GroupsPage = () => {
                                             </h3>
                                             
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                {grupo.times.map(time => (
-                                                    <div key={time.id} className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                                                        <Trophy size={16} className="text-yellow-500" />
-                                                        <div>
-                                                            <p className="font-semibold text-gray-900 dark:text-gray-100">{time.nome}</p>
-                                                            <p className="text-sm text-gray-500 dark:text-gray-400">{time.curso.nome}</p>
-                                                        </div>
-                                                    </div>
+                                                {grupo.times.map(grupoTime => (
+    <div key={grupoTime.time.id} className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+        <Trophy size={16} className="text-yellow-500" />
+        <div>
+            <p className="font-semibold text-gray-900 dark:text-gray-100">{grupoTime.time.nome}</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400">{grupoTime.time.curso?.nome}</p>
+        </div>
+    </div>
                                                 ))}
                                             </div>
                                         </div>

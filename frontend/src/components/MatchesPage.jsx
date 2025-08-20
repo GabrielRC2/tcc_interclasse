@@ -7,9 +7,14 @@ import { SumulaModal } from '@/components/SumulaModal';
 
 export const MatchesPage = () => {
   const { selectedTournament } = useTournament();
+  const [partidas, setPartidas] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [filtros, setFiltros] = useState({
+    masculino: true,
+    feminino: true,
+  });
 
   // estados (nomes em português)
-  const [partidas, setPartidas] = useState([]);
   const [partidasFiltradas, setPartidasFiltradas] = useState([]);
   const [modalidades, setModalidades] = useState([]);
   const [modalidadeSelecionada, setModalidadeSelecionada] = useState('');
@@ -24,14 +29,47 @@ export const MatchesPage = () => {
   const [showConfigModal, setShowConfigModal] = useState(false);
   const [generating, setGenerating] = useState(false);
 
+  // FUNÇÃO ÚNICA DE CARREGAR PARTIDAS
+  const carregarPartidas = async () => {
+    if (!selectedTournament) {
+      setPartidas([]);
+      setLoading(false);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      console.log(`🔄 Carregando partidas para torneio ${selectedTournament.id}`);
+      
+      let url = `/api/partidas?torneioId=${selectedTournament.id}`;
+      if (modalidadeSelecionada) url += `&modalidadeId=${modalidadeSelecionada}`;
+      if (generoSelecionado) url += `&genero=${generoSelecionado}`;
+      
+      const response = await fetch(url);
+      
+      if (response.ok) {
+        const data = await response.json();
+        setPartidas(data);
+        console.log(`✅ Carregadas ${data.length} partidas:`, data);
+      } else {
+        console.error('❌ Erro HTTP ao carregar partidas:', response.status);
+        setPartidas([]);
+      }
+    } catch (error) {
+      console.error('❌ Erro ao carregar partidas:', error);
+      setPartidas([]);
+    } finally {
+      setLoading(false);
+      setCarregando(false);
+    }
+  };
+
   useEffect(() => {
     carregarDadosIniciais();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
     carregarPartidas();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedTournament, modalidadeSelecionada, generoSelecionado]);
 
   useEffect(() => {
@@ -41,6 +79,10 @@ export const MatchesPage = () => {
   useEffect(() => {
     loadConfiguracaoLocais();
   }, []);
+
+  useEffect(() => {
+    loadModalidades();
+  }, [selectedTournament]);
 
   // carrega modalidades (exemplo)
   const carregarDadosIniciais = async () => {
@@ -52,25 +94,6 @@ export const MatchesPage = () => {
       console.error('Erro ao carregar modalidades:', err);
     } finally {
       setCarregando(false);
-    }
-  };
-
-  // carrega partidas do torneio
-  const carregarPartidas = async () => {
-    if (!selectedTournament) {
-      setPartidas([]);
-      return;
-    }
-    try {
-      let url = `/api/partidas?torneioId=${selectedTournament.id}`;
-      if (modalidadeSelecionada) url += `&modalidadeId=${modalidadeSelecionada}`;
-      if (generoSelecionado) url += `&genero=${generoSelecionado}`;
-      const res = await fetch(url);
-      const data = res.ok ? await res.json() : [];
-      setPartidas(data);
-    } catch (err) {
-      console.error('Erro ao carregar partidas:', err);
-      setPartidas([]);
     }
   };
 
@@ -111,17 +134,16 @@ export const MatchesPage = () => {
       'Agendada': 'AGENDADA',
       'Em andamento': 'EM_ANDAMENTO',
       'Finalizada': 'FINALIZADA',
-      'Encerrada': 'FINALIZADA', // enviar FINALIZADA quando usuário quer "Encerrada"
+      'Encerrada': 'FINALIZADA',
       'Cancelada': 'CANCELADA'
     };
     return m[statusPortugues] ?? statusPortugues;
   };
 
-  // atualiza status no servidor (envia valor que o servidor espera)
+  // atualiza status no servidor
   const atualizarStatusNoServidor = async (partidaId, statusPortugues) => {
     try {
       const servidorStatus = (() => {
-        // servidor PATCH handler aceita várias formas mas usamos português mapeado
         if (statusPortugues === 'Encerrada') return 'Finalizada';
         return statusPortugues;
       })();
@@ -142,7 +164,7 @@ export const MatchesPage = () => {
     }
   };
 
-  // clique no badge de status: alterna entre Agendada <-> Em andamento (ou escolhe)
+  // clique no badge de status
   const tratarCliqueStatus = async (partida) => {
     if (!partida) return;
     const atual = partida.status || 'Agendada';
@@ -162,7 +184,7 @@ export const MatchesPage = () => {
     setPartidas(prev => prev.map(p => p.id === partida.id ? { ...p, status: desejado } : p));
     setPartidasFiltradas(prev => prev.map(p => p.id === partida.id ? { ...p, status: desejado } : p));
 
-    // tentar persistir no servidor (convertendo 'Encerrada' local para 'Finalizada' para o servidor)
+    // tentar persistir no servidor
     const servidorRes = await atualizarStatusNoServidor(partida.id, desejado);
     if (servidorRes) {
       setPartidas(prev => prev.map(p => p.id === partida.id ? { ...p, ...(servidorRes || {}) } : p));
@@ -173,22 +195,15 @@ export const MatchesPage = () => {
     if (desejado === 'Em andamento') {
       setPartidaSelecionada({ ...partida, status: 'Em andamento' });
     } else {
-      // se voltou para agendada e modal aberto para essa partida, fechar
       if (partidaSelecionada?.id === partida.id) setPartidaSelecionada(null);
     }
   };
 
-  // quando a súmula é enviada (SumulaModal -> onSumulaEnviada)
-  // atualizamos status local para "Encerrada" e persistimos como "Finalizada" no servidor
+  // quando a súmula é enviada
   const tratarSumulaEnviada = async (partidaId) => {
-    // atualização otimista local: colocar "Encerrada" para remoção da listagem
     setPartidas(prev => prev.map(p => p.id === partidaId ? { ...p, status: 'Encerrada' } : p));
     setPartidasFiltradas(prev => prev.filter(p => p.id !== partidaId));
-
-    // enviar como "Finalizada" ao servidor
     await atualizarStatusNoServidor(partidaId, 'Finalizada');
-
-    // recarregar partidas para garantir consistência em dashboard
     await carregarPartidas();
   };
 
@@ -199,7 +214,6 @@ export const MatchesPage = () => {
       
       setModalidadesDisponiveis(data.modalidades);
       
-      // Configuração padrão
       const configPadrao = {};
       data.modalidades.forEach(modalidade => {
           configPadrao[modalidade.nome] = modalidade.localPadrao;
@@ -207,6 +221,27 @@ export const MatchesPage = () => {
       setConfiguracaoLocais(configPadrao);
     } catch (error) {
       console.error('Erro ao carregar configuração de locais:', error);
+    }
+  };
+
+  const loadModalidades = async () => {
+    if (!selectedTournament) {
+        setModalidades([]);
+        return;
+    }
+
+    try {
+        const response = await fetch(`/api/modalidades/por-torneio?torneioId=${selectedTournament.id}`);
+        const data = await response.json();
+        
+        console.log(`📊 Modalidades do torneio ${selectedTournament.name}:`, data);
+        setModalidades(data);
+        
+        setModalidadeSelecionada('');
+        setGeneroSelecionado('');
+    } catch (error) {
+        console.error('Erro ao carregar modalidades:', error);
+        setModalidades([]);
     }
   };
 
@@ -234,7 +269,7 @@ export const MatchesPage = () => {
         if (response.ok) {
             const result = await response.json();
             alert(`✅ ${result.partidasGeradas} partidas geradas em ${result.slots} slots de tempo! ${result.modalidades} modalidades otimizadas.`);
-            carregarPartidas(); // Recarregar partidas
+            carregarPartidas();
         } else {
             const error = await response.json();
             alert('❌ ' + (error.error || 'Erro ao gerar partidas'));
@@ -459,7 +494,6 @@ export const MatchesPage = () => {
                   <Button 
                     onClick={() => {
                       setShowConfigModal(false);
-                      // Salvar configurações se necessário
                     }}
                     className="flex-1"
                   >

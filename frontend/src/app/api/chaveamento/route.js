@@ -13,11 +13,23 @@ export async function GET(request) {
       return Response.json([]);
     }
 
-    // Buscar grupos com times da modalidade/gênero específicos
+    console.log('🔍 Buscando chaveamento:', { torneioId, modalidadeId, genero });
+
+    // CORREÇÃO: Buscar grupos COM FILTRO DE GÊNERO
     const grupos = await prisma.grupo.findMany({
       where: {
         torneioId: parseInt(torneioId),
-        modalidadeId: parseInt(modalidadeId)
+        modalidadeId: parseInt(modalidadeId),
+        // ADICIONAR: Filtro para garantir que o grupo tem times do gênero específico
+        times: {
+          some: {
+            time: {
+              categoria: {
+                genero: genero
+              }
+            }
+          }
+        }
       },
       include: {
         times: {
@@ -29,10 +41,12 @@ export async function GET(request) {
               }
             }
           },
+          // FILTRO ESPECÍFICO: Apenas times do gênero selecionado
           where: {
             time: {
               categoria: {
-                genero: genero
+                genero: genero,
+                modalidadeId: parseInt(modalidadeId)
               }
             }
           }
@@ -41,13 +55,22 @@ export async function GET(request) {
       orderBy: { nome: 'asc' }
     });
 
-    // Gerar rodízio para cada grupo
-    const chaveamento = grupos.map(grupo => {
+    console.log(`📊 Grupos encontrados para ${genero}:`, grupos.length);
+
+    // Verificar se os grupos têm times do gênero específico
+    const gruposComTimes = grupos.filter(grupo => grupo.times.length > 0);
+    
+    console.log(`✅ Grupos com times ${genero}:`, gruposComTimes.length);
+
+    // Gerar rodízio para cada grupo que tem times do gênero específico
+    const chaveamento = gruposComTimes.map(grupo => {
       const times = grupo.times.map(gt => ({
         id: gt.time.id,
         nome: gt.time.nome,
         curso: gt.time.curso.sigla
       }));
+
+      console.log(`🏃 Grupo ${grupo.nome}: ${times.length} times ${genero}`);
 
       const partidas = gerarRodizio(times);
       
@@ -58,9 +81,10 @@ export async function GET(request) {
       };
     });
 
+    console.log(`🎯 Chaveamento final: ${chaveamento.length} grupos`);
     return Response.json(chaveamento);
   } catch (error) {
-    console.error('Erro ao buscar chaveamento:', error);
+    console.error('❌ Erro ao buscar chaveamento:', error);
     return Response.json({ error: 'Erro interno do servidor' }, { status: 500 });
   }
 }

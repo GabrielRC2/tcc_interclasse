@@ -56,7 +56,7 @@ async function main() {
       { nome: 'Química', sigla: 'ETIQ' },
       { nome: 'Humanas', sigla: 'HUM' },
       { nome: 'Edificações', sigla: 'EDA' },
-      { nome: 'Administração', sigla: 'ADM' },
+      { nome: 'Administração', sigla: 'ADA' },
     ],
   });
   const cursos = await prisma.curso.findMany();
@@ -73,7 +73,6 @@ async function main() {
   await prisma.torneio.createMany({
     data: [
       { nome: 'Meio do Ano 2024', status: 'EM ANDAMENTO', inicio: new Date('2024-05-15T08:00:00'), fim: new Date('2024-06-15T18:00:00') },
-      { nome: 'Fim de Ano 2024', status: 'PLANEJAMENTO', inicio: new Date('2024-11-10T08:00:00'), fim: new Date('2024-12-10T18:00:00') },
     ],
   });
   const torneioPrincipal = await prisma.torneio.findFirst({ where: { nome: 'Meio do Ano 2024' }});
@@ -96,14 +95,14 @@ async function main() {
   const categorias = await prisma.categoria.findMany();
   
   // 7. Geração de Jogadores com Nomes Realistas
-  console.log('Gerando jogadores com nomes realistas...');
+  console.log('Gerando jogadores com nomes realistas...'); // eslint-disable-next-line no-unused-vars
   const salas = ['1º', '2º', '3º'];
   let todosJogadoresParaCriar = [];
 
   for (const curso of cursos) {
     for (const sala of salas) {
       for (const genero of ['Masculino', 'Feminino']) {
-        for (let i = 0; i < 15; i++) { // Gerar 15 jogadores por grupo
+        for (let i = 0; i < 15; i++) {
           
           // Lógica para gerar nome aleatório
           const primeiroNome = genero === 'Masculino'
@@ -129,46 +128,60 @@ async function main() {
   const jogadoresDoBanco = await prisma.jogador.findMany();
 
   // 8. Geração de Times e associação de jogadores
-  console.log('Criando times e associando jogadores...');
-  let timesParaCriar = [];
-  
+  console.log('🏆 Criando times para o torneio...');
+
+  // DESCOMENTAR E CORRIGIR ESTE BLOCO:
+  let contadorTimes = 0;
+
   for (const curso of cursos) {
       for (const sala of salas) {
           for (const categoria of categorias) {
-              timesParaCriar.push({
-                  nome: `${sala}${curso.sigla}`,
-                  sala,
-                  cursoId: curso.id,
-                  categoriaId: categoria.id,
-                  torneioId: torneioPrincipal.id,
+              const timeCriado = await prisma.time.create({
+                  data: {
+                      nome: `${sala}${curso.sigla}`,
+                      sala,
+                      cursoId: curso.id,
+                      categoriaId: categoria.id,
+                      torneioId: torneioPrincipal.id,
+                  }
               });
+              
+              contadorTimes++;
+              console.log(`   ✅ Time criado: ${timeCriado.nome} - ${categoria.nome}`);
           }
       }
   }
-  await prisma.time.createMany({ data: timesParaCriar });
-  const timesDoBanco = await prisma.time.findMany({ include: { categoria: true } });
+
+  console.log('🏃 Criando escalações dos times...');
+
+  const timesDoBanco = await prisma.time.findMany({
+      include: {
+          categoria: true
+      }
+  });
 
   let escalacoes = [];
   for (const time of timesDoBanco) {
-    const jogadoresDisponiveis = jogadoresDoBanco.filter(j => 
-        j.cursoId === time.cursoId &&
-        j.sala === time.sala &&
-        j.genero === time.categoria.genero
-    );
+      const jogadoresDisponiveis = jogadoresDoBanco.filter(j => 
+          j.cursoId === time.cursoId &&
+          j.sala === time.sala &&
+          j.genero === time.categoria.genero
+      );
 
-    const numJogadoresParaEscalar = time.categoria.nome.includes('Vôlei') ? 6 : 7;
-    const jogadoresParaEscalar = jogadoresDisponiveis.slice(0, numJogadoresParaEscalar);
+      const numJogadoresParaEscalar = time.categoria.nome.includes('Vôlei') ? 6 : 7;
+      const jogadoresParaEscalar = jogadoresDisponiveis.slice(0, numJogadoresParaEscalar);
 
-    for (let i = 0; i < jogadoresParaEscalar.length; i++) {
-        escalacoes.push({
-            timeId: time.id,
-            jogadorId: jogadoresParaEscalar[i].id,
-            numeroCamisa: i + 1,
-        });
-    }
+      for (let i = 0; i < jogadoresParaEscalar.length; i++) {
+          escalacoes.push({
+              timeId: time.id,
+              jogadorId: jogadoresParaEscalar[i].id,
+              numeroCamisa: i + 1,
+          });
+      }
   }
 
   await prisma.timeJogador.createMany({ data: escalacoes });
+  console.log(`   ✅ ${escalacoes.length} jogadores escalados em times`);
 
   console.log('Seeding concluído com sucesso!');
 }

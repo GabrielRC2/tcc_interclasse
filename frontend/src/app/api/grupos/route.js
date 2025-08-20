@@ -13,10 +13,21 @@ export async function GET(request) {
       return Response.json([]);
     }
 
+    console.log('🔍 Buscando grupos:', { torneioId, modalidadeId, genero });
+
+    // ADICIONAR filtro por gênero na query:
     const grupos = await prisma.grupo.findMany({
       where: {
         torneioId: parseInt(torneioId),
-        modalidadeId: parseInt(modalidadeId)
+        modalidadeId: parseInt(modalidadeId),
+        // GARANTIR que o grupo tem times do gênero específico
+        times: {
+          some: {
+            time: {
+              categoria: { genero: genero }
+            }
+          }
+        }
       },
       include: {
         times: {
@@ -28,36 +39,25 @@ export async function GET(request) {
               }
             }
           },
+          // FILTRAR apenas times do gênero específico
           where: {
             time: {
-              categoria: {
-                genero: genero
-              }
+              categoria: { genero: genero }
             }
           }
         }
       },
-      orderBy: {
-        nome: 'asc'
-      }
+      orderBy: { nome: 'asc' }
     });
 
-    // Filtrar apenas grupos que têm times do gênero especificado
+    // Filtrar grupos que realmente têm times do gênero
     const gruposComTimes = grupos.filter(grupo => grupo.times.length > 0);
 
-    const gruposFormatados = gruposComTimes.map(grupo => ({
-      nome: grupo.nome,
-      times: grupo.times.map(gt => ({
-        id: gt.time.id,
-        nome: gt.time.nome,
-        curso: gt.time.curso,
-        categoria: gt.time.categoria
-      }))
-    }));
+    console.log(`📊 Grupos encontrados: ${gruposComTimes.length} para ${genero}`);
 
-    return Response.json(gruposFormatados);
+    return Response.json(gruposComTimes);
   } catch (error) {
-    console.error('Erro ao buscar grupos:', error);
+    console.error('❌ Erro ao buscar grupos:', error);
     return Response.json({ error: 'Erro interno do servidor' }, { status: 500 });
   }
 }
