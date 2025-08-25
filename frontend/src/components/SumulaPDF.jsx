@@ -89,7 +89,7 @@ const styles = StyleSheet.create({
   },
   celulaNome: {
     flex: 1.0,
-    paddingRight: 6,
+    paddingRight: 4,
   },
   celulaCamisa: {
     width: 40,
@@ -105,22 +105,14 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   cardAmarelo: {
-    backgroundColor: '#fbbf24',
-    color: '#000',
-    paddingVertical: 2,
-    paddingHorizontal: 4,
-    borderRadius: 2,
     fontSize: 8,
-    textAlign: 'center'
+    textAlign: 'center',
+    fontWeight: 'bold',
   },
   cardVermelho: {
-    backgroundColor: '#dc2626',
-    color: '#fff',
-    paddingVertical: 2,
-    paddingHorizontal: 4,
-    borderRadius: 2,
     fontSize: 8,
-    textAlign: 'center'
+    textAlign: 'center',
+    fontWeight: 'bold',
   },
 
   playersSection: {
@@ -163,48 +155,45 @@ const styles = StyleSheet.create({
  *  - match: objeto da partida (team1, team2, result, time, modality, category, location, status, etc.)
  *  - tournament: objeto do torneio
  *  - showPenalties: boolean
- *  - team1Data: { name, players: [...] }  (opcional — quando fornecido usa estes dados)
- *  - team2Data: { name, players: [...] }  (opcional)
+ *  - team1Data: { name, players: [...] }  (deverá ser fornecido pelo SumulaModal)
+ *  - team2Data: { name, players: [...] }  (deverá ser fornecido pelo SumulaModal)
  *
- * Players: cada player pode ter campos em português ou inglês:
- *  - id, nome|name, numeroCamisa|numero|number, points|pontos|gols, yellow|amarelos, red|vermelhos
+ * Observação: este componente NÃO utiliza mais dados mockados — espera receber team1Data/team2Data
+ * (se não receber, exibirá listas vazias).
  */
 export const SumulaPDF = ({ match = {}, tournament = {}, showPenalties = false, team1Data = null, team2Data = null }) => {
-  // fallback: se não recebeu dados de times, tenta usar mock (como antes)
-  const mockData = {
-    teams: [
-      {
-        name: match?.team1,
-        players: [
-          { id: 1, name: "João Silva", points: 2, yellow: 1, red: 0, numero: 10 },
-          { id: 2, name: "Carlos Santos", points: 1, yellow: 0, red: 0, numero: 7 },
-          { id: 3, name: "Pedro Lima", points: 0, yellow: 2, red: 1, numero: 5 },
-        ]
-      },
-      {
-        name: match?.team2,
-        players: [
-          { id: 4, name: "Ana Maria", points: 1, yellow: 0, red: 0, numero: 9 },
-          { id: 5, name: "Beatriz Silva", points: 2, yellow: 1, red: 0, numero: 11 },
-          { id: 6, name: "Carla Santos", points: 0, yellow: 0, red: 0, numero: 8 },
-        ]
-      }
-    ]
+  // preparar dados fornecidos pelo SumulaModal (não usar mock)
+  const t1 = {
+    name: (team1Data && (team1Data.name || team1Data.nome)) || match?.team1 || '-',
+    players: (team1Data && Array.isArray(team1Data.players) ? team1Data.players : [])
+  };
+  const t2 = {
+    name: (team2Data && (team2Data.name || team2Data.nome)) || match?.team2 || '-',
+    players: (team2Data && Array.isArray(team2Data.players) ? team2Data.players : [])
   };
 
-  const t1 = team1Data || mockData.teams[0];
-  const t2 = team2Data || mockData.teams[1];
+  const obterNomeJogador = (p) => p?.nome ?? p?.name ?? '-';
+  const obterNumeroCamisa = (p) => (p?.numeroCamisa ?? p?.numero ?? p?.number ?? '-');
+  const obterGols = (p) => {
+    const v = p?.points ?? p?.pontos ?? p?.gols ?? 0;
+    const n = Number(v);
+    return Number.isFinite(n) ? n : 0;
+  };
+  const obterAmarelos = (p) => {
+    const v = p?.yellow ?? p?.amarelos ?? 0;
+    const n = Number(v);
+    return Number.isFinite(n) ? n : 0;
+  };
+  const obterVermelhos = (p) => {
+    const v = p?.red ?? p?.vermelhos ?? 0;
+    const n = Number(v);
+    return Number.isFinite(n) ? n : 0;
+  };
 
-  const obterNomeJogador = (p) => p.nome ?? p.name ?? '-';
-  const obterNumeroCamisa = (p) => (p.numeroCamisa ?? p.numero ?? p.number ?? '-');
-  const obterGols = (p) => (p.points ?? p.pontos ?? p.gols ?? 0);
-  const obterAmarelos = (p) => (p.yellow ?? p.amarelos ?? 0);
-  const obterVermelhos = (p) => (p.red ?? p.vermelhos ?? 0);
-
-  // helper para renderizar lista de jogadores como "tabela"
+  // renderizador de "tabela" para cada time
   const renderListaJogadores = (timeData) => {
     const players = (timeData?.players || []).map(p => ({
-      id: p.id,
+      id: p?.id ?? `${Math.random()}`,
       nome: obterNomeJogador(p),
       camisa: obterNumeroCamisa(p),
       gols: obterGols(p),
@@ -218,8 +207,8 @@ export const SumulaPDF = ({ match = {}, tournament = {}, showPenalties = false, 
           <Text style={[styles.th, styles.celulaNome]}>Jogador</Text>
           <Text style={[styles.th, styles.celulaCamisa]}>Camisa</Text>
           <Text style={[styles.th, styles.celulaGols]}>Gols</Text>
-          <Text style={[styles.th, styles.celulaCartao]}>🟨</Text>
-          <Text style={[styles.th, styles.celulaCartao]}>🟥</Text>
+          <Text style={[styles.th, styles.celulaCartao]}>Ama.</Text>
+          <Text style={[styles.th, styles.celulaCartao]}>Ver.</Text>
         </View>
 
         {players.length === 0 ? (
@@ -243,9 +232,31 @@ export const SumulaPDF = ({ match = {}, tournament = {}, showPenalties = false, 
     );
   };
 
-  // Placar principal (tenta extrair de match.result)
-  const placarA = (match?.result && typeof match.result === 'string') ? (match.result.split(':')[0] ?? '0') : (match?.pontosCasa ?? '0');
-  const placarB = (match?.result && typeof match.result === 'string') ? (match.result.split(':')[1] ?? '0') : (match?.pontosVisitante ?? '0');
+  // calcular placar final: preferência para campos persistidos (pontosCasa/pontosVisitante),
+  // senão tentar extrair de match.result (string), senão somar gols dos jogadores enviados.
+  const parseResultadoString = (resStr) => {
+    try {
+      if (!resStr || typeof resStr !== 'string') return null;
+      const parts = resStr.split(':').map(s => s.trim());
+      if (parts.length !== 2) return null;
+      const a = parseInt(parts[0], 10);
+      const b = parseInt(parts[1], 10);
+      if (Number.isFinite(a) && Number.isFinite(b)) return { a, b };
+      return null;
+    } catch {
+      return null;
+    }
+  };
+
+  const resultadoParseado = parseResultadoString(match?.result ?? match?.resultado ?? null);
+
+  const placarA = (typeof match?.pontosCasa === 'number')
+    ? match.pontosCasa
+    : (resultadoParseado ? resultadoParseado.a : t1.players.reduce((s, p) => s + obterGols(p), 0));
+
+  const placarB = (typeof match?.pontosVisitante === 'number')
+    ? match.pontosVisitante
+    : (resultadoParseado ? resultadoParseado.b : t2.players.reduce((s, p) => s + obterGols(p), 0));
 
   return (
     <Document>
@@ -262,14 +273,14 @@ export const SumulaPDF = ({ match = {}, tournament = {}, showPenalties = false, 
         {/* Placar */}
         <View style={styles.scoreSection}>
           <View style={styles.teamContainer}>
-            <Text style={styles.teamName}>{match?.team1}</Text>
+            <Text style={styles.teamName}>{t1.name}</Text>
             <Text style={styles.score}>{placarA}</Text>
           </View>
 
           <Text style={{ fontSize: 28, fontWeight: 'bold', color: '#666' }}>:</Text>
 
           <View style={styles.teamContainer}>
-            <Text style={styles.teamName}>{match?.team2}</Text>
+            <Text style={styles.teamName}>{t2.name}</Text>
             <Text style={styles.score}>{placarB}</Text>
           </View>
         </View>
@@ -306,9 +317,9 @@ export const SumulaPDF = ({ match = {}, tournament = {}, showPenalties = false, 
           <View style={{ marginTop: 10 }}>
             <Text style={{ fontSize: 11, fontWeight: 'bold', marginBottom: 6, textAlign: 'center' }}>PÊNALTIS</Text>
             <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center' }}>
-              <Text style={{ fontSize: 24, fontWeight: 'bold' }}>{(match?.penaltyResult || '0:0').split(':')[0]}</Text>
+              <Text style={{ fontSize: 24, fontWeight: 'bold' }}>{String((match?.penaltyResult || '0:0').split(':')[0] ?? '0')}</Text>
               <Text style={{ fontSize: 24, fontWeight: 'bold', marginHorizontal: 8 }}>:</Text>
-              <Text style={{ fontSize: 24, fontWeight: 'bold' }}>{(match?.penaltyResult || '0:0').split(':')[1]}</Text>
+              <Text style={{ fontSize: 24, fontWeight: 'bold' }}>{String((match?.penaltyResult || '0:0').split(':')[1] ?? '0')}</Text>
             </View>
           </View>
         )}

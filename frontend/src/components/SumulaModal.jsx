@@ -16,16 +16,22 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEn
   const [carregando, setCarregando] = useState(true);
   const [salvando, setSalvando] = useState(false);
 
-  const [jogadoresTimeA, setJogadoresTimeA] = useState([]); // exibição (modo final)
+  const [jogadoresTimeA, setJogadoresTimeA] = useState([]);
   const [jogadoresTimeB, setJogadoresTimeB] = useState([]);
   const [eventos, setEventos] = useState([]);
 
-  // estados editáveis (modo live)
-  const [edicaoTimeA, setEdicaoTimeA] = useState([]); // [{ id, pontos, amarelos, vermelhos }]
+  // estados editáveis (modo live ou edição manual)
+  const [edicaoTimeA, setEdicaoTimeA] = useState([]); // [{ id, points, yellow, red }]
   const [edicaoTimeB, setEdicaoTimeB] = useState([]);
 
-  const [placarA, setPlacarA] = useState(match.result ? parseInt(match.result.split(':')[0]) || 0 : 0);
-  const [placarB, setPlacarB] = useState(match.result ? parseInt(match.result.split(':')[1]) || 0 : 0);
+  const [placarA, setPlacarA] = useState(match.result ? parseInt(String(match.result).split(':')[0]) || 0 : 0);
+  const [placarB, setPlacarB] = useState(match.result ? parseInt(String(match.result).split(':')[1]) || 0 : 0);
+
+  // permite editar mesmo quando NÃO está ao vivo (botão "Editar súmula")
+  const [permitirEdicao, setPermitirEdicao] = useState(false);
+  // quando o usuário inicia edição de uma partida já finalizada, marcamos este estado
+  // para garantir que o botão de export fique oculto até que os dados sejam efetivamente persistidos
+  const [editingFinalizada, setEditingFinalizada] = useState(false);
 
   useEffect(() => {
     const carregarDados = async () => {
@@ -35,10 +41,6 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEn
         const partidaData = partidaRes.ok ? await partidaRes.json() : null;
         const time1Id = partidaData?.team1Id ?? match.team1Id;
         const time2Id = partidaData?.team2Id ?? match.team2Id;
-
-        if (!time1Id || !time2Id) {
-          console.error('IDs dos times não encontrados', { partidaData, match });
-        }
 
         const [resT1, resT2, resEv] = await Promise.all([
           fetch(`/api/teams/${time1Id}/jogadores`),
@@ -73,7 +75,7 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEn
         const statsA = montarEstatisticas(mappedT1, dataEv);
         const statsB = montarEstatisticas(mappedT2, dataEv);
 
-        // inicializa edições (modo live)
+        // inicializa edições a partir das estatísticas atuais
         setEdicaoTimeA(statsA.map(s => ({ id: s.id, points: s.pontos, yellow: s.amarelos, red: s.vermelhos })));
         setEdicaoTimeB(statsB.map(s => ({ id: s.id, points: s.pontos, yellow: s.amarelos, red: s.vermelhos })));
 
@@ -87,7 +89,7 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEn
           return { ...j, points: s.pontos || 0, yellow: s.amarelos || 0, red: s.vermelhos || 0 };
         }));
 
-        // recalcula placar inicial
+        // recalcula placar inicial a partir dos eventos
         const golsA = statsA.reduce((s, p) => s + (p.pontos || 0), 0);
         const golsB = statsB.reduce((s, p) => s + (p.pontos || 0), 0);
         setPlacarA(golsA);
@@ -103,14 +105,14 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEn
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [match?.id]);
 
-  // quando edições mudam em modo live, recalcula placar
+  // quando edições mudam em modo live OU quando estamos em edição manual, recalcula placar
   useEffect(() => {
-    if (!estaAoVivo) return;
+    if (!(estaAoVivo || permitirEdicao)) return;
     const gA = (edicaoTimeA || []).reduce((s, p) => s + (p.points || 0), 0);
     const gB = (edicaoTimeB || []).reduce((s, p) => s + (p.points || 0), 0);
     setPlacarA(gA);
     setPlacarB(gB);
-  }, [edicaoTimeA, edicaoTimeB, estaAoVivo]);
+  }, [edicaoTimeA, edicaoTimeB, estaAoVivo, permitirEdicao]);
 
   const tratarMudancaInput = (time, jogadorId, campo, valor) => {
     const v = Math.max(0, parseInt(valor || '0', 10));
@@ -121,9 +123,9 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEn
     }
   };
 
-  // envia eventos ao backend e finaliza partida (muda status para Finalizada)
+  // envia eventos ao backend e atualiza pontos finais; permite envio quando ao vivo ou quando permitirEdicao=true
   const enviarSumula = async () => {
-    if (!estaAoVivo) return;
+    if (!(estaAoVivo || permitirEdicao)) return;
     setSalvando(true);
     try {
       const eventosEnviar = [];
@@ -153,7 +155,7 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEn
         }
       }
 
-      // POST eventos
+      // POST eventos (rota faz reconciliação: atualiza existentes / cria novos conforme necessário)
       const res = await fetch(`/api/partidas/${match.id}/eventos`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -165,31 +167,60 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEn
         throw new Error(txt || 'Erro ao enviar eventos');
       }
 
-      // após salvar eventos, atualiza status da partida para "Finalizada"
+      // calcular pontos finais a partir das edicoes (preferência)
+      const pontosCasaCalc = (edicaoTimeA || []).reduce((s, p) => s + (p.points || 0), 0);
+      const pontosVisitanteCalc = (edicaoTimeB || []).reduce((s, p) => s + (p.points || 0), 0);
+
+      // PATCH pontos finais (e opcionalmente status)
+      const patchBody = {
+        pontosCasa: pontosCasaCalc,
+        pontosVisitante: pontosVisitanteCalc
+      };
+      if (estaAoVivo) patchBody.status = 'Finalizada';
+
       const patchRes = await fetch(`/api/partidas/${match.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'Finalizada' }) // endpoint mapeia para DB
+        body: JSON.stringify(patchBody)
       });
 
+      const patchText = await patchRes.text().catch(() => '');
       if (!patchRes.ok) {
-        const txt = await patchRes.text().catch(() => '');
-        console.warn('Eventos salvos, mas falha ao atualizar status:', txt);
-        // não bloqueamos sucesso dos eventos; informamos usuário
-        alert('Eventos salvos, mas falha ao atualizar status da partida: ' + txt);
-      } else {
-        // notifica parent para atualizar listagens (MatchesPage / Dashboard)
-        try {
-          onSumulaEnviada(match.id);
-        } catch (e) { /* noop */ }
+        console.warn('Eventos salvos, mas falha ao atualizar partida:', patchText);
+        // Recarrega eventos para mostrar o que foi salvo, mas mantém o modo de edição
+        const evRes2 = await fetch(`/api/partidas/${match.id}/eventos`);
+        const evData2 = evRes2.ok ? await evRes2.json() : [];
+        setEventos(evData2 || []);
+
+        const recomputar = (jogadores, listaEventos) => {
+          const mapa = {};
+          jogadores.forEach(j => mapa[j.id] = { pontos: 0, amarelos: 0, vermelhos: 0 });
+          (listaEventos || []).forEach(ev => {
+            const pid = parseInt(ev.jogadorId ?? ev.jogador ?? ev.jogador?.id);
+            if (!pid || !(pid in mapa)) return;
+            if (ev.tipo === 'GOL') mapa[pid].pontos += Number(ev.pontosGerados ?? ev.ponto ?? 1);
+            else if (ev.tipo === 'CARTAO_AMARELO') mapa[pid].amarelos += 1;
+            else if (ev.tipo === 'CARTAO_VERMELHO') mapa[pid].vermelhos += 1;
+          });
+          return jogadores.map(j => ({ ...j, points: mapa[j.id].pontos, yellow: mapa[j.id].amarelos, red: mapa[j.id].vermelhos }));
+        };
+
+        setJogadoresTimeA(prev => recomputar(prev, evData2));
+        setJogadoresTimeB(prev => recomputar(prev, evData2));
+
+        alert('Eventos salvos, mas falha ao atualizar partida: ' + (patchText || 'erro desconhecido') + '\nA súmula permanece em modo de edição para correção.');
+        // mantém permitirEdicao = true para que o usuário possa corrigir e reenviar
+        return;
       }
 
-      // recarregar eventos atualizados para exibição
+      // PATCH ok -> confirmar envio e atualizar UI
+      try { onSumulaEnviada(match.id); } catch (e) { /* noop */ }
+
+      // recarregar eventos e recomputar exibição
       const evRes = await fetch(`/api/partidas/${match.id}/eventos`);
       const evData = evRes.ok ? await evRes.json() : [];
       setEventos(evData || []);
 
-      // recomputar exibição de estatísticas
       const recomputar = (jogadores, listaEventos) => {
         const mapa = {};
         jogadores.forEach(j => mapa[j.id] = { pontos: 0, amarelos: 0, vermelhos: 0 });
@@ -206,8 +237,22 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEn
       setJogadoresTimeA(prev => recomputar(prev, evData));
       setJogadoresTimeB(prev => recomputar(prev, evData));
 
-      alert('Súmula enviada e partida finalizada com sucesso.');
-      onClose();
+      // se edição manual, atualizamos com valores calculados a partir da edição também
+      if (permitirEdicao && !estaAoVivo) {
+        setJogadoresTimeA(prev => prev.map(j => {
+          const ed = edicaoTimeA.find(e => e.id === j.id) || {};
+          return { ...j, points: ed.points ?? j.points, yellow: ed.yellow ?? j.yellow, red: ed.red ?? j.red };
+        }));
+        setJogadoresTimeB(prev => prev.map(j => {
+          const ed = edicaoTimeB.find(e => e.id === j.id) || {};
+          return { ...j, points: ed.points ?? j.points, yellow: ed.yellow ?? j.yellow, red: ed.red ?? j.red };
+        }));
+      }
+
+  alert(estaAoVivo ? 'Súmula enviada e partida finalizada com sucesso.' : 'Súmula atualizada com sucesso.');
+  setPermitirEdicao(false);
+  setEditingFinalizada(false);
+  onClose();
     } catch (err) {
       console.error('Erro ao enviar súmula:', err);
       alert('Erro ao enviar súmula: ' + (err.message || err));
@@ -242,6 +287,7 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEn
         ) : (
           jogadores.map(j => {
             const linhaEdicao = (edicao || []).find(x => x.id === j.id) || { points: 0, yellow: 0, red: 0 };
+            const podeEditarCampo = estaAoVivo || permitirEdicao;
             return (
               <tr key={j.id} className="border-t">
                 <td className="p-2">{j.nome || j.name}</td>
@@ -251,7 +297,7 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEn
                   </span>
                 </td>
                 <td className="p-2 text-center">
-                  {estaAoVivo ? (
+                  {podeEditarCampo ? (
                     <input
                       type="number"
                       min={0}
@@ -265,7 +311,7 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEn
                   )}
                 </td>
                 <td className="p-2 text-center">
-                  {estaAoVivo ? (
+                  {podeEditarCampo ? (
                     <input
                       type="number"
                       min={0}
@@ -279,7 +325,7 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEn
                   )}
                 </td>
                 <td className="p-2 text-center">
-                  {estaAoVivo ? (
+                  {podeEditarCampo ? (
                     <input
                       type="number"
                       min={0}
@@ -299,6 +345,13 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEn
       </tbody>
     </table>
   );
+
+  // Controle de export: se a partida é Finalizada, o botão prefere ficar à esquerda.
+  // Entretanto, quando o usuário ativa "Editar súmula" devemos esconder o botão
+  // até que a súmula seja enviada ao banco (permitirEdicao === false novamente).
+  const exportEsquerdaBase = (match?.status === 'Finalizada');
+  // Mostrar export somente quando não estivermos em modo de edição (nem edição iniciada para partida finalizada)
+  const mostrarExport = !carregando && !permitirEdicao && !editingFinalizada;
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="INFORMAÇÕES DO TORNEIO" size="max-w-4xl max-h-[90vh]">
@@ -346,7 +399,6 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEn
               <div className="mt-4 border-t pt-4">
                 <h3 className="font-bold text-lg mb-3 text-center">JOGADORES E ESTATÍSTICAS</h3>
 
-                {/* tabelas lado a lado em telas médias/maiores, empilhadas em telas pequenas */}
                 <div className="mb-4">
                   <div className="flex flex-col md:flex-row md:items-start md:space-x-6 gap-4">
                     <div className="md:flex-1">
@@ -371,13 +423,11 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEn
           )}
         </div>
 
-        <div className="flex justify-end gap-2 pt-4 border-t border-gray-200 dark:border-gray-700 mt-4 bg-white dark:bg-gray-800">
-          {estaAoVivo && !carregando ? (
-            <Button onClick={enviarSumula} disabled={salvando}>
-              {salvando ? 'Enviando...' : 'Enviar Súmula'}
-            </Button>
-          ) : (
-            !carregando && (
+        {/* Footer: duas áreas (esquerda / direita) para controlar posição do botão Exportar */}
+        <div className="flex justify-between items-center gap-2 pt-4 border-t border-gray-200 dark:border-gray-700 mt-4 bg-white dark:bg-gray-800 px-4">
+          {/* Left area */}
+          <div className="flex items-center space-x-2">
+            {exportEsquerdaBase && mostrarExport && (
               <PDFDownloadLink
                 document={<SumulaPDF match={match} tournament={selectedTournament} showPenalties={false} team1Data={{ name: match.team1, players: jogadoresTimeA }} team2Data={{ name: match.team2, players: jogadoresTimeB }} />}
                 fileName={gerarNomeArquivo()}
@@ -385,10 +435,61 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEn
               >
                 {({ loading }) => (loading ? 'Gerando PDF...' : 'Exportar PDF')}
               </PDFDownloadLink>
-            )
-          )}
+            )}
+          </div>
 
-          <Button onClick={onClose}>Fechar</Button>
+          {/* Right area */}
+          <div className="flex items-center gap-2">
+            {/* If export should not be left, show it here */}
+            {!exportEsquerdaBase && mostrarExport && (
+              <PDFDownloadLink
+                document={<SumulaPDF match={match} tournament={selectedTournament} showPenalties={false} team1Data={{ name: match.team1, players: jogadoresTimeA }} team2Data={{ name: match.team2, players: jogadoresTimeB }} />}
+                fileName={gerarNomeArquivo()}
+                className="inline-flex items-center px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white font-medium rounded-md transition-colors"
+              >
+                {({ loading }) => (loading ? 'Gerando PDF...' : 'Exportar PDF')}
+              </PDFDownloadLink>
+            )}
+
+            {estaAoVivo && !carregando && (
+              <Button onClick={enviarSumula} disabled={salvando}>
+                {salvando ? 'Enviando...' : 'Enviar Súmula'}
+              </Button>
+            )}
+
+            {/* Botão para permitir edição mesmo quando não está ao vivo */}
+            {!estaAoVivo && (
+              <Button
+                onClick={() => {
+                  const novo = !permitirEdicao;
+                  setPermitirEdicao(novo);
+                  // marca que estamos editando uma súmula que já estava finalizada
+                  if (novo && match?.status === 'Finalizada') {
+                    setEditingFinalizada(true);
+                  }
+                  if (!novo) {
+                    // cancelando edição -> limpar flag
+                    setEditingFinalizada(false);
+                  }
+
+                  // iniciar edições a partir do estado atual
+                  setEdicaoTimeA(jogadoresTimeA.map(j => ({ id: j.id, points: j.points || 0, yellow: j.yellow || 0, red: j.red || 0 })));
+                  setEdicaoTimeB(jogadoresTimeB.map(j => ({ id: j.id, points: j.points || 0, yellow: j.yellow || 0, red: j.red || 0 })));
+                }}
+              >
+                {permitirEdicao ? 'Cancelar edição' : 'Editar súmula'}
+              </Button>
+            )}
+
+            {/* Quando permitimos edição manual, mostrar botão de salvar */}
+            {!estaAoVivo && permitirEdicao && (
+              <Button onClick={enviarSumula} disabled={salvando}>
+                {salvando ? 'Salvando...' : 'Salvar alterações'}
+              </Button>
+            )}
+
+            <Button onClick={() => { setPermitirEdicao(false); setEditingFinalizada(false); onClose(); }}>Fechar</Button>
+          </div>
         </div>
       </div>
     </Modal>

@@ -230,10 +230,9 @@ export async function POST(request) {
   }
 }
 
-export async function PATCH(request, {params}) {
+export async function PATCH(request, { params }) {
   try {
-    // Next.js dynamic route params must be awaited
-    const { id } = await params;
+    const { id } = params || {};
     const partidaId = parseInt(id, 10);
 
     if (isNaN(partidaId)) {
@@ -241,31 +240,85 @@ export async function PATCH(request, {params}) {
     }
 
     const body = await request.json();
-    const incomingStatus = body.status || body.statusPartida || body.status_partida;
 
-    if (!incomingStatus) {
-      return Response.json({ error: 'Parâmetro "status" é obrigatório' }, { status: 400 });
+    // aceitar variantes de nomes de campos
+    const incomingStatus = body.status ?? body.statusPartida ?? body.status_partida;
+    const rawPontosCasa = body.pontosCasa ?? body.pontos_casa ?? body.pontos_casa_final;
+    const rawPontosVisitante = body.pontosVisitante ?? body.pontos_visitante ?? body.pontos_visitante_final;
+
+    const incomingPontosCasa = typeof rawPontosCasa !== 'undefined' && rawPontosCasa !== null
+      ? Number(rawPontosCasa)
+      : undefined;
+    const incomingPontosVisitante = typeof rawPontosVisitante !== 'undefined' && rawPontosVisitante !== null
+      ? Number(rawPontosVisitante)
+      : undefined;
+
+    if (typeof incomingPontosCasa === 'number' && Number.isNaN(incomingPontosCasa)) {
+      return Response.json({ error: 'pontosCasa inválido' }, { status: 400 });
+    }
+    if (typeof incomingPontosVisitante === 'number' && Number.isNaN(incomingPontosVisitante)) {
+      return Response.json({ error: 'pontosVisitante inválido' }, { status: 400 });
     }
 
-    // aceitar tanto labels em português quanto valores do enum do banco
+    // mapear status amigável -> enum do DB (se fornecido)
     const mapStatus = {
       'Agendada': 'AGENDADA',
       'Em andamento': 'EM_ANDAMENTO',
       'Finalizada': 'FINALIZADA',
+      'Encerrada': 'FINALIZADA',
       'AGENDADA': 'AGENDADA',
       'EM_ANDAMENTO': 'EM_ANDAMENTO',
       'FINALIZADA': 'FINALIZADA'
     };
 
-    const dbStatus = mapStatus[incomingStatus];
-    if (!dbStatus) {
-      return Response.json({ error: `Status inválido: ${incomingStatus}` }, { status: 400 });
+    const dataToUpdate = {};
+
+    if (incomingStatus) {
+      const dbStatus = mapStatus[incomingStatus];
+      if (!dbStatus) {
+        return Response.json({ error: `Status inválido: ${incomingStatus}` }, { status: 400 });
+      }
+      dataToUpdate.statusPartida = dbStatus;
     }
 
-    // Atualiza status da partida
+    if (typeof incomingPontosCasa === 'number') dataToUpdate.pontosCasa = incomingPontosCasa;
+    if (typeof incomingPontosVisitante === 'number') dataToUpdate.pontosVisitante = incomingPontosVisitante;
+
+    // Se status finalizada (fornecido) mas pontos não vieram, calcular a partir dos eventos
+    if (dataToUpdate.statusPartida === 'FINALIZADA') {
+      if (typeof dataToUpdate.pontosCasa !== 'number' || typeof dataToUpdate.pontosVisitante !== 'number') {
+        // buscar partida e times para determinar quem é casa/visitante
+        const partidaCompleta = await prisma.partida.findUnique({
+          where: { id: partidaId },
+          include: { times: true }
+        });
+
+        const timesCasa = (partidaCompleta?.times || []).filter(pt => pt.ehCasa === true || pt.ehCasa === 1 || pt.ehCasa === '1');
+        const timesVisitante = (partidaCompleta?.times || []).filter(pt => !(pt.ehCasa === true || pt.ehCasa === 1 || pt.ehCasa === '1'));
+
+        const timeCasaId = timesCasa[0]?.timeId ?? null;
+        const timeVisitanteId = timesVisitante[0]?.timeId ?? null;
+
+        const calculo = await calcularPlacarAPartirDeEventos(partidaId, timeCasaId, timeVisitanteId);
+
+        if (typeof dataToUpdate.pontosCasa !== 'number' && typeof calculo.pontosCasa === 'number') {
+          dataToUpdate.pontosCasa = calculo.pontosCasa;
+        }
+        if (typeof dataToUpdate.pontosVisitante !== 'number' && typeof calculo.pontosVisitante === 'number') {
+          dataToUpdate.pontosVisitante = calculo.pontosVisitante;
+        }
+      }
+    }
+
+    // Se não foi enviado status, mas foram enviados pontos, aceitamos apenas atualizar pontos
+    // Se nada válido veio, retornar 400
+    if (Object.keys(dataToUpdate).length === 0) {
+      return Response.json({ error: 'Nenhum campo válido para atualização (status/pontosCasa/pontosVisitante)' }, { status: 400 });
+    }
+
     const partidaAtualizada = await prisma.partida.update({
       where: { id: partidaId },
-      data: { statusPartida: dbStatus },
+      data: dataToUpdate,
       include: {
         times: {
           include: {
@@ -286,9 +339,8 @@ export async function PATCH(request, {params}) {
       }
     });
 
-    // formatar resposta similar ao GET
-    const timesCasa = partidaAtualizada.times.filter(pt => pt.ehCasa);
-    const timesVisitante = partidaAtualizada.times.filter(pt => !pt.ehCasa);
+    const timesCasa = partidaAtualizada.times.filter(pt => pt.ehCasa === true || pt.ehCasa === 1 || pt.ehCasa === '1');
+    const timesVisitante = partidaAtualizada.times.filter(pt => !(pt.ehCasa === true || pt.ehCasa === 1 || pt.ehCasa === '1'));
     const timeCasa = timesCasa[0]?.time;
     const timeVisitante = timesVisitante[0]?.time;
 
@@ -313,10 +365,11 @@ export async function PATCH(request, {params}) {
 
     return Response.json(partidaFormatada);
   } catch (error) {
-    console.error('Erro ao atualizar status da partida:', error);
+    console.error('Erro ao atualizar status/placar da partida:', error);
     return Response.json({ error: 'Erro interno do servidor' }, { status: 500 });
   }
 }
+
 
 // Gerar partidas rodízio para um grupo
 function gerarRodizioPartidas(times, grupoId) {
