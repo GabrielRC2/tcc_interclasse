@@ -4,6 +4,14 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 
+// Interface para o usuário extendido
+interface ExtendedUser {
+    id: string;
+    email: string;
+    name: string;
+    tipo_usuario: string;
+}
+
 const authOptions: NextAuthOptions = {
     providers: [
         CredentialsProvider({
@@ -43,8 +51,8 @@ const authOptions: NextAuthOptions = {
                         id: user.id_usuario.toString(),
                         email: user.email_usuario,
                         name: user.nome_usuario,
-                        tipo: user.tipo_usuario
-                    };
+                        tipo_usuario: user.tipo_usuario
+                    } satisfies ExtendedUser;
                 } catch (error) {
                     console.error("Erro na autenticação:", error);
                     return null;
@@ -52,6 +60,22 @@ const authOptions: NextAuthOptions = {
             }
         })
     ],
+    callbacks: {
+        async jwt({ token, user }) {
+            // Adiciona o tipo do usuário ao token JWT usando verificação de propriedade
+            if (user && 'tipo_usuario' in user) {
+                token.tipo_usuario = (user as ExtendedUser).tipo_usuario;
+            }
+            return token;
+        },
+        async session({ session, token }) {
+            // Adiciona o tipo do usuário à sessão usando verificação de propriedade
+            if (token && 'tipo_usuario' in token) {
+                (session.user as any).tipo_usuario = token.tipo_usuario;
+            }
+            return session;
+        }
+    },
     pages: {
         signIn: "/login",
     },

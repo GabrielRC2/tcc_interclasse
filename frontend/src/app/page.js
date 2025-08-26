@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useSession, signOut } from 'next-auth/react';
 import { Sidebar } from '@/components/Sidebar';
 import { LoginPage } from '@/components/LoginPage';
 import { Dashboard } from '@/components/DashboardPage';
@@ -13,8 +14,42 @@ import { GroupsPage } from '@/components/GroupsPage';
 import { TournamentProvider } from '@/contexts/TournamentContext';
 import { User } from 'lucide-react';
 
+// Função utilitária centralizada para verificar permissões
+const checkUserAccess = (userType, pageName) => {
+  if (!userType) return pageName === 'dashboard';
+  
+  // REPRESENTANTE só pode acessar dashboard e teams
+  if (userType === 'REPRESENTANTE') {
+    return pageName === 'dashboard' || pageName === 'teams';
+  }
+  
+  // STAFF pode acessar dashboard, teams e registrations
+  if (userType === 'STAFF') {
+    return pageName === 'dashboard' || pageName === 'teams' || pageName === 'registrations';
+  }
+  
+  // ADMIN tem acesso total
+  return true;
+};
+
+// Função utilitária para obter páginas permitidas para um tipo de usuário
+const getAllowedPages = (userType) => {
+  if (!userType) return ['dashboard'];
+  
+  if (userType === 'REPRESENTANTE') {
+    return ['dashboard', 'teams'];
+  }
+  
+  if (userType === 'STAFF') {
+    return ['dashboard', 'teams'];
+  }
+  
+  // ADMIN tem acesso a todas as páginas
+  return ['dashboard', 'seasons', 'teams', 'registrations', 'brackets', 'matches', 'groups'];
+};
+
 export default function Home() {
-  const [isLoggedIn, setIsLoggedIn] = useState(true);
+  const { data: session, status } = useSession();
   const [currentPage, setCurrentPage] = useState('dashboard'); // Começa no dashboard
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -27,10 +62,23 @@ export default function Home() {
 
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
+  // Verifica se o usuário tem permissão para acessar a página usando função centralizada
+  const hasPageAccess = (pageName) => {
+    const userType = session?.user?.tipo_usuario;
+    return checkUserAccess(userType, pageName);
+  };
+
+  // Intercepta mudanças de página para verificar permissões
+  const handlePageChange = (pageName) => {
+    if (hasPageAccess(pageName)) {
+      setCurrentPage(pageName);
+    }
+  };
+
   // Lógica principal de renderização de conteúdo
   const renderPage = () => {
     // Se o usuário NÃO está logado:
-    if (!isLoggedIn) {
+    if (!session) {
       // Permite apenas Dashboard e Login
       if (currentPage === 'login') {
         return <LoginPage onLogin={handleLogin} />;
@@ -40,6 +88,12 @@ export default function Home() {
         // O Dashboard sempre será acessível para deslogados.
         return <Dashboard />;
       }
+    }
+
+    // Verifica se o usuário tem acesso à página atual
+    if (!hasPageAccess(currentPage)) {
+      setCurrentPage('dashboard');
+      return <Dashboard />;
     }
 
     switch (currentPage) {
@@ -56,12 +110,11 @@ export default function Home() {
 
   // Funções de login e logout
   const handleLogin = () => {
-    setIsLoggedIn(true);
     setCurrentPage('dashboard'); // Redireciona para dashboard após login
   };
 
-  const handleLogout = () => {
-    setIsLoggedIn(false);
+  const handleLogout = async () => {
+    await signOut({ redirect: false });
     setCurrentPage('dashboard'); // Redireciona para dashboard após logout
   };
 
@@ -76,10 +129,12 @@ export default function Home() {
           isSidebarOpen={isSidebarOpen}
           toggleSidebar={toggleSidebar}
           currentPage={currentPage}
-          setCurrentPage={setCurrentPage}
+          setCurrentPage={handlePageChange}
           isDarkMode={isDarkMode}
           toggleDarkMode={toggleDarkMode}
-          isLoggedIn={isLoggedIn}
+          isLoggedIn={!!session}
+          userType={session?.user?.tipo_usuario}
+          allowedPages={getAllowedPages(session?.user?.tipo_usuario)}
           onLogout={handleLogout}
           onLoginClick={handleLoginClick}
         />

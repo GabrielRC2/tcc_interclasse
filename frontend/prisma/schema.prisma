@@ -15,9 +15,9 @@ datasource db {
 
 // Adicione esta parte logo depois do datasource db
 enum TipoUsuario {
-  admin
-  staff  
-  representante
+  ADMIN
+  STAFF  
+  REPRESENTANTE
 }
 
 // ------------------------------------------

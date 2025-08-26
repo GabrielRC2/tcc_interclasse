@@ -38,6 +38,8 @@ export const Sidebar = ({
   isDarkMode, 
   toggleDarkMode,
   isLoggedIn,   // <--- ADICIONADO
+  userType,     // <--- ADICIONADO (tipo do usuário)
+  allowedPages, // <--- ADICIONADO (páginas permitidas)
   onLogout,     // <--- ADICIONADO (será a função de sair)
   onLoginClick  // <--- ADICIONADO (será a função para ir para a tela de login)
 }) => {
@@ -76,12 +78,25 @@ export const Sidebar = ({
                     {/* Links de navegação RESTRICTED (APENAS SE LOGADO) */}
                     {isLoggedIn && ( // <--- INÍCIO DA RENDERIZAÇÃO CONDICIONAL
                       <>
-                        <NavLink icon={<Calendar size={20} />} label="Temporadas" pageName="seasons" isSidebarOpen={isSidebarOpen} currentPage={currentPage} setCurrentPage={setCurrentPage} />
-                        <NavLink icon={<Users size={20} />} label="Times" pageName="teams" isSidebarOpen={isSidebarOpen} currentPage={currentPage} setCurrentPage={setCurrentPage} />
-                        <NavLink icon={<Plus size={20} />} label="Cadastros" pageName="registrations" isSidebarOpen={isSidebarOpen} currentPage={currentPage} setCurrentPage={setCurrentPage} />
-                        <NavLink icon={<Shield size={20} />} label="Chaveamento" pageName="brackets" isSidebarOpen={isSidebarOpen} currentPage={currentPage} setCurrentPage={setCurrentPage} />
-                        <NavLink icon={<FileText size={20} />} label="Partidas" pageName="matches" isSidebarOpen={isSidebarOpen} currentPage={currentPage} setCurrentPage={setCurrentPage} />
-                        <NavLink icon={<Users size={20} />} label="Grupos" pageName="groups" isSidebarOpen={isSidebarOpen} currentPage={currentPage} setCurrentPage={setCurrentPage} />
+                        {/* Renderização baseada em páginas permitidas */}
+                        {allowedPages?.includes('teams') && (
+                          <NavLink icon={<Users size={20} />} label="Times" pageName="teams" isSidebarOpen={isSidebarOpen} currentPage={currentPage} setCurrentPage={setCurrentPage} />
+                        )}
+                        {allowedPages?.includes('seasons') && (
+                          <NavLink icon={<Calendar size={20} />} label="Temporadas" pageName="seasons" isSidebarOpen={isSidebarOpen} currentPage={currentPage} setCurrentPage={setCurrentPage} />
+                        )}
+                        {allowedPages?.includes('registrations') && (
+                          <NavLink icon={<Plus size={20} />} label="Cadastros" pageName="registrations" isSidebarOpen={isSidebarOpen} currentPage={currentPage} setCurrentPage={setCurrentPage} />
+                        )}
+                        {allowedPages?.includes('brackets') && (
+                          <NavLink icon={<Shield size={20} />} label="Chaveamento" pageName="brackets" isSidebarOpen={isSidebarOpen} currentPage={currentPage} setCurrentPage={setCurrentPage} />
+                        )}
+                        {allowedPages?.includes('matches') && (
+                          <NavLink icon={<FileText size={20} />} label="Partidas" pageName="matches" isSidebarOpen={isSidebarOpen} currentPage={currentPage} setCurrentPage={setCurrentPage} />
+                        )}
+                        {allowedPages?.includes('groups') && (
+                          <NavLink icon={<Users size={20} />} label="Grupos" pageName="groups" isSidebarOpen={isSidebarOpen} currentPage={currentPage} setCurrentPage={setCurrentPage} />
+                        )}
                       </>
                     )} {/* <--- FIM DA RENDERIZAÇÃO CONDICIONAL */}
                 </ul>
