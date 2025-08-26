@@ -233,10 +233,10 @@ export async function POST(request) {
 export async function PATCH(request, { params }) {
   try {
     // Next.js app router: params is an async proxy — await before reading
-    const { id } = await params || {};
-    const partidaId = parseInt(id, 10);
+    const { partidaId } = await params || {};
+    const partidaIdNum = parseInt(partidaId, 10);
 
-    if (isNaN(partidaId)) {
+    if (isNaN(partidaIdNum)) {
       return Response.json({ error: 'ID da partida inválido' }, { status: 400 });
     }
 
@@ -290,7 +290,7 @@ export async function PATCH(request, { params }) {
       if (typeof dataToUpdate.pontosCasa !== 'number' || typeof dataToUpdate.pontosVisitante !== 'number') {
         // buscar partida e times para determinar quem é casa/visitante
         const partidaCompleta = await prisma.partida.findUnique({
-          where: { id: partidaId },
+          where: { id: partidaIdNum },
           include: { times: true }
         });
 
@@ -300,7 +300,7 @@ export async function PATCH(request, { params }) {
         const timeCasaId = timesCasa[0]?.timeId ?? null;
         const timeVisitanteId = timesVisitante[0]?.timeId ?? null;
 
-        const calculo = await calcularPlacarAPartirDeEventos(partidaId, timeCasaId, timeVisitanteId);
+        const calculo = await calcularPlacarAPartirDeEventos(partidaIdNum, timeCasaId, timeVisitanteId);
 
         if (typeof dataToUpdate.pontosCasa !== 'number' && typeof calculo.pontosCasa === 'number') {
           dataToUpdate.pontosCasa = calculo.pontosCasa;
@@ -318,7 +318,7 @@ export async function PATCH(request, { params }) {
     }
 
     const partidaAtualizada = await prisma.partida.update({
-      where: { id: partidaId },
+      where: { id: partidaIdNum },
       data: dataToUpdate,
       include: {
         times: {
@@ -465,4 +465,10 @@ function getStatusPortugues(status) {
     'CANCELADA': 'Cancelada'
   };
   return statusMap[status] || status;
+}
+
+// Placeholder function for calculating score from events
+async function calcularPlacarAPartirDeEventos(partidaId, timeCasaId, timeVisitanteId) {
+  // This would need to be implemented based on your events logic
+  return { pontosCasa: 0, pontosVisitante: 0 };
 }

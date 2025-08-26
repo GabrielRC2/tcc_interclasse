@@ -4,13 +4,13 @@ import { NextResponse } from "next/server";
 export async function GET(request, {params}) {
   try {
     // Next.js 14+: params precisa ser await
-    const { id } = await params;
+    const { partidaId } = await params;
 
-    const partidaId = parseInt(id);
+    const partidaIdNum = parseInt(partidaId);
 
     // Buscar eventos da partida, incluindo o jogador
     const eventos = await prisma.eventoPartida.findMany({
-      where: { partidaId },
+      where: { partidaId: partidaIdNum },
       include: {
         jogador: true // Não existe 'time' aqui!
       }
@@ -24,7 +24,7 @@ export async function GET(request, {params}) {
 }
 
 /**
- * ENDPOINT: POST /api/partidas/:id/eventos
+ * ENDPOINT: POST /api/partidas/:partidaId/eventos
  * 
  * DESCRIÇÃO:
  * Registra múltiplos eventos em uma partida (gols, cartões, etc.)
@@ -44,16 +44,16 @@ export async function POST(request, { params }) {
         const data = await request.json();
         
         // Corrigido: Aguardar params antes de usar suas propriedades
-        const { id } = params;
-        const partidaId = parseInt(id, 10);
+        const { partidaId } = await params;
+        const partidaIdNum = parseInt(partidaId, 10);
         
-        if (isNaN(partidaId)) {
+        if (isNaN(partidaIdNum)) {
             return NextResponse.json({ error: "ID da partida inválido" }, { status: 400 });
         }
         
         // Verificar se a partida existe
         const partida = await prisma.partida.findUnique({
-            where: { id: partidaId }
+            where: { id: partidaIdNum }
         });
         
         if (!partida) {
@@ -69,7 +69,7 @@ export async function POST(request, { params }) {
                 tipo: evento.tipo,
                 pontosGerados: evento.ponto,
                 jogadorId: evento.jogador,
-                partidaId: partidaId,
+                partidaId: partidaIdNum,
                 // Só inclua tempoPartida se for fornecido e estiver formatado corretamente
                 // ...(tempoFormatado && { tempoPartida: tempoFormatado })
             };
@@ -83,7 +83,7 @@ export async function POST(request, { params }) {
         // Busca os eventos recém-criados com relacionamentos
         const eventosCompletos = await prisma.eventoPartida.findMany({
             where: {
-                partidaId: partidaId,
+                partidaId: partidaIdNum,
             },
             include: {
                 partida: {

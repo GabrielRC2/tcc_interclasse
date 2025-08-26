@@ -128,92 +128,161 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEn
     if (!(estaAoVivo || permitirEdicao)) return;
     setSalvando(true);
     try {
-      const eventosEnviar = [];
+      // Reconcile events instead of blindly creating duplicates.
+      // 1) Load existing events for this match
+      const existingRes = await fetch(`/api/partidas/${match.id}/eventos`);
+      const existingEvents = existingRes.ok ? await existingRes.json() : [];
 
-      const adicionarEventosDeLista = (listaEdicao) => {
+      // Build lookup maps
+      const golMap = new Map(); // jogadorId -> event
+      const cardMap = new Map(); // `${jogadorId}:${tipo}` -> array of events
+      existingEvents.forEach(ev => {
+        const jid = parseInt(ev.jogadorId ?? ev.jogador ?? ev.jogador?.id, 10);
+        if (!jid) return;
+        if (ev.tipo === 'GOL') {
+          golMap.set(jid, ev);
+        } else if (ev.tipo === 'CARTAO_AMARELO' || ev.tipo === 'CARTAO_VERMELHO') {
+          const key = `${jid}:${ev.tipo}`;
+          const arr = cardMap.get(key) || [];
+          arr.push(ev);
+          cardMap.set(key, arr);
+        }
+      });
+
+      const postsToCreate = [];
+      const patchesToDo = [];
+      const warnings = [];
+
+      const reconciliarLista = (listaEdicao) => {
         listaEdicao.forEach(p => {
-          const pontos = p.points || 0;
-          if (pontos > 0) {
-            eventosEnviar.push({ tipo: 'GOL', ponto: pontos, jogador: p.id });
+          const jogadorId = p.id;
+          const desiredGols = Number(p.points || 0);
+
+          // GOLS: se já existe evento do tipo GOL para este jogador -> PATCH com pontosGerados = desired
+          const existingGol = golMap.get(jogadorId);
+          if (existingGol) {
+            const existingPoints = Number(existingGol.pontosGerados ?? existingGol.ponto ?? 0);
+            if (existingPoints !== desiredGols) {
+              patchesToDo.push({ id: existingGol.id, body: { pontosGerados: desiredGols } });
+            }
+          } else if (desiredGols > 0) {
+            // criar novo evento de GOL com pontos acumulados do jogador
+            postsToCreate.push({ tipo: 'GOL', ponto: desiredGols, jogador: jogadorId });
           }
-          for (let i = 0; i < (p.yellow || 0); i++) {
-            eventosEnviar.push({ tipo: 'CARTAO_AMARELO', ponto: 0, jogador: p.id });
+
+          // CARTÕES: aqui cada cartão é um registro. Se faltam registros, criamos; se houverem mais do que o desejado, apenas avisamos (sem DELETE disponível).
+          const desiredY = Number(p.yellow || 0);
+          const keyY = `${jogadorId}:CARTAO_AMARELO`;
+          const existingY = (cardMap.get(keyY) || []).length;
+          if (desiredY > existingY) {
+            for (let i = 0; i < desiredY - existingY; i++) postsToCreate.push({ tipo: 'CARTAO_AMARELO', ponto: 0, jogador: jogadorId });
+          } else if (desiredY < existingY) {
+            warnings.push(`Jogador ${jogadorId} tem mais cartões amarelos no banco (${existingY}) do que o desejado (${desiredY}) — remoção não suportada pelo cliente.`);
           }
-          for (let i = 0; i < (p.red || 0); i++) {
-            eventosEnviar.push({ tipo: 'CARTAO_VERMELHO', ponto: 0, jogador: p.id });
+
+          const desiredR = Number(p.red || 0);
+          const keyR = `${jogadorId}:CARTAO_VERMELHO`;
+          const existingR = (cardMap.get(keyR) || []).length;
+          if (desiredR > existingR) {
+            for (let i = 0; i < desiredR - existingR; i++) postsToCreate.push({ tipo: 'CARTAO_VERMELHO', ponto: 0, jogador: jogadorId });
+          } else if (desiredR < existingR) {
+            warnings.push(`Jogador ${jogadorId} tem mais cartões vermelhos no banco (${existingR}) do que o desejado (${desiredR}) — remoção não suportada pelo cliente.`);
           }
         });
       };
 
-      adicionarEventosDeLista(edicaoTimeA);
-      adicionarEventosDeLista(edicaoTimeB);
+      reconciliarLista(edicaoTimeA);
+      reconciliarLista(edicaoTimeB);
 
-      if (eventosEnviar.length === 0) {
-        if (!confirm('Nenhum evento foi alterado. Deseja enviar mesmo assim?')) {
+      if (postsToCreate.length === 0 && patchesToDo.length === 0) {
+        if (!confirm('Nenhuma alteração detectada. Deseja enviar/confirmar mesmo assim?')) {
           setSalvando(false);
           return;
         }
       }
 
-      // POST eventos (rota faz reconciliação: atualiza existentes / cria novos conforme necessário)
-      const res = await fetch(`/api/partidas/${match.id}/eventos`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(eventosEnviar)
-      });
-
-      if (!res.ok) {
-        const txt = await res.text().catch(() => '');
-        throw new Error(txt || 'Erro ao enviar eventos');
+      // Execute patches first
+      if (patchesToDo.length > 0) {
+        await Promise.all(patchesToDo.map(p => fetch(`/api/partidas/${match.id}/eventos/${p.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(p.body)
+        })));
       }
+
+      // Then create any missing events in batch (POST accepts array)
+      if (postsToCreate.length > 0) {
+        const createRes = await fetch(`/api/partidas/${match.id}/eventos`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(postsToCreate)
+        });
+        if (!createRes.ok) {
+          const txt = await createRes.text().catch(() => '');
+          throw new Error(txt || 'Erro ao criar eventos');
+        }
+      }
+
+      // Show warnings if any (cards present more than desired and we couldn't delete)
+      if (warnings.length) {
+        console.warn('Avisos ao reconciliar eventos:', warnings.join('\n'));
+        alert('Avisos: ' + warnings.join('\n'));
+      }
+
 
       // calcular pontos finais a partir das edicoes (preferência)
       const pontosCasaCalc = (edicaoTimeA || []).reduce((s, p) => s + (p.points || 0), 0);
       const pontosVisitanteCalc = (edicaoTimeB || []).reduce((s, p) => s + (p.points || 0), 0);
 
-      // PATCH pontos finais (e opcionalmente status)
-      const patchBody = {
-        pontosCasa: pontosCasaCalc,
-        pontosVisitante: pontosVisitanteCalc
-      };
-      if (estaAoVivo) patchBody.status = 'Finalizada';
+      // Decide se devemos atualizar a partida (PATCH). Somente quando:
+      // - estamos ao vivo (então finalizamos a partida), ou
+      // - estamos editando manualmente uma súmula que já estava finalizada (corrigir placar)
+      const shouldPatchMatch = estaAoVivo || (permitirEdicao && match?.status === 'Finalizada');
 
-      const patchRes = await fetch(`/api/partidas/${match.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(patchBody)
-      });
-
-      const patchText = await patchRes.text().catch(() => '');
-      if (!patchRes.ok) {
-        console.warn('Eventos salvos, mas falha ao atualizar partida:', patchText);
-        // Recarrega eventos para mostrar o que foi salvo, mas mantém o modo de edição
-        const evRes2 = await fetch(`/api/partidas/${match.id}/eventos`);
-        const evData2 = evRes2.ok ? await evRes2.json() : [];
-        setEventos(evData2 || []);
-
-        const recomputar = (jogadores, listaEventos) => {
-          const mapa = {};
-          jogadores.forEach(j => mapa[j.id] = { pontos: 0, amarelos: 0, vermelhos: 0 });
-          (listaEventos || []).forEach(ev => {
-            const pid = parseInt(ev.jogadorId ?? ev.jogador ?? ev.jogador?.id);
-            if (!pid || !(pid in mapa)) return;
-            if (ev.tipo === 'GOL') mapa[pid].pontos += Number(ev.pontosGerados ?? ev.ponto ?? 1);
-            else if (ev.tipo === 'CARTAO_AMARELO') mapa[pid].amarelos += 1;
-            else if (ev.tipo === 'CARTAO_VERMELHO') mapa[pid].vermelhos += 1;
-          });
-          return jogadores.map(j => ({ ...j, points: mapa[j.id].pontos, yellow: mapa[j.id].amarelos, red: mapa[j.id].vermelhos }));
+      if (shouldPatchMatch) {
+        const patchBody = {
+          pontosCasa: pontosCasaCalc,
+          pontosVisitante: pontosVisitanteCalc
         };
+        if (estaAoVivo) patchBody.status = 'Finalizada';
 
-        setJogadoresTimeA(prev => recomputar(prev, evData2));
-        setJogadoresTimeB(prev => recomputar(prev, evData2));
+        const patchRes = await fetch(`/api/partidas/${match.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(patchBody)
+        });
 
-        alert('Eventos salvos, mas falha ao atualizar partida: ' + (patchText || 'erro desconhecido') + '\nA súmula permanece em modo de edição para correção.');
-        // mantém permitirEdicao = true para que o usuário possa corrigir e reenviar
-        return;
+        const patchText = await patchRes.text().catch(() => '');
+        if (!patchRes.ok) {
+          console.warn('Eventos salvos, mas falha ao atualizar partida:', patchText);
+          // Recarrega eventos para mostrar o que foi salvo, mas mantém o modo de edição
+          const evRes2 = await fetch(`/api/partidas/${match.id}/eventos`);
+          const evData2 = evRes2.ok ? await evRes2.json() : [];
+          setEventos(evData2 || []);
+
+          const recomputar = (jogadores, listaEventos) => {
+            const mapa = {};
+            jogadores.forEach(j => mapa[j.id] = { pontos: 0, amarelos: 0, vermelhos: 0 });
+            (listaEventos || []).forEach(ev => {
+              const pid = parseInt(ev.jogadorId ?? ev.jogador ?? ev.jogador?.id);
+              if (!pid || !(pid in mapa)) return;
+              if (ev.tipo === 'GOL') mapa[pid].pontos += Number(ev.pontosGerados ?? ev.ponto ?? 1);
+              else if (ev.tipo === 'CARTAO_AMARELO') mapa[pid].amarelos += 1;
+              else if (ev.tipo === 'CARTAO_VERMELHO') mapa[pid].vermelhos += 1;
+            });
+            return jogadores.map(j => ({ ...j, points: mapa[j.id].pontos, yellow: mapa[j.id].amarelos, red: mapa[j.id].vermelhos }));
+          };
+
+          setJogadoresTimeA(prev => recomputar(prev, evData2));
+          setJogadoresTimeB(prev => recomputar(prev, evData2));
+
+          alert('Eventos salvos, mas falha ao atualizar partida: ' + (patchText || 'erro desconhecido') + '\nA súmula permanece em modo de edição para correção.');
+          // mantém permitirEdicao = true para que o usuário possa corrigir e reenviar
+          return;
+        }
       }
 
-      // PATCH ok -> confirmar envio e atualizar UI
+      // Se chegamos aqui, eventos foram salvos (e partida atualizada, se aplicável).
       try { onSumulaEnviada(match.id); } catch (e) { /* noop */ }
 
       // recarregar eventos e recomputar exibição
