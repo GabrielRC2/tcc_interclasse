@@ -219,11 +219,13 @@ model TimeJogador {
 // Tabela: Partida_Times
 // Descrição: Registra os Times que disputam uma Partida.
 model PartidaTime {
-  partidaId     Int     @map("fk_id_partida")
-  timeId        Int     @map("fk_id_time")
-  ehCasa        Boolean @map("eh_casa") // true = casa, false = visitante
-  partida       Partida @relation(fields: [partidaId], references: [id])
-  time          Time    @relation(fields: [timeId], references: [id])
+  partidaId       Int     @map("fk_id_partida")
+  timeId          Int     @map("fk_id_time")
+  ehCasa          Boolean @map("eh_casa") // true = casa, false = visitante
+  resultado       String  @default("PENDENTE") @map("resutado_partida") // VENCEDOR, PERDEDOR, WO, EMPATE, PENDENTE
+  pontosTorneio   Int     @default(0) @map("pontos_torneio") // Pontos ganhos no torneio (3-1-0)
+  partida         Partida @relation(fields: [partidaId], references: [id])
+  time            Time    @relation(fields: [timeId], references: [id])
 
   @@id([partidaId, timeId])
   @@map("PartidaTime")
