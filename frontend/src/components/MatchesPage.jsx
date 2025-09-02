@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, MapPin, Trophy, Filter, Play, Settings } from 'lucide-react';
+import { Calendar, Clock, MapPin, Trophy, Filter, Play, Settings, Shuffle } from 'lucide-react';
 import { Button, Select } from '@/components/common';
 import { useTournament } from '@/contexts/TournamentContext';
 import { SumulaModal } from '@/components/SumulaModal';
@@ -17,7 +17,7 @@ export const MatchesPage = () => {
   const [statusSelecionado, setStatusSelecionado] = useState('');
   const [generos] = useState(['Masculino', 'Feminino']);
   const [partidaSelecionada, setPartidaSelecionada] = useState(null);
-  const [opcoesStatus] = useState(['Agendada', 'Em andamento', 'Encerrada', 'Cancelada']);
+  const [opcoesStatus] = useState(['Agendada', 'Em andamento', 'Finalizada', 'Cancelada']);
   const [carregando, setCarregando] = useState(true);
   const [configuracaoLocais, setConfiguracaoLocais] = useState({});
   const [modalidadesDisponiveis, setModalidadesDisponiveis] = useState([]);
@@ -74,14 +74,9 @@ export const MatchesPage = () => {
     }
   };
 
-  // aplica filtros e remove partidas encerradas
+  // aplica filtros - partidas finalizadas permanecem visíveis
   const aplicarFiltros = () => {
     let lista = [...partidas];
-    // remover partidas com status "Finalizada" ou "Encerrada" do listagem
-    lista = lista.filter(p => {
-      const st = (p.status || '').toLowerCase();
-      return st !== 'finalizada' && st !== 'encerrada';
-    });
     if (statusSelecionado) {
       lista = lista.filter(p => p.status === statusSelecionado);
     }
@@ -92,7 +87,7 @@ export const MatchesPage = () => {
   const obterCorStatus = (status) => {
     switch (status) {
       case 'Finalizada':
-      case 'Encerrada':
+      case 'Finalizada':
         return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
       case 'Em andamento':
         return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200';
@@ -111,7 +106,6 @@ export const MatchesPage = () => {
       'Agendada': 'AGENDADA',
       'Em andamento': 'EM_ANDAMENTO',
       'Finalizada': 'FINALIZADA',
-      'Encerrada': 'FINALIZADA', // enviar FINALIZADA quando usuário quer "Encerrada"
       'Cancelada': 'CANCELADA'
     };
     return m[statusPortugues] ?? statusPortugues;
@@ -122,7 +116,6 @@ export const MatchesPage = () => {
     try {
       const servidorStatus = (() => {
         // servidor PATCH handler aceita várias formas mas usamos português mapeado
-        if (statusPortugues === 'Encerrada') return 'Finalizada';
         return statusPortugues;
       })();
       const res = await fetch(`/api/partidas/${partidaId}`, {
@@ -162,7 +155,7 @@ export const MatchesPage = () => {
     setPartidas(prev => prev.map(p => p.id === partida.id ? { ...p, status: desejado } : p));
     setPartidasFiltradas(prev => prev.map(p => p.id === partida.id ? { ...p, status: desejado } : p));
 
-    // tentar persistir no servidor (convertendo 'Encerrada' local para 'Finalizada' para o servidor)
+    // tentar persistir no servidor
     const servidorRes = await atualizarStatusNoServidor(partida.id, desejado);
     if (servidorRes) {
       setPartidas(prev => prev.map(p => p.id === partida.id ? { ...p, ...(servidorRes || {}) } : p));
@@ -179,11 +172,11 @@ export const MatchesPage = () => {
   };
 
   // quando a súmula é enviada (SumulaModal -> onSumulaEnviada)
-  // atualizamos status local para "Encerrada" e persistimos como "Finalizada" no servidor
+  // atualizamos status local para "Finalizada" e persistimos como "Finalizada" no servidor
   const tratarSumulaEnviada = async (partidaId) => {
-    // atualização otimista local: colocar "Encerrada" para remoção da listagem
-    setPartidas(prev => prev.map(p => p.id === partidaId ? { ...p, status: 'Encerrada' } : p));
-    setPartidasFiltradas(prev => prev.filter(p => p.id !== partidaId));
+    // atualização otimista local: colocar "Finalizada"
+    setPartidas(prev => prev.map(p => p.id === partidaId ? { ...p, status: 'Finalizada' } : p));
+    setPartidasFiltradas(prev => prev.map(p => p.id === partidaId ? { ...p, status: 'Finalizada' } : p));
 
     // enviar como "Finalizada" ao servidor
     await atualizarStatusNoServidor(partidaId, 'Finalizada');
@@ -247,6 +240,55 @@ export const MatchesPage = () => {
     }
   };
 
+  // gerar pontuações aleatórias para partidas agendadas
+  const gerarPontuacoesAleatorias = async () => {
+    const partidasAgendadas = partidas.filter(p => p.status === 'Agendada');
+    
+    if (partidasAgendadas.length === 0) {
+      alert('❌ Nenhuma partida agendada encontrada');
+      return;
+    }
+
+    const confirmar = window.confirm(`Finalizar ${partidasAgendadas.length} partidas com pontuações aleatórias?`);
+    if (!confirmar) return;
+
+    try {
+      const response = await fetch('/api/partidas/pontuacoes-aleatorias', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ torneioId: selectedTournament.id })
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        alert(`✅ ${result.partidasFinalizadas} partidas finalizadas!`);
+        // Recarregar partidas do servidor para mostrar as pontuações
+        await carregarPartidas();
+      } else {
+        const error = await response.json();
+        alert('❌ ' + (error.error || 'Erro ao gerar pontuações'));
+      }
+    } catch (error) {
+      console.error('Erro:', error);
+      alert('❌ Erro ao gerar pontuações');
+    }
+  };
+
+  // Função para determinar o vencedor
+  const obterVencedor = (partida) => {
+    if (!partida.result) return null;
+    
+    const [golsCasa, golsVisitante] = partida.result.split(':').map(Number);
+    
+    if (golsCasa > golsVisitante) {
+      return { vencedor: partida.team1, tipo: 'casa' };
+    } else if (golsVisitante > golsCasa) {
+      return { vencedor: partida.team2, tipo: 'visitante' };
+    } else {
+      return { vencedor: 'Empate', tipo: 'empate' };
+    }
+  };
+
   if (carregando) {
     return <div className="flex justify-center items-center h-64">Carregando...</div>;
   }
@@ -277,6 +319,14 @@ export const MatchesPage = () => {
           >
             <Play size={16} className="mr-2" />
             {generating ? 'Gerando...' : 'Gerar Partidas Otimizadas'}
+          </Button>
+          <Button 
+            onClick={gerarPontuacoesAleatorias} 
+            disabled={partidas.filter(p => p.status === 'Agendada').length === 0}
+            className="bg-orange-600 hover:bg-orange-700"
+          >
+            <Shuffle size={16} className="mr-2" />
+            Gerar Pontuações Aleatórias
           </Button>
         </div>
       </div>
@@ -372,7 +422,18 @@ export const MatchesPage = () => {
 
                         <div className="text-center px-4">
                           {p.result ? (
-                            <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{p.result}</div>
+                            <div className="text-center">
+                              <div className="text-2xl font-bold text-blue-600 dark:text-blue-400 mb-1">{p.result}</div>
+                              {(() => {
+                                const resultado = obterVencedor(p);
+                                if (resultado?.tipo === 'empate') {
+                                  return <div className="text-sm font-semibold text-yellow-600 dark:text-yellow-400">EMPATE</div>;
+                                } else if (resultado?.vencedor) {
+                                  return <div className="text-sm font-semibold text-green-600 dark:text-green-400">🏆 {resultado.vencedor}</div>;
+                                }
+                                return null;
+                              })()}
+                            </div>
                           ) : (
                             <div className="text-xl font-bold text-gray-400">VS</div>
                           )}
