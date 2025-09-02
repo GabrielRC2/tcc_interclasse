@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { Shuffle, Users, Trophy, Play } from 'lucide-react';
+import { Shuffle, Users, Trophy } from 'lucide-react';
 import { Modal } from '@/components/Modal';
 import { Button, Select, CardSplat } from '@/components/common';
 import { useTournament } from '@/contexts/TournamentContext';
@@ -130,40 +130,6 @@ export const GroupsPage = () => {
         }
     };
 
-    const gerarChaveamento = async () => {
-        if (grupos.length === 0) {
-            alert('Realize o sorteio primeiro');
-            return;
-        }
-
-        if (!confirm('Gerar chaveamento automático? Esta ação criará todas as partidas otimizadas.')) {
-            return;
-        }
-
-        try {
-            const response = await fetch('/api/matches/generate', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    torneioId: selectedTournament.id,
-                    modalidadeId: selectedModalidade,
-                    genero: selectedGenero
-                })
-            });
-
-            if (response.ok) {
-                const result = await response.json();
-                alert(`Chaveamento gerado com sucesso! ${result.partidasGeradas} partidas criadas.`);
-            } else {
-                const error = await response.json();
-                alert(error.error || 'Erro ao gerar chaveamento');
-            }
-        } catch (error) {
-            console.error('Erro ao gerar chaveamento:', error);
-            alert('Erro ao gerar chaveamento');
-        }
-    };
-
     if (loading) {
         return <div className="flex justify-center items-center h-64">Carregando...</div>;
     }
@@ -184,10 +150,6 @@ export const GroupsPage = () => {
                         <Button onClick={handleSorteio} disabled={!selectedTournament || !selectedModalidade || !selectedGenero || !quantidadeGrupos}>
                             <Shuffle size={20} className="mr-2" />
                             Realizar Sorteio
-                        </Button>
-                        <Button onClick={gerarChaveamento} disabled={grupos.length === 0}>
-                            <Play size={20} className="mr-2" />
-                            Gerar Chaveamento
                         </Button>
                     </div>
                 </div>

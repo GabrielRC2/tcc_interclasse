@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, MapPin, Trophy, Filter, AlertCircle } from 'lucide-react';
+import { Calendar, Clock, MapPin, Trophy, Filter, AlertCircle, Play, Shuffle } from 'lucide-react';
 import { Button, Select } from '@/components/common';
 import { useTournament } from '@/contexts/TournamentContext';
 import { SumulaModal } from '@/components/SumulaModal';
@@ -69,14 +69,9 @@ export const MatchesPage = () => {
     }
   };
 
-  // aplica filtros e remove partidas encerradas
+  // aplica filtros - partidas finalizadas permanecem visíveis
   const aplicarFiltros = () => {
     let lista = [...partidas];
-    // remover partidas com status "Finalizada" ou "Encerrada" do listagem
-    lista = lista.filter(p => {
-      const st = (p.status || '').toLowerCase();
-      return st !== 'finalizada' && st !== 'encerrada';
-    });
     if (statusSelecionado) {
       lista = lista.filter(p => p.status === statusSelecionado);
     }
@@ -176,9 +171,9 @@ export const MatchesPage = () => {
   // quando a súmula é enviada (SumulaModal -> onSumulaEnviada)
   // atualizamos status local para "Encerrada" e persistimos como "Finalizada" no servidor
   const tratarSumulaEnviada = async (partidaId) => {
-    // atualização otimista local: colocar "Encerrada" para remoção da listagem
+    // atualização otimista local: colocar "Encerrada" para exibição
     setPartidas(prev => prev.map(p => p.id === partidaId ? { ...p, status: 'Encerrada' } : p));
-    setPartidasFiltradas(prev => prev.filter(p => p.id !== partidaId));
+    setPartidasFiltradas(prev => prev.map(p => p.id === partidaId ? { ...p, status: 'Encerrada' } : p));
 
     // enviar como "Finalizada" ao servidor
     await atualizarStatusNoServidor(partidaId, 'Finalizada');
@@ -205,6 +200,98 @@ export const MatchesPage = () => {
     fecharModalWO();
   };
 
+  // gerar partidas automaticamente
+  const gerarPartidas = async () => {
+    if (!selectedTournament || !modalidadeSelecionada || !generoSelecionado) {
+      alert('Selecione o torneio, modalidade e gênero primeiro');
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/matches/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          torneioId: selectedTournament.id,
+          modalidadeId: modalidadeSelecionada,
+          genero: generoSelecionado
+        })
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        alert(`${result.partidasGeradas} partidas geradas com sucesso!`);
+        await carregarPartidas();
+      } else {
+        const error = await response.json();
+        alert(error.error || 'Erro ao gerar partidas');
+      }
+    } catch (error) {
+      console.error('Erro ao gerar partidas:', error);
+      alert('Erro ao gerar partidas');
+    }
+  };
+
+  // gerar resultados aleatórios para partidas agendadas
+  const gerarResultadosAleatorios = async () => {
+    const partidasAgendadas = partidas.filter(p => p.status === 'Agendada');
+    
+    if (partidasAgendadas.length === 0) {
+      alert('Nenhuma partida agendada encontrada para gerar resultados');
+      return;
+    }
+
+    const confirmar = window.confirm(`Deseja gerar resultados aleatórios para ${partidasAgendadas.length} partidas agendadas?`);
+    if (!confirmar) return;
+
+    try {
+      let resultadosGerados = 0;
+
+      for (const partida of partidasAgendadas) {
+        // Gerar placares realistas (1-5 gols)
+        let golsCasa = Math.floor(Math.random() * 5) + 1;
+        let golsVisitante = Math.floor(Math.random() * 5) + 1;
+
+        // 15% chance de empate apenas na fase de grupos
+        const chanceEmpate = Math.random();
+        if (chanceEmpate < 0.15) {
+          golsVisitante = golsCasa; // Forçar empate
+        } else if (chanceEmpate < 0.575) {
+          // 50% das vezes não-empate, garantir vitória da casa
+          while (golsCasa <= golsVisitante) {
+            golsCasa = Math.floor(Math.random() * 5) + 1;
+          }
+        } else {
+          // 50% das vezes não-empate, garantir vitória visitante
+          while (golsVisitante <= golsCasa) {
+            golsVisitante = Math.floor(Math.random() * 5) + 1;
+          }
+        }
+
+        // Atualizar partida com resultado
+        const updateResponse = await fetch(`/api/partidas/${partida.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            status: 'Finalizada',
+            pontosCasa: golsCasa,
+            pontosVisitante: golsVisitante
+          })
+        });
+
+        if (updateResponse.ok) {
+          resultadosGerados++;
+        }
+      }
+
+      alert(`${resultadosGerados} resultados aleatórios gerados com sucesso!`);
+      await carregarPartidas();
+    } catch (error) {
+      console.error('Erro ao gerar resultados aleatórios:', error);
+      alert('Erro ao gerar resultados aleatórios');
+    }
+  };
+
   if (carregando) {
     return <div className="flex justify-center items-center h-64">Carregando...</div>;
   }
@@ -219,6 +306,22 @@ export const MatchesPage = () => {
               Torneio: {selectedTournament.name} • {partidasFiltradas.length} partidas
             </p>
           )}
+        </div>
+        <div className="flex gap-2">
+          <Button 
+            onClick={gerarPartidas} 
+            disabled={!selectedTournament || !modalidadeSelecionada || !generoSelecionado}
+            className="bg-blue-600 hover:bg-blue-700"
+          >
+            Gerar Partidas
+          </Button>
+          <Button 
+            onClick={gerarResultadosAleatorios} 
+            disabled={partidas.filter(p => p.status === 'Agendada').length === 0}
+            className="bg-green-600 hover:bg-green-700"
+          >
+            Resultados Aleatórios
+          </Button>
         </div>
       </div>
 

@@ -8,15 +8,57 @@ export async function GET(request) {
     const { searchParams } = new URL(request.url);
     const torneioId = searchParams.get('torneioId');
     const grupoId = searchParams.get('grupoId');
+    const modalidadeId = searchParams.get('modalidadeId');
+    const genero = searchParams.get('genero');
 
     if (!torneioId) {
       return Response.json({ error: "torneioId é obrigatório" }, { status: 400 });
     }
 
+    // Se modalidadeId e genero são fornecidos, filtrar apenas por esses
+    let whereClause = {
+      partida: {
+        torneioId: parseInt(torneioId)
+      }
+    };
+
+    if (modalidadeId && genero) {
+      // Buscar grupos da modalidade/gênero específicos
+      const grupos = await prisma.grupo.findMany({
+        where: {
+          torneioId: parseInt(torneioId),
+          modalidadeId: parseInt(modalidadeId)
+        },
+        include: {
+          times: {
+            include: {
+              time: {
+                include: {
+                  categoria: true
+                }
+              }
+            },
+            where: {
+              time: {
+                categoria: {
+                  genero: genero
+                }
+              }
+            }
+          }
+        }
+      });
+
+      const gruposIds = grupos.map(g => g.id);
+      whereClause.partida.grupoId = { in: gruposIds };
+    } else if (grupoId) {
+      whereClause.partida.grupoId = parseInt(grupoId);
+    }
+
     const classificacao = await obterClassificacao(
       prisma, 
       parseInt(torneioId), 
-      grupoId ? parseInt(grupoId) : null
+      whereClause
     );
 
     return Response.json({ classificacao });
