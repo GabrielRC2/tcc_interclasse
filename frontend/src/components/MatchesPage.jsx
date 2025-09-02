@@ -1,10 +1,9 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, MapPin, Trophy, Filter, AlertCircle, Play, Shuffle } from 'lucide-react';
+import { Calendar, Clock, MapPin, Trophy, Filter, Play, Settings } from 'lucide-react';
 import { Button, Select } from '@/components/common';
 import { useTournament } from '@/contexts/TournamentContext';
 import { SumulaModal } from '@/components/SumulaModal';
-import { WOModal } from '@/components/WOModal';
 
 export const MatchesPage = () => {
   const { selectedTournament } = useTournament();
@@ -20,8 +19,10 @@ export const MatchesPage = () => {
   const [partidaSelecionada, setPartidaSelecionada] = useState(null);
   const [opcoesStatus] = useState(['Agendada', 'Em andamento', 'Encerrada', 'Cancelada']);
   const [carregando, setCarregando] = useState(true);
-  const [woModalAberto, setWoModalAberto] = useState(false);
-  const [partidaWO, setPartidaWO] = useState(null);
+  const [configuracaoLocais, setConfiguracaoLocais] = useState({});
+  const [modalidadesDisponiveis, setModalidadesDisponiveis] = useState([]);
+  const [showConfigModal, setShowConfigModal] = useState(false);
+  const [generating, setGenerating] = useState(false);
 
   useEffect(() => {
     carregarDadosIniciais();
@@ -36,6 +37,10 @@ export const MatchesPage = () => {
   useEffect(() => {
     aplicarFiltros();
   }, [partidas, statusSelecionado]);
+
+  useEffect(() => {
+    loadConfiguracaoLocais();
+  }, []);
 
   // carrega modalidades (exemplo)
   const carregarDadosIniciais = async () => {
@@ -69,9 +74,14 @@ export const MatchesPage = () => {
     }
   };
 
-  // aplica filtros - partidas finalizadas permanecem visíveis
+  // aplica filtros e remove partidas encerradas
   const aplicarFiltros = () => {
     let lista = [...partidas];
+    // remover partidas com status "Finalizada" ou "Encerrada" do listagem
+    lista = lista.filter(p => {
+      const st = (p.status || '').toLowerCase();
+      return st !== 'finalizada' && st !== 'encerrada';
+    });
     if (statusSelecionado) {
       lista = lista.filter(p => p.status === statusSelecionado);
     }
@@ -171,9 +181,9 @@ export const MatchesPage = () => {
   // quando a súmula é enviada (SumulaModal -> onSumulaEnviada)
   // atualizamos status local para "Encerrada" e persistimos como "Finalizada" no servidor
   const tratarSumulaEnviada = async (partidaId) => {
-    // atualização otimista local: colocar "Encerrada" para exibição
+    // atualização otimista local: colocar "Encerrada" para remoção da listagem
     setPartidas(prev => prev.map(p => p.id === partidaId ? { ...p, status: 'Encerrada' } : p));
-    setPartidasFiltradas(prev => prev.map(p => p.id === partidaId ? { ...p, status: 'Encerrada' } : p));
+    setPartidasFiltradas(prev => prev.filter(p => p.id !== partidaId));
 
     // enviar como "Finalizada" ao servidor
     await atualizarStatusNoServidor(partidaId, 'Finalizada');
@@ -182,113 +192,58 @@ export const MatchesPage = () => {
     await carregarPartidas();
   };
 
-  // abrir modal de WO
-  const abrirModalWO = (partida) => {
-    setPartidaWO(partida);
-    setWoModalAberto(true);
-  };
-
-  // fechar modal de WO
-  const fecharModalWO = () => {
-    setWoModalAberto(false);
-    setPartidaWO(null);
-  };
-
-  // quando WO é confirmado
-  const tratarWOConfirmado = async () => {
-    await carregarPartidas(); // recarregar partidas
-    fecharModalWO();
-  };
-
-  // gerar partidas automaticamente
-  const gerarPartidas = async () => {
-    if (!selectedTournament || !modalidadeSelecionada || !generoSelecionado) {
-      alert('Selecione o torneio, modalidade e gênero primeiro');
-      return;
-    }
-
+  const loadConfiguracaoLocais = async () => {
     try {
-      const response = await fetch('/api/matches/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          torneioId: selectedTournament.id,
-          modalidadeId: modalidadeSelecionada,
-          genero: generoSelecionado
-        })
+      const response = await fetch('/api/modalidades-locais');
+      const data = await response.json();
+      
+      setModalidadesDisponiveis(data.modalidades);
+      
+      // Configuração padrão
+      const configPadrao = {};
+      data.modalidades.forEach(modalidade => {
+          configPadrao[modalidade.nome] = modalidade.localPadrao;
       });
-
-      if (response.ok) {
-        const result = await response.json();
-        alert(`${result.partidasGeradas} partidas geradas com sucesso!`);
-        await carregarPartidas();
-      } else {
-        const error = await response.json();
-        alert(error.error || 'Erro ao gerar partidas');
-      }
+      setConfiguracaoLocais(configPadrao);
     } catch (error) {
-      console.error('Erro ao gerar partidas:', error);
-      alert('Erro ao gerar partidas');
+      console.error('Erro ao carregar configuração de locais:', error);
     }
   };
 
-  // gerar resultados aleatórios para partidas agendadas
-  const gerarResultadosAleatorios = async () => {
-    const partidasAgendadas = partidas.filter(p => p.status === 'Agendada');
-    
-    if (partidasAgendadas.length === 0) {
-      alert('Nenhuma partida agendada encontrada para gerar resultados');
-      return;
+  const gerarPartidasOtimizadas = async () => {
+    if (!selectedTournament) {
+        alert('Selecione um torneio primeiro');
+        return;
     }
 
-    const confirmar = window.confirm(`Deseja gerar resultados aleatórios para ${partidasAgendadas.length} partidas agendadas?`);
-    if (!confirmar) return;
+    if (!confirm('Gerar partidas otimizadas? Esta ação criará TODAS as partidas de TODAS as modalidades de forma otimizada e simultânea.')) {
+        return;
+    }
 
+    setGenerating(true);
     try {
-      let resultadosGerados = 0;
-
-      for (const partida of partidasAgendadas) {
-        // Gerar placares realistas (1-5 gols)
-        let golsCasa = Math.floor(Math.random() * 5) + 1;
-        let golsVisitante = Math.floor(Math.random() * 5) + 1;
-
-        // 15% chance de empate apenas na fase de grupos
-        const chanceEmpate = Math.random();
-        if (chanceEmpate < 0.15) {
-          golsVisitante = golsCasa; // Forçar empate
-        } else if (chanceEmpate < 0.575) {
-          // 50% das vezes não-empate, garantir vitória da casa
-          while (golsCasa <= golsVisitante) {
-            golsCasa = Math.floor(Math.random() * 5) + 1;
-          }
-        } else {
-          // 50% das vezes não-empate, garantir vitória visitante
-          while (golsVisitante <= golsCasa) {
-            golsVisitante = Math.floor(Math.random() * 5) + 1;
-          }
-        }
-
-        // Atualizar partida com resultado
-        const updateResponse = await fetch(`/api/partidas/${partida.id}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            status: 'Finalizada',
-            pontosCasa: golsCasa,
-            pontosVisitante: golsVisitante
-          })
+        const response = await fetch('/api/partidas/gerar-otimizadas', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                torneioId: selectedTournament.id,
+                configuracaoLocais
+            })
         });
 
-        if (updateResponse.ok) {
-          resultadosGerados++;
+        if (response.ok) {
+            const result = await response.json();
+            alert(`✅ ${result.partidasGeradas} partidas geradas em ${result.slots} slots de tempo! ${result.modalidades} modalidades otimizadas.`);
+            carregarPartidas(); // Recarregar partidas
+        } else {
+            const error = await response.json();
+            alert('❌ ' + (error.error || 'Erro ao gerar partidas'));
         }
-      }
-
-      alert(`${resultadosGerados} resultados aleatórios gerados com sucesso!`);
-      await carregarPartidas();
     } catch (error) {
-      console.error('Erro ao gerar resultados aleatórios:', error);
-      alert('Erro ao gerar resultados aleatórios');
+        console.error('Erro ao gerar partidas:', error);
+        alert('❌ Erro ao gerar partidas');
+    } finally {
+        setGenerating(false);
     }
   };
 
@@ -309,18 +264,19 @@ export const MatchesPage = () => {
         </div>
         <div className="flex gap-2">
           <Button 
-            onClick={gerarPartidas} 
-            disabled={!selectedTournament || !modalidadeSelecionada || !generoSelecionado}
-            className="bg-blue-600 hover:bg-blue-700"
+            onClick={() => setShowConfigModal(true)}
+            variant="outline"
+            disabled={!selectedTournament}
           >
-            Gerar Partidas
+            <Settings size={16} className="mr-2" />
+            Configurar Locais
           </Button>
           <Button 
-            onClick={gerarResultadosAleatorios} 
-            disabled={partidas.filter(p => p.status === 'Agendada').length === 0}
-            className="bg-green-600 hover:bg-green-700"
+            onClick={gerarPartidasOtimizadas}
+            disabled={!selectedTournament || generating}
           >
-            Resultados Aleatórios
+            <Play size={16} className="mr-2" />
+            {generating ? 'Gerando...' : 'Gerar Partidas Otimizadas'}
           </Button>
         </div>
       </div>
@@ -406,17 +362,6 @@ export const MatchesPage = () => {
                         >
                           {p.status || 'Agendada'}
                         </span>
-
-                        {/* Ícone de WO */}
-                        {(p.status === 'Agendada' || p.status === 'Em andamento') && (
-                          <button
-                            onClick={() => abrirModalWO(p)}
-                            className="p-1 text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-full transition-colors"
-                            title="Registrar WO (Walk Over)"
-                          >
-                            <AlertCircle size={16} />
-                          </button>
-                        )}
                       </div>
 
                       <div className="flex items-center justify-center gap-4 mb-4">
@@ -477,12 +422,53 @@ export const MatchesPage = () => {
             onSumulaEnviada={(id) => tratarSumulaEnviada(id)}
           />
 
-          <WOModal
-            isOpen={woModalAberto}
-            onClose={fecharModalWO}
-            match={partidaWO}
-            onWOConfirmed={tratarWOConfirmado}
-          />
+          {showConfigModal && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+              <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md">
+                <h3 className="text-lg font-bold mb-4">Configurar Locais por Modalidade</h3>
+                
+                <div className="space-y-4">
+                  {modalidadesDisponiveis.map(modalidade => (
+                    <div key={modalidade.id}>
+                      <label className="block text-sm font-medium mb-1">
+                        {modalidade.nome}
+                      </label>
+                      <select 
+                        className="w-full p-2 border rounded"
+                        value={configuracaoLocais[modalidade.nome] || modalidade.localPadrao}
+                        onChange={(e) => setConfiguracaoLocais(prev => ({
+                            ...prev,
+                            [modalidade.nome]: e.target.value
+                        }))}
+                      >
+                        <option value="Quadra de Baixo">Quadra de Baixo</option>
+                        <option value="Quadra de Cima">Quadra de Cima</option>
+                      </select>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="flex gap-2 mt-6">
+                  <Button 
+                    onClick={() => setShowConfigModal(false)}
+                    variant="outline"
+                    className="flex-1"
+                  >
+                    Cancelar
+                  </Button>
+                  <Button 
+                    onClick={() => {
+                      setShowConfigModal(false);
+                      // Salvar configurações se necessário
+                    }}
+                    className="flex-1"
+                  >
+                    Salvar
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
         </>
       )}
     </div>

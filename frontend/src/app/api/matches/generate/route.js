@@ -4,19 +4,18 @@ const prisma = new PrismaClient();
 
 export async function POST(request) {
   try {
-    const { torneioId, modalidadeId, genero } = await request.json();
+    const { torneioId } = await request.json();
 
-    if (!torneioId || !modalidadeId || !genero) {
-      return Response.json({ error: 'Parâmetros obrigatórios em falta' }, { status: 400 });
+    if (!torneioId) {
+      return Response.json({ error: 'ID do torneio é obrigatório' }, { status: 400 });
     }
 
-    console.log('Gerando partidas para:', { torneioId, modalidadeId, genero });
+    console.log('Gerando partidas para torneio:', torneioId);
 
-    // 1. Buscar grupos com times da modalidade/gênero específicos
+    // 1. Buscar TODOS os grupos do torneio
     const grupos = await prisma.grupo.findMany({
       where: {
-        torneioId: parseInt(torneioId),
-        modalidadeId: parseInt(modalidadeId)
+        torneioId: parseInt(torneioId)
       },
       include: {
         times: {
@@ -25,13 +24,6 @@ export async function POST(request) {
               include: {
                 categoria: true,
                 curso: true
-              }
-            }
-          },
-          where: {
-            time: {
-              categoria: {
-                genero: genero
               }
             }
           }
