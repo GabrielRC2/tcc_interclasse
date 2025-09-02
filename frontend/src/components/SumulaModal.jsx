@@ -15,6 +15,7 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEn
 
   const [carregando, setCarregando] = useState(true);
   const [salvando, setSalvando] = useState(false);
+  const [partidaDetalhes, setPartidaDetalhes] = useState(null); // Novo estado para dados da partida
 
   const [jogadoresTimeA, setJogadoresTimeA] = useState([]);
   const [jogadoresTimeB, setJogadoresTimeB] = useState([]);
@@ -37,10 +38,29 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEn
     const carregarDados = async () => {
       setCarregando(true);
       try {
-        const partidaRes = await fetch(`/api/partidas/${match.id}`);
+        const partidaRes = await fetch(`/api/partidas/${match.id}/detalhes`);
         const partidaData = partidaRes.ok ? await partidaRes.json() : null;
-        const time1Id = partidaData?.team1Id ?? match.team1Id;
-        const time2Id = partidaData?.team2Id ?? match.team2Id;
+        setPartidaDetalhes(partidaData); // Salvar os detalhes da partida
+        
+        // Debug: log dos dados da partida para verificar estrutura
+        console.log('Dados da partida carregados:', partidaData);
+        console.log('Times da partida:', partidaData?.times);
+        
+        // Verificar se há W.O. nos resultados
+        if (partidaData?.times) {
+          partidaData.times.forEach((time, index) => {
+            console.log(`Time ${index + 1}:`, {
+              timeId: time.timeId,
+              nome: time.time?.nome,
+              resultado: time.resultado,
+              pontosTorneio: time.pontosTorneio,
+              ehCasa: time.ehCasa
+            });
+          });
+        }
+        
+        const time1Id = partidaData?.times?.find(t => t.ehCasa)?.timeId ?? match.team1Id;
+        const time2Id = partidaData?.times?.find(t => !t.ehCasa)?.timeId ?? match.team2Id;
 
         const [resT1, resT2, resEv] = await Promise.all([
           fetch(`/api/teams/${time1Id}/jogadores`),
@@ -89,11 +109,67 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEn
           return { ...j, points: s.pontos || 0, yellow: s.amarelos || 0, red: s.vermelhos || 0 };
         }));
 
-        // recalcula placar inicial a partir dos eventos
-        const golsA = statsA.reduce((s, p) => s + (p.pontos || 0), 0);
-        const golsB = statsB.reduce((s, p) => s + (p.pontos || 0), 0);
-        setPlacarA(golsA);
-        setPlacarB(golsB);
+        // Para W.O., usar os pontos salvos na partida, caso contrário calcular dos eventos
+        if (partidaData && partidaData.statusPartida === 'FINALIZADA') {
+          // Verificar se há W.O. através dos resultados dos times
+          const temWONaPartida = partidaData.times?.some(pt => pt.resultado === 'WO');
+          
+          console.log('Verificando W.O. na partida finalizada:', {
+            temWONaPartida,
+            statusPartida: partidaData.statusPartida,
+            pontosCasa: partidaData.pontosCasa,
+            pontosVisitante: partidaData.pontosVisitante,
+            times: partidaData.times?.map(t => ({
+              resultado: t.resultado,
+              timeId: t.timeId,
+              ehCasa: t.ehCasa
+            }))
+          });
+          
+          if (temWONaPartida) {
+            // Em caso de W.O., ambos os times devem mostrar 0 pontos na súmula
+            // Os pontos do torneio (3-0) são apenas para classificação, não para o placar da partida
+            const timeQueDeWO = partidaData.times?.find(pt => pt.resultado === 'WO');
+            const timeVencedor = partidaData.times?.find(pt => pt.resultado === 'VENCEDOR');
+            
+            // Determinar qual é o time da casa e qual é visitante
+            const timeCasa = partidaData.times?.find(pt => pt.ehCasa);
+            const timeVisitante = partidaData.times?.find(pt => !pt.ehCasa);
+            
+            console.log('Configurando placar para W.O.:', {
+              timeQueDeWO: timeQueDeWO?.timeId,
+              timeVencedor: timeVencedor?.timeId,
+              timeCasa: timeCasa?.timeId,
+              timeVisitante: timeVisitante?.timeId
+            });
+            
+            if (timeQueDeWO?.timeId === timeCasa?.timeId) {
+              // Time da casa deu W.O.
+              setPlacarA(0); // Será exibido como "WO"
+              setPlacarB(0); // Time vencedor também mostra 0 na súmula (não ganhou jogando)
+            } else if (timeQueDeWO?.timeId === timeVisitante?.timeId) {
+              // Time visitante deu W.O.
+              setPlacarA(0); // Time vencedor também mostra 0 na súmula (não ganhou jogando)
+              setPlacarB(0); // Será exibido como "WO"
+            } else {
+              // Fallback - usar pontos da partida
+              setPlacarA(partidaData.pontosCasa || 0);
+              setPlacarB(partidaData.pontosVisitante || 0);
+            }
+          } else {
+            // Partida normal - calcular dos eventos
+            const golsA = statsA.reduce((s, p) => s + (p.pontos || 0), 0);
+            const golsB = statsB.reduce((s, p) => s + (p.pontos || 0), 0);
+            setPlacarA(golsA);
+            setPlacarB(golsB);
+          }
+        } else {
+          // Partida não finalizada - calcular dos eventos
+          const golsA = statsA.reduce((s, p) => s + (p.pontos || 0), 0);
+          const golsB = statsB.reduce((s, p) => s + (p.pontos || 0), 0);
+          setPlacarA(golsA);
+          setPlacarB(golsB);
+        }
       } catch (err) {
         console.error('Erro ao carregar súmula:', err);
       } finally {
@@ -415,12 +491,91 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEn
     </table>
   );
 
-  // Controle de export: se a partida é Finalizada, o botão prefere ficar à esquerda.
-  // Entretanto, quando o usuário ativa "Editar súmula" devemos esconder o botão
-  // até que a súmula seja enviada ao banco (permitirEdicao === false novamente).
-  const exportEsquerdaBase = (match?.status === 'Finalizada');
-  // Mostrar export somente quando não estivermos em modo de edição (nem edição iniciada para partida finalizada)
-  const mostrarExport = !carregando && !permitirEdicao && !editingFinalizada;
+  // Controle de export: só mostrar quando a partida estiver finalizada E não estiver em edição
+  const mostrarExport = !carregando && 
+                       match?.status === 'Finalizada' && 
+                       !permitirEdicao && 
+                       !editingFinalizada;
+
+  // Determinar se houve W.O. e cores do placar
+  const temWO = partidaDetalhes?.times?.some(pt => pt.resultado === 'WO') || false;
+  
+  // Debug para W.O.
+  console.log('Verificação de W.O.:', {
+    temWO,
+    times: partidaDetalhes?.times?.map(t => ({ 
+      timeId: t.timeId, 
+      resultado: t.resultado, 
+      ehCasa: t.ehCasa,
+      nome: t.time?.nome 
+    }))
+  });
+  
+  // Identificar qual time deu W.O. e qual ganhou
+  const timeWO = partidaDetalhes?.times?.find(pt => pt.resultado === 'WO');
+  const timeVencedorWO = partidaDetalhes?.times?.find(pt => pt.resultado === 'VENCEDOR' && temWO);
+  
+  const obterCorPlacar = (pontuacao, ehTimeA) => {
+    if (match?.status !== 'Finalizada') return 'text-gray-800 dark:text-gray-100';
+    
+    if (temWO) {
+      // Em caso de W.O., verificar qual time deu W.O.
+      const timeAId = partidaDetalhes?.times?.find(pt => pt.ehCasa)?.timeId;
+      const timeBId = partidaDetalhes?.times?.find(pt => !pt.ehCasa)?.timeId;
+      
+      if (ehTimeA) {
+        return timeWO?.timeId === timeAId ? 'text-red-600 font-bold' : 'text-green-600 font-bold';
+      } else {
+        return timeWO?.timeId === timeBId ? 'text-red-600 font-bold' : 'text-green-600 font-bold';
+      }
+    } else {
+      // Jogo normal - comparar pontuações
+      if (placarA === placarB) return 'text-yellow-600 dark:text-yellow-400'; // empate
+      if (ehTimeA) {
+        return placarA > placarB ? 'text-green-600 font-bold' : 'text-red-600 font-bold';
+      } else {
+        return placarB > placarA ? 'text-green-600 font-bold' : 'text-red-600 font-bold';
+      }
+    }
+  };
+
+  const obterTextoPlacar = (pontuacao, ehTimeA) => {
+    if (temWO && partidaDetalhes?.times) {
+      // Encontrar qual time deu W.O.
+      const timeQueDeWO = partidaDetalhes.times.find(pt => pt.resultado === 'WO');
+      const timeVencedor = partidaDetalhes.times.find(pt => pt.resultado === 'VENCEDOR');
+      
+      if (timeQueDeWO) {
+        const timeCasa = partidaDetalhes.times.find(pt => pt.ehCasa);
+        const timeVisitante = partidaDetalhes.times.find(pt => !pt.ehCasa);
+        
+        // Se o time atual é o que deu W.O., mostrar "WO"
+        if (ehTimeA && timeQueDeWO.timeId === timeCasa?.timeId) {
+          return 'WO';
+        } else if (!ehTimeA && timeQueDeWO.timeId === timeVisitante?.timeId) {
+          return 'WO';
+        } else {
+          // Time vencedor por W.O. - mostrar 0 na súmula (pontos do torneio são só para classificação)
+          return '0';
+        }
+      }
+    }
+    return pontuacao.toString();
+  };
+
+  const obterNomeTimeWO = () => {
+    if (temWO && timeWO && partidaDetalhes?.times) {
+      const timeCasa = partidaDetalhes.times.find(pt => pt.ehCasa);
+      const timeVisitante = partidaDetalhes.times.find(pt => !pt.ehCasa);
+      
+      if (timeWO.timeId === timeCasa?.timeId) {
+        return match.team1;
+      } else if (timeWO.timeId === timeVisitante?.timeId) {
+        return match.team2;
+      }
+    }
+    return null;
+  };
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="INFORMAÇÕES DO TORNEIO" size="max-w-4xl max-h-[90vh]">
@@ -445,12 +600,16 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEn
               <div className="flex justify-around items-center text-center">
                 <div>
                   <p className="font-bold text-lg dark:text-gray-200">{match.team1}</p>
-                  <p className="font-extrabold text-6xl text-gray-800 dark:text-gray-100">{placarA}</p>
+                  <p className={`font-extrabold text-6xl ${obterCorPlacar(placarA, true)}`}>
+                    {obterTextoPlacar(placarA, true)}
+                  </p>
                 </div>
                 <p className="font-extrabold text-6xl text-gray-400 dark:text-gray-500">:</p>
                 <div>
                   <p className="font-bold text-lg dark:text-gray-200">{match.team2}</p>
-                  <p className="font-extrabold text-6xl text-gray-800 dark:text-gray-100">{placarB}</p>
+                  <p className={`font-extrabold text-6xl ${obterCorPlacar(placarB, false)}`}>
+                    {obterTextoPlacar(placarB, false)}
+                  </p>
                 </div>
               </div>
 
@@ -462,6 +621,16 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEn
                 <div>
                   <p><strong>Status:</strong> {match.status || '-'}</p>
                   <p><strong>Fase:</strong> {match.phase || match.fase || 'Grupos'}</p>
+                  {temWO && (
+                    <div className="mt-2">
+                      <p className="text-red-600 font-bold">⚠️ PARTIDA DECIDIDA POR W.O.</p>
+                      {obterNomeTimeWO() && (
+                        <p className="text-sm text-red-500">
+                          Time que deu W.O.: <strong>{obterNomeTimeWO()}</strong>
+                        </p>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -492,11 +661,11 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEn
           )}
         </div>
 
-        {/* Footer: duas áreas (esquerda / direita) para controlar posição do botão Exportar */}
+        {/* Footer: botões de ação */}
         <div className="flex justify-between items-center gap-2 pt-4 border-t border-gray-200 dark:border-gray-700 mt-4 bg-white dark:bg-gray-800 px-4">
-          {/* Left area */}
+          {/* Left area - Botão de exportar PDF (apenas quando partida finalizada) */}
           <div className="flex items-center space-x-2">
-            {exportEsquerdaBase && mostrarExport && (
+            {mostrarExport && (
               <PDFDownloadLink
                 document={<SumulaPDF match={match} tournament={selectedTournament} showPenalties={false} team1Data={{ name: match.team1, players: jogadoresTimeA }} team2Data={{ name: match.team2, players: jogadoresTimeB }} />}
                 fileName={gerarNomeArquivo()}
@@ -507,19 +676,8 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEn
             )}
           </div>
 
-          {/* Right area */}
+          {/* Right area - Botões de ação */}
           <div className="flex items-center gap-2">
-            {/* If export should not be left, show it here */}
-            {!exportEsquerdaBase && mostrarExport && (
-              <PDFDownloadLink
-                document={<SumulaPDF match={match} tournament={selectedTournament} showPenalties={false} team1Data={{ name: match.team1, players: jogadoresTimeA }} team2Data={{ name: match.team2, players: jogadoresTimeB }} />}
-                fileName={gerarNomeArquivo()}
-                className="inline-flex items-center px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white font-medium rounded-md transition-colors"
-              >
-                {({ loading }) => (loading ? 'Gerando PDF...' : 'Exportar PDF')}
-              </PDFDownloadLink>
-            )}
-
             {estaAoVivo && !carregando && (
               <Button onClick={enviarSumula} disabled={salvando}>
                 {salvando ? 'Enviando...' : 'Enviar Súmula'}
