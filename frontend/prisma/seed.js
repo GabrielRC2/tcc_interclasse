@@ -57,7 +57,7 @@ async function main() {
       { nome: 'Química', sigla: 'ETIQ' },
       { nome: 'Humanas', sigla: 'HUM' },
       { nome: 'Edificações', sigla: 'EDA' },
-      { nome: 'Administração', sigla: 'ADM' },
+      { nome: 'Administração', sigla: 'ADA' },
     ],
   });
   const cursos = await prisma.curso.findMany();
@@ -74,7 +74,6 @@ async function main() {
   await prisma.torneio.createMany({
     data: [
       { nome: 'Meio do Ano 2024', status: 'EM ANDAMENTO', inicio: new Date('2024-05-15T08:00:00'), fim: new Date('2024-06-15T18:00:00') },
-      { nome: 'Fim de Ano 2024', status: 'PLANEJAMENTO', inicio: new Date('2024-11-10T08:00:00'), fim: new Date('2024-12-10T18:00:00') },
     ],
   });
   const torneioPrincipal = await prisma.torneio.findFirst({ where: { nome: 'Meio do Ano 2024' }});

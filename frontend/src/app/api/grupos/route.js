@@ -13,10 +13,22 @@ export async function GET(request) {
       return Response.json([]);
     }
 
+    console.log('Buscando grupos:', { torneioId, modalidadeId, genero });
+
+    // Buscar grupos com times da modalidade/gênero específicos
     const grupos = await prisma.grupo.findMany({
       where: {
         torneioId: parseInt(torneioId),
-        modalidadeId: parseInt(modalidadeId)
+        modalidadeId: parseInt(modalidadeId),
+        times: {
+          some: {
+            time: {
+              categoria: {
+                genero: genero
+              }
+            }
+          }
+        }
       },
       include: {
         times: {
@@ -37,27 +49,27 @@ export async function GET(request) {
           }
         }
       },
-      orderBy: {
-        nome: 'asc'
-      }
+      orderBy: { nome: 'asc' }
     });
 
-    // Filtrar apenas grupos que têm times do gênero especificado
-    const gruposComTimes = grupos.filter(grupo => grupo.times.length > 0);
+    console.log(`Encontrados ${grupos.length} grupos para ${genero}`);
 
-    const gruposFormatados = gruposComTimes.map(grupo => ({
+    const gruposFormatados = grupos.map(grupo => ({
+      id: grupo.id,
       nome: grupo.nome,
       times: grupo.times.map(gt => ({
         id: gt.time.id,
         nome: gt.time.nome,
-        curso: gt.time.curso,
-        categoria: gt.time.categoria
+        curso: gt.time.curso
       }))
     }));
 
     return Response.json(gruposFormatados);
+
   } catch (error) {
     console.error('Erro ao buscar grupos:', error);
     return Response.json({ error: 'Erro interno do servidor' }, { status: 500 });
+  } finally {
+    await prisma.$disconnect();
   }
 }
