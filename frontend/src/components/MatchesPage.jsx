@@ -274,6 +274,40 @@ export const MatchesPage = () => {
     }
   };
 
+  // gerar eliminatórias baseadas na classificação dos grupos
+  const gerarEliminatorias = async () => {
+    if (!selectedTournament?.id) {
+      alert('❌ Selecione um torneio primeiro');
+      return;
+    }
+
+    const confirmar = window.confirm('Gerar eliminatórias baseadas na classificação atual dos grupos?');
+    if (!confirmar) return;
+
+    setGenerating(true);
+    try {
+      const response = await fetch('/api/eliminatorias/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ torneioId: selectedTournament.id })
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        alert(`✅ Eliminatórias geradas! ${result.partidasCriadas} partidas criadas na fase: ${result.fase}`);
+        await carregarPartidas();
+      } else {
+        const error = await response.json();
+        alert('❌ ' + (error.error || 'Erro ao gerar eliminatórias'));
+      }
+    } catch (error) {
+      console.error('Erro:', error);
+      alert('❌ Erro ao gerar eliminatórias');
+    } finally {
+      setGenerating(false);
+    }
+  };
+
   // Função para determinar o vencedor
   const obterVencedor = (partida) => {
     if (!partida.result) return null;
@@ -327,6 +361,14 @@ export const MatchesPage = () => {
           >
             <Shuffle size={16} className="mr-2" />
             Gerar Pontuações Aleatórias
+          </Button>
+          <Button 
+            onClick={gerarEliminatorias} 
+            disabled={generating}
+            className="bg-purple-600 hover:bg-purple-700"
+          >
+            <Trophy size={16} className="mr-2" />
+            Gerar Eliminatórias
           </Button>
         </div>
       </div>
