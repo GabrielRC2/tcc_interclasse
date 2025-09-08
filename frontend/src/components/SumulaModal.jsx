@@ -230,59 +230,25 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEn
       }
 
 
-      // calcular pontos finais a partir das edicoes (preferência)
       const pontosCasaCalc = (edicaoTimeA || []).reduce((s, p) => s + (p.points || 0), 0);
       const pontosVisitanteCalc = (edicaoTimeB || []).reduce((s, p) => s + (p.points || 0), 0);
 
-      // Decide se devemos atualizar a partida (PATCH). Somente quando:
-      // - estamos ao vivo (então finalizamos a partida), ou
-      // - estamos editando manualmente uma súmula que já estava finalizada (corrigir placar)
-      const shouldPatchMatch = estaAoVivo || (permitirEdicao && match?.status === 'Finalizada');
-
-      if (shouldPatchMatch) {
-        const patchBody = {
+      // Finalizar a partida usando o novo endpoint
+      const finalizarResponse = await fetch(`/api/partidas/${match.id}/finalizar`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           pontosCasa: pontosCasaCalc,
-          pontosVisitante: pontosVisitanteCalc
-        };
-        if (estaAoVivo) patchBody.status = 'Finalizada';
+          pontosVisitante: pontosVisitanteCalc,
+        }),
+      });
 
-        const patchRes = await fetch(`/api/partidas/${match.id}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(patchBody)
-        });
-
-        const patchText = await patchRes.text().catch(() => '');
-        if (!patchRes.ok) {
-          console.warn('Eventos salvos, mas falha ao atualizar partida:', patchText);
-          // Recarrega eventos para mostrar o que foi salvo, mas mantém o modo de edição
-          const evRes2 = await fetch(`/api/partidas/${match.id}/eventos`);
-          const evData2 = evRes2.ok ? await evRes2.json() : [];
-          setEventos(evData2 || []);
-
-          const recomputar = (jogadores, listaEventos) => {
-            const mapa = {};
-            jogadores.forEach(j => mapa[j.id] = { pontos: 0, amarelos: 0, vermelhos: 0 });
-            (listaEventos || []).forEach(ev => {
-              const pid = parseInt(ev.jogadorId ?? ev.jogador ?? ev.jogador?.id);
-              if (!pid || !(pid in mapa)) return;
-              if (ev.tipo === 'GOL') mapa[pid].pontos += Number(ev.pontosGerados ?? ev.ponto ?? 1);
-              else if (ev.tipo === 'CARTAO_AMARELO') mapa[pid].amarelos += 1;
-              else if (ev.tipo === 'CARTAO_VERMELHO') mapa[pid].vermelhos += 1;
-            });
-            return jogadores.map(j => ({ ...j, points: mapa[j.id].pontos, yellow: mapa[j.id].amarelos, red: mapa[j.id].vermelhos }));
-          };
-
-          setJogadoresTimeA(prev => recomputar(prev, evData2));
-          setJogadoresTimeB(prev => recomputar(prev, evData2));
-
-          alert('Eventos salvos, mas falha ao atualizar partida: ' + (patchText || 'erro desconhecido') + '\nA súmula permanece em modo de edição para correção.');
-          // mantém permitirEdicao = true para que o usuário possa corrigir e reenviar
-          return;
-        }
+      if (!finalizarResponse.ok) {
+        const error = await finalizarResponse.json();
+        throw new Error(error.error || 'Falha ao finalizar a partida');
       }
 
-      // Se chegamos aqui, eventos foram salvos (e partida atualizada, se aplicável).
+      // Se chegamos aqui, a partida foi finalizada e os pontos calculados.
       try { onSumulaEnviada(match.id); } catch (e) { /* noop */ }
 
       // recarregar eventos e recomputar exibição

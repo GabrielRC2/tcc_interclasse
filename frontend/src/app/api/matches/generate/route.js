@@ -68,7 +68,14 @@ export async function POST(request) {
         continue;
       }
 
-      const partidasGrupo = gerarRodizioPartidas(times, grupo.id);
+      // Determinar gênero e modalidade do grupo
+      const primeiroTime = times[0];
+      const genero = primeiroTime.categoria?.genero || 'Masculino';
+      const modalidadeId = grupo.modalidadeId;
+      
+      console.log(`Grupo ${grupo.nome}: gênero=${genero}, modalidade=${modalidadeId}`);
+
+      const partidasGrupo = gerarRodizioPartidas(times, grupo.id, genero, modalidadeId);
       todasPartidas.push(...partidasGrupo);
     }
 
@@ -94,7 +101,11 @@ export async function POST(request) {
           statusPartida: 'AGENDADA',
           grupoId: partida.grupoId,
           localId: localPadrao.id,
-          torneioId: parseInt(torneioId)
+          torneioId: parseInt(torneioId),
+          modalidadeId: partida.modalidadeId,
+          genero: partida.genero,
+          tipo: 'GRUPO',
+          fase: 'Grupos'
         }
       });
 
@@ -134,7 +145,7 @@ export async function POST(request) {
 }
 
 // Gerar partidas rodízio para um grupo
-function gerarRodizioPartidas(times, grupoId) {
+function gerarRodizioPartidas(times, grupoId, genero, modalidadeId) {
   const partidas = [];
   const timesCopy = [...times];
 
@@ -158,6 +169,8 @@ function gerarRodizioPartidas(times, grupoId) {
           time1Nome: time1.nome,
           time2Nome: time2.nome,
           grupoId: grupoId,
+          modalidadeId: modalidadeId,
+          genero: genero,
           rodada: r + 1
         });
       }

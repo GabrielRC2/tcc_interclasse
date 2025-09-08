@@ -141,15 +141,15 @@ model Partida {
   grupoId          Int?              @map("fk_id_grupo") // Opcional para partidas eliminatórias
   localId          Int               @map("fk_id_local")
   torneioId        Int               @map("fk_id_torneio")
-  modalidadeId     Int?              @map("fk_id_modalidade") // Para partidas eliminatórias
-  genero           String?           @map("genero") @db.VarChar(10) // Para partidas eliminatórias
+  modalidadeId     Int               @map("fk_id_modalidade")
+  genero           String            @map("genero") @db.VarChar(10)
   tipo             String            @default("GRUPO") @map("tipo") @db.VarChar(20) // GRUPO ou ELIMINATORIA
   fase             String?           @map("fase") @db.VarChar(50) // Ex: "Oitavas de Final", "Quartas", etc.
   ordem            Int?              @map("ordem") // Ordem da partida no torneio
   grupo            Grupo?            @relation(fields: [grupoId], references: [id])
   local            Local             @relation(fields: [localId], references: [id])
   torneio          Torneio           @relation(fields: [torneioId], references: [id])
-  modalidade       Modalidade?       @relation(fields: [modalidadeId], references: [id])
+  modalidade       Modalidade        @relation(fields: [modalidadeId], references: [id])
   eventosPartida   EventoPartida[]
   times            PartidaTime[]     // ADICIONADO: relacionamento com times
 
