@@ -193,18 +193,30 @@ export async function processarWO(prisma, partidaId, timeWOId) {
  * Busca classificação do torneio ordenada por pontos
  * @param {object} prisma - Instância do Prisma
  * @param {number} torneioId - ID do torneio
- * @param {number} grupoId - ID do grupo (opcional)
+ * @param {object|number} filtro - Objeto de filtro complexo ou grupoId simples (retrocompatibilidade)
  * @returns {Array} Lista de times com pontuação
  */
-export async function obterClassificacao(prisma, torneioId, grupoId = null) {
-  const whereClause = {
-    partida: {
-      torneioId: torneioId
-    }
-  };
+export async function obterClassificacao(prisma, torneioId, filtro = null) {
+  let whereClause;
 
-  if (grupoId) {
-    whereClause.partida.grupoId = grupoId;
+  if (typeof filtro === 'number') {
+    // Retrocompatibilidade: filtro simples por grupoId
+    whereClause = {
+      partida: {
+        torneioId: torneioId,
+        grupoId: filtro
+      }
+    };
+  } else if (filtro && typeof filtro === 'object') {
+    // Novo formato: objeto de filtro completo
+    whereClause = filtro;
+  } else {
+    // Sem filtro: todos os times do torneio
+    whereClause = {
+      partida: {
+        torneioId: torneioId
+      }
+    };
   }
 
   const resultados = await prisma.partidaTime.findMany({
