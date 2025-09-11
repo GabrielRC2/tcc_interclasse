@@ -490,17 +490,9 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEn
       const timeBId = partidaDetalhes?.times?.find(pt => !pt.ehCasa)?.timeId;
       
       if (ehTimeA) {
-        return timeWO?.timeId === timeAId ? 'text-red-600 font-bold' : 'text-green-600 font-bold';
+        return timeWO?.timeId === timeAId ? 'text-red-600 font-bold' : ' font-bold';
       } else {
-        return timeWO?.timeId === timeBId ? 'text-red-600 font-bold' : 'text-green-600 font-bold';
-      }
-    } else {
-      // Jogo normal - comparar pontuações
-      if (placarA === placarB) return 'text-yellow-600 dark:text-yellow-400'; // empate
-      if (ehTimeA) {
-        return placarA > placarB ? 'text-green-600 font-bold' : 'text-red-600 font-bold';
-      } else {
-        return placarB > placarA ? 'text-green-600 font-bold' : 'text-red-600 font-bold';
+        return timeWO?.timeId === timeBId ? 'text-red-600 font-bold' : ' font-bold';
       }
     }
   };

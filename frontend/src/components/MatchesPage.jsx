@@ -1,9 +1,10 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, MapPin, Trophy, Filter, Play, Settings, Shuffle } from 'lucide-react';
+import { Calendar, Clock, MapPin, Trophy, Filter, Play, Settings, Shuffle, AlertCircle } from 'lucide-react';
 import { Button, Select } from '@/components/common';
 import { useTournament } from '@/contexts/TournamentContext';
 import { SumulaModal } from '@/components/SumulaModal';
+import { WOModal } from '@/components/WOModal';
 
 export const MatchesPage = () => {
   const { selectedTournament } = useTournament();
@@ -23,6 +24,8 @@ export const MatchesPage = () => {
   const [modalidadesDisponiveis, setModalidadesDisponiveis] = useState([]);
   const [showConfigModal, setShowConfigModal] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const [woModalAberto, setWoModalAberto] = useState(false);
+  const [partidaWO, setPartidaWO] = useState(null);
 
   useEffect(() => {
     carregarDadosIniciais();
@@ -413,6 +416,24 @@ export const MatchesPage = () => {
     }
   };
 
+  // abrir modal de WO
+  const abrirModalWO = (partida) => {
+    setPartidaWO(partida);
+    setWoModalAberto(true);
+  };
+
+  // fechar modal de WO
+  const fecharModalWO = () => {
+    setWoModalAberto(false);
+    setPartidaWO(null);
+  };
+
+  // quando WO é confirmado
+  const tratarWOConfirmado = async () => {
+    await carregarPartidas(); // recarregar partidas
+    fecharModalWO();
+  };
+
   if (carregando) {
     return <div className="flex justify-center items-center h-64">Carregando...</div>;
   }
@@ -539,6 +560,17 @@ export const MatchesPage = () => {
                         >
                           {p.status || 'Agendada'}
                         </span>
+
+                        {/* Ícone de WO */}
+                        {(p.status === 'Agendada' || p.status === 'Em andamento') && (
+                          <button
+                            onClick={() => abrirModalWO(p)}
+                            className="p-1 text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-full transition-colors"
+                            title="Registrar WO (Walk Over)"
+                          >
+                            <AlertCircle size={16} />
+                          </button>
+                        )}
                       </div>
 
                       <div className="flex items-center justify-center gap-4 mb-4">
@@ -608,6 +640,13 @@ export const MatchesPage = () => {
             match={partidaSelecionada}
             mode={partidaSelecionada?.status === 'Em andamento' ? 'live' : 'final'}
             onSumulaEnviada={(id) => tratarSumulaEnviada(id)}
+          />
+
+          <WOModal
+            isOpen={woModalAberto}
+            onClose={fecharModalWO}
+            match={partidaWO}
+            onWOConfirmed={tratarWOConfirmado}
           />
 
           {showConfigModal && (
