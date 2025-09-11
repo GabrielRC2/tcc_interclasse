@@ -46,6 +46,7 @@ export async function GET(request) {
             modalidade: true
           }
         },
+        modalidade: true, // Adicionar modalidade diretamente para eliminatórias
         local: true
       },
       orderBy: {
@@ -68,6 +69,20 @@ export async function GET(request) {
       const timeCasa = timesCasa[0]?.time;
       const timeVisitante = timesVisitante[0]?.time;
 
+      // Buscar modalidade de diferentes formas dependendo do tipo de partida
+      let modalidadeNome = 'N/A';
+      
+      if (partida.grupo?.modalidade?.nome) {
+        // Partidas de grupos
+        modalidadeNome = partida.grupo.modalidade.nome;
+      } else if (partida.modalidade?.nome) {
+        // Partidas eliminatórias com modalidade direta
+        modalidadeNome = partida.modalidade.nome;
+      } else if (timeCasa?.categoria?.modalidade?.nome) {
+        // Buscar modalidade através da categoria do time
+        modalidadeNome = timeCasa.categoria.modalidade.nome;
+      }
+
       return {
         id: partida.id,
         ordem: index + 1,
@@ -80,7 +95,7 @@ export async function GET(request) {
         result: partida.pontosCasa !== null && partida.pontosVisitante !== null 
           ? `${partida.pontosCasa}:${partida.pontosVisitante}` 
           : null,
-        modality: partida.grupo?.modalidade?.nome || 'N/A',
+        modality: modalidadeNome,
         category: timeCasa?.categoria?.genero || timeVisitante?.categoria?.genero || 'N/A',
         location: partida.local?.nome || 'TBD',
         status: getStatusPortugues(partida.statusPartida),

@@ -172,16 +172,9 @@ export const MatchesPage = () => {
   };
 
   // quando a súmula é enviada (SumulaModal -> onSumulaEnviada)
-  // atualizamos status local para "Finalizada" e persistimos como "Finalizada" no servidor
   const tratarSumulaEnviada = async (partidaId) => {
-    // atualização otimista local: colocar "Finalizada"
-    setPartidas(prev => prev.map(p => p.id === partidaId ? { ...p, status: 'Finalizada' } : p));
-    setPartidasFiltradas(prev => prev.map(p => p.id === partidaId ? { ...p, status: 'Finalizada' } : p));
-
-    // enviar como "Finalizada" ao servidor
-    await atualizarStatusNoServidor(partidaId, 'Finalizada');
-
-    // recarregar partidas para garantir consistência em dashboard
+    // Apenas recarrega as partidas para garantir consistência.
+    // A API de finalização já atualizou o status e os pontos.
     await carregarPartidas();
   };
 
@@ -274,6 +267,50 @@ export const MatchesPage = () => {
     }
   };
 
+  // gerar eliminatórias baseadas na classificação dos grupos
+  // gerar eliminatórias baseadas na classificação dos grupos
+  const gerarEliminatorias = async () => {
+    if (!selectedTournament?.id) {
+      alert('❌ Selecione um torneio primeiro');
+      return;
+    }
+
+    if (!modalidadeSelecionada || !generoSelecionado) {
+      alert('❌ Selecione uma modalidade e gênero para gerar as eliminatórias.');
+      return;
+    }
+
+    const confirmar = window.confirm('Gerar eliminatórias baseadas na classificação atual dos grupos?');
+    if (!confirmar) return;
+
+    setGenerating(true);
+    try {
+      const response = await fetch('/api/eliminatorias/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          torneioId: selectedTournament.id,
+          modalidadeId: modalidadeSelecionada,
+          genero: generoSelecionado,
+        }),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        alert(`✅ Eliminatórias geradas! ${result.partidasCriadas} partidas criadas na fase: ${result.fase}`);
+        await carregarPartidas();
+      } else {
+        const error = await response.json();
+        alert('❌ ' + (error.error || 'Erro ao gerar eliminatórias'));
+      }
+    } catch (error) {
+      console.error('Erro:', error);
+      alert('❌ Erro ao gerar eliminatórias');
+    } finally {
+      setGenerating(false);
+    }
+  };
+
   // Função para determinar o vencedor
   const obterVencedor = (partida) => {
     if (!partida.result) return null;
@@ -286,6 +323,93 @@ export const MatchesPage = () => {
       return { vencedor: partida.team2, tipo: 'visitante' };
     } else {
       return { vencedor: 'Empate', tipo: 'empate' };
+    }
+  };
+
+  // Função para determinar a próxima ação do torneio
+  const proximaAcao = (() => {
+    if (!selectedTournament) return '';
+    
+    // Se não há partidas, pode gerar grupos ou eliminatórias
+    if (!partidas.length) {
+      return 'GERAR_GRUPOS';
+    }
+    
+    // Verificar se há partidas de grupos pendentes
+    const partidasGrupos = partidas.filter(p => p.fase === 'Grupos' || p.fase === 'Fase de Grupos' || !p.fase);
+    const partidasGruposPendentes = partidasGrupos.filter(p => p.status !== 'FINALIZADA');
+    
+    if (partidasGruposPendentes.length > 0) {
+      return 'AGUARDAR_GRUPOS';
+    }
+    
+    // Verificar se já existem eliminatórias
+    const partidasEliminatorias = partidas.filter(p => 
+      p.fase && ['Oitavas de Final', 'Quartas de Final', 'Semifinais', 'Final', 'Triangular Final', 'Partida Extra'].includes(p.fase)
+    );
+    
+    // Se há partidas de grupos finalizadas mas não há eliminatórias, pode gerar eliminatórias
+    if (partidasGrupos.length > 0 && partidasEliminatorias.length === 0) {
+      return 'GERAR_ELIMINATORIAS';
+    }
+    
+    return '';
+  })();
+
+  // Função para obter texto do botão de gerar partidas
+  const getBotaoGerarPartidasTexto = () => {
+    if (proximaAcao === 'GERAR_GRUPOS') {
+      return 'Gerar Partidas de Grupos';
+    }
+    if (proximaAcao === 'GERAR_ELIMINATORIAS') {
+      return 'Gerar Eliminatórias';
+    }
+    return 'Gerar Partidas';
+  };
+
+  // Função para lidar com geração de partidas
+  const handleGerarPartidas = async () => {
+    if (!selectedTournament) return;
+    
+    if (proximaAcao === 'GERAR_GRUPOS') {
+      await gerarPartidasDeGrupos();
+    } else if (proximaAcao === 'GERAR_ELIMINATORIAS') {
+      await gerarEliminatorias();
+    } else {
+      alert('Funcionalidade em desenvolvimento');
+    }
+  };
+
+  // Função para gerar partidas de grupos
+  const gerarPartidasDeGrupos = async () => {
+    if (!selectedTournament) return;
+    
+    const confirmar = window.confirm('Deseja gerar todas as partidas de grupos para todas as modalidades e gêneros do torneio?');
+    if (!confirmar) return;
+
+    setGenerating(true);
+    try {
+      const response = await fetch('/api/matches/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          torneioId: selectedTournament.id
+        })
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        alert(`✅ Partidas geradas! ${result.partidasCriadas} partidas criadas`);
+        await carregarPartidas();
+      } else {
+        const error = await response.json();
+        alert('❌ ' + (error.error || 'Erro ao gerar partidas'));
+      }
+    } catch (error) {
+      console.error('Erro:', error);
+      alert('❌ Erro ao gerar partidas');
+    } finally {
+      setGenerating(false);
     }
   };
 
@@ -313,13 +437,15 @@ export const MatchesPage = () => {
             <Settings size={16} className="mr-2" />
             Configurar Locais
           </Button>
-          <Button 
-            onClick={gerarPartidasOtimizadas}
-            disabled={!selectedTournament || generating}
-          >
-            <Play size={16} className="mr-2" />
-            {generating ? 'Gerando...' : 'Gerar Partidas Otimizadas'}
-          </Button>
+          {proximaAcao && proximaAcao.startsWith('GERAR') && (
+            <Button 
+              onClick={handleGerarPartidas}
+              disabled={!selectedTournament || generating}
+            >
+              <Play size={16} className="mr-2" />
+              {generating ? 'Gerando...' : getBotaoGerarPartidasTexto()}
+            </Button>
+          )}
           <Button 
             onClick={gerarPontuacoesAleatorias} 
             disabled={partidas.filter(p => p.status === 'Agendada').length === 0}
@@ -328,6 +454,7 @@ export const MatchesPage = () => {
             <Shuffle size={16} className="mr-2" />
             Gerar Pontuações Aleatórias
           </Button>
+          
         </div>
       </div>
 

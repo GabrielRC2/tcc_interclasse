@@ -83,30 +83,77 @@ export const BracketsPage = () => {
         }
     };
 
-    const gerarEliminatorias = async () => {
+    const gerarEliminatorias = async (faseEscolhida = null) => {
+        console.log('=== DEBUG gerarEliminatorias ===');
+        console.log('selectedTournament:', selectedTournament);
+        console.log('selectedModalidade:', selectedModalidade);
+        console.log('selectedGenero:', selectedGenero);
+        console.log('classificacao.length:', classificacao.length);
+        console.log('faseEscolhida:', faseEscolhida);
+
+        // Verificações mais robustas
+        if (!selectedTournament) {
+            alert('Erro: Nenhum torneio selecionado');
+            console.error('selectedTournament é null/undefined');
+            return;
+        }
+
+        if (!selectedTournament.id) {
+            alert('Erro: Torneio selecionado não tem ID válido');
+            console.error('selectedTournament.id é null/undefined:', selectedTournament);
+            return;
+        }
+
+        if (!selectedModalidade || !selectedGenero) {
+            alert('Selecione modalidade e gênero antes de gerar eliminatórias.');
+            return;
+        }
+
         if (classificacao.length === 0) {
             alert('Nenhuma classificação encontrada. Complete a fase de grupos primeiro.');
             return;
         }
 
-        const confirmar = window.confirm(`Gerar fase eliminatória com ${classificacao.length} times classificados?`);
+        const faseTexto = faseEscolhida || 'automática';
+        const confirmar = window.confirm(`Gerar ${faseTexto} com base na classificação atual?`);
         if (!confirmar) return;
 
         try {
+            // Verificação adicional antes de acessar propriedades
+            if (!selectedTournament?.id) {
+                alert('Erro: Torneio não selecionado ou ID inválido');
+                return;
+            }
+
+            const bodyData = {
+                torneioId: selectedTournament.id,
+                modalidadeId: selectedModalidade,
+                genero: selectedGenero,
+                faseEscolhida: faseEscolhida
+            };
+
+            console.log('Enviando para API:', bodyData);
+
             const response = await fetch('/api/eliminatorias/generate', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    torneioId: selectedTournament.id,
-                    modalidadeId: selectedModalidade,
-                    genero: selectedGenero
-                })
+                body: JSON.stringify(bodyData)
             });
 
             if (response.ok) {
                 const result = await response.json();
-                alert(`Eliminatórias geradas com sucesso! ${result.partidasGeradas} partidas criadas.`);
+                
+                let mensagem = `${result.fase} gerada com sucesso!\n`;
+                mensagem += `${result.timesClassificados} times classificados\n`;
+                mensagem += `${result.partidasCriadas} partidas criadas`;
+                
+                if (result.detalhes?.fasesExistentes?.length > 0) {
+                    mensagem += `\n\nFases já criadas: ${result.detalhes.fasesExistentes.join(', ')}`;
+                }
+                
+                alert(mensagem);
                 await loadEliminatorias();
+                await loadClassificacao(); // Recarregar classificação
             } else {
                 const error = await response.json();
                 alert(error.error || 'Erro ao gerar eliminatórias');
@@ -114,6 +161,69 @@ export const BracketsPage = () => {
         } catch (error) {
             console.error('Erro ao gerar eliminatórias:', error);
             alert('Erro ao gerar eliminatórias');
+        }
+    };
+
+    const mostrarOpcoesEliminatorias = () => {
+        console.log('=== DEBUG mostrarOpcoesEliminatorias ===');
+        console.log('selectedTournament:', selectedTournament);
+        console.log('selectedModalidade:', selectedModalidade);
+        console.log('selectedGenero:', selectedGenero);
+        console.log('classificacao:', classificacao);
+
+        if (!selectedTournament || !selectedModalidade || !selectedGenero) {
+            alert('Selecione torneio, modalidade e gênero antes de gerar eliminatórias.');
+            return;
+        }
+
+        const numTimes = classificacao.length;
+        console.log('numTimes:', numTimes);
+
+        // Se não há classificação, pode ser que seja uma fase subsequente
+        if (numTimes === 0) {
+            const confirmar = window.confirm('Não há classificação dos grupos carregada. Deseja tentar gerar a próxima fase das eliminatórias baseada nos vencedores da fase anterior?');
+            if (confirmar) {
+                gerarEliminatorias(); // Sem especificar fase, deixa a API decidir
+            }
+            return;
+        }
+
+        const opcoes = [];
+        
+        if (numTimes >= 16) opcoes.push('Oitavas de Final');
+        if (numTimes >= 8) opcoes.push('Quartas de Final');
+        if (numTimes >= 4) opcoes.push('Semifinais');
+        if (numTimes >= 2) opcoes.push('Final');
+
+        console.log('opcoes disponíveis:', opcoes);
+
+        if (opcoes.length <= 1) {
+            // Se só há uma opção, gerar diretamente
+            console.log('Gerando diretamente:', opcoes[0]);
+            gerarEliminatorias(opcoes[0]);
+            return;
+        }
+
+        // Mostrar modal com opções
+        let prompt = `Escolha a fase inicial das eliminatórias:\n`;
+        prompt += opcoes.map((op, i) => `${i+1}. ${op}`).join('\n');
+        prompt += `\n${opcoes.length + 1}. Deixar a API decidir automaticamente`;
+        prompt += '\n\nDigite o número da opção:';
+        
+        const escolha = window.prompt(prompt);
+        
+        console.log('escolha do usuário:', escolha);
+        
+        if (escolha) {
+            const indice = parseInt(escolha) - 1;
+            if (indice >= 0 && indice < opcoes.length) {
+                const faseEscolhida = opcoes[indice];
+                console.log('faseEscolhida:', faseEscolhida);
+                gerarEliminatorias(faseEscolhida);
+            } else if (indice === opcoes.length) {
+                console.log('Deixando API decidir automaticamente');
+                gerarEliminatorias(); // Sem especificar fase
+            }
         }
     };
 
@@ -143,8 +253,8 @@ export const BracketsPage = () => {
                 </div>
                 <div className="flex gap-2">
                     <Button 
-                        onClick={gerarEliminatorias} 
-                        disabled={classificacao.length === 0}
+                        onClick={mostrarOpcoesEliminatorias} 
+                        disabled={!selectedTournament?.id || !selectedModalidade || !selectedGenero || classificacao.length === 0}
                         className="bg-red-600 hover:bg-red-700"
                     >
                         <Target className="mr-2" size={16} />
@@ -294,7 +404,7 @@ export const BracketsPage = () => {
                                     {eliminatorias.map(fase => (
                                         <div key={fase.fase} className="border border-gray-200 dark:border-gray-600 rounded-lg p-4">
                                             <h3 className="text-lg font-bold text-gray-800 dark:text-gray-200 mb-4">
-                                                {fase.fase}
+                                                {fase.fase} - {fase.partidas[0].modalidade}
                                             </h3>
                                             <div className="grid gap-3">
                                                 {fase.partidas.map((partida, idx) => (

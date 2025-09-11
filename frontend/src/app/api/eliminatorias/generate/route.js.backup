@@ -1,0 +1,583 @@
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
+
+export async function POST(request) {
+  try {
+    const { torneioId, modalidadeId, genero } = await request.json();
+
+    if (!torneioId) {
+      return Response.json({ error: 'Parâmetro torneioId é obrigatório' }, { status: 400 });
+    }
+
+    console.log('=== GERANDO ELIMINATÓRIAS ===');
+    console.log('Torneio:', torneioId, 'Modalidade:', modalidadeId, 'Gênero:', genero);
+
+    let modalidades = [];
+
+    if (modalidadeId && genero) {
+      // Modo específico: uma modalidade e gênero
+      const modalidade = await prisma.modalidade.findUnique({
+        where: { id: parseInt(modalidadeId) }
+      });
+      
+      if (!modalidade) {
+        return Response.json({ error: 'Modalidade não encontrada' }, { status: 404 });
+      }
+      
+      modalidades = [{ modalidade, generos: [genero] }];
+    } else {
+      // Modo geral: todas modalidades e gêneros do torneio
+      const torneioModalidades = await prisma.torneioModalidade.findMany({
+        where: { 
+          torneioId: parseInt(torneioId)
+        },
+        include: {
+          modalidade: true
+        }
+      });
+
+      if (torneioModalidades.length === 0) {
+        return Response.json({ error: 'Nenhuma modalidade encontrada no torneio' }, { status: 404 });
+      }
+
+      modalidades = torneioModalidades.map(tm => ({ 
+        modalidade: tm.modalidade, 
+        generos: ['Masculino', 'Feminino'] 
+      }));
+    }
+
+    let totalPartidasCriadas = 0;
+    const resultados = [];
+
+    // Processar cada modalidade e gênero
+    for (const { modalidade, generos } of modalidades) {
+      for (const generoAtual of generos) {
+        try {
+          console.log(`\n--- Processando ${modalidade.nome} ${generoAtual} ---`);
+          
+          // 1. Buscar classificação dos grupos
+          const classificacao = await buscarClassificacao(torneioId, modalidade.id, generoAtual);
+          
+          if (classificacao.length === 0) {
+            console.log(`Nenhum time encontrado para ${modalidade.nome} ${generoAtual}`);
+            continue;
+          }
+
+          console.log(`Times encontrados para ${modalidade.nome} ${generoAtual}:`, classificacao.length);
+
+          // 2. Determinar estrutura do mata-mata
+          const estrutura = determinarEstrutura(classificacao);
+          console.log('Estrutura:', estrutura.descricao);
+
+          // 3. Limpar eliminatórias existentes
+          await limparEliminatorias(torneioId, modalidade.id, generoAtual);
+
+          // 4. Gerar partidas
+          const partidasGeradas = await gerarPartidas(torneioId, modalidade.id, generoAtual, estrutura);
+          
+          totalPartidasCriadas += partidasGeradas;
+          
+          resultados.push({
+            modalidade: modalidade.nome,
+            genero: generoAtual,
+            estrutura: estrutura.descricao,
+            partidasGeradas,
+            timesClassificados: estrutura.participantes.length
+          });
+
+        } catch (error) {
+          console.error(`Erro ao processar ${modalidade.nome} ${generoAtual}:`, error);
+          // Continua com as outras modalidades/gêneros
+        }
+      }
+    }
+
+    if (totalPartidasCriadas === 0) {
+      return Response.json({ 
+        error: 'Nenhuma eliminatória foi gerada. Verifique se a fase de grupos foi finalizada.' 
+      }, { status: 404 });
+    }
+
+    // Resposta compatível com ambos os casos
+    const response = {
+      message: 'Eliminatórias geradas com sucesso!',
+      partidasCriadas: totalPartidasCriadas,
+      fase: 'Eliminatórias',
+      detalhes: resultados
+    };
+
+    // Para compatibilidade com BracketsPage
+    if (modalidadeId && genero && resultados.length === 1) {
+      response.partidasGeradas = resultados[0].partidasGeradas;
+      response.estrutura = resultados[0].estrutura;
+      response.timesClassificados = resultados[0].timesClassificados;
+    }
+
+    return Response.json(response);
+
+  } catch (error) {
+    console.error('Erro ao gerar eliminatórias:', error);
+    return Response.json({ error: 'Erro interno: ' + error.message }, { status: 500 });
+  }
+}
+
+// Buscar classificação dos grupos
+async function buscarClassificacao(torneioId, modalidadeId, genero) {
+  const grupos = await prisma.grupo.findMany({
+    where: {
+      torneioId: parseInt(torneioId),
+      modalidadeId: parseInt(modalidadeId),
+      genero: genero
+    },
+    include: {
+      times: {
+        include: {
+          time: true
+        }
+      }
+    }
+  });
+
+  if (grupos.length === 0) {
+    return [];
+  }
+
+  const timesClassificados = [];
+
+  // Calcular classificação para cada grupo
+  for (const grupo of grupos) {
+    const timesDoGrupo = [];
+
+    for (const grupoTime of grupo.times) {
+      const stats = await calcularStats(torneioId, grupoTime.time.id, grupo.id);
+      timesDoGrupo.push({
+        ...grupoTime.time,
+        grupo: grupo.nome,
+        ...stats
+      });
+    }
+
+    // Ordenar times do grupo
+    timesDoGrupo.sort((a, b) => {
+      if (b.pontos !== a.pontos) return b.pontos - a.pontos;
+      if (b.saldoGols !== a.saldoGols) return b.saldoGols - a.saldoGols;
+      if (b.golsMarcados !== a.golsMarcados) return b.golsMarcados - a.golsMarcados;
+      return a.nome.localeCompare(b.nome);
+    });
+
+    // Classificar os dois primeiros de cada grupo
+    if (timesDoGrupo.length >= 1) {
+      timesClassificados.push({ ...timesDoGrupo[0], posicaoGrupo: 1 });
+    }
+    if (timesDoGrupo.length >= 2) {
+      timesClassificados.push({ ...timesDoGrupo[1], posicaoGrupo: 2 });
+    }
+  }
+
+  return timesClassificados;
+}
+
+// Calcular estatísticas de um time
+async function calcularStats(torneioId, timeId, grupoId) {
+  const partidas = await prisma.partida.findMany({
+    where: {
+      torneioId: parseInt(torneioId),
+      grupoId: parseInt(grupoId),
+      status: 'Finalizada',
+      times: {
+        some: {
+          timeId: parseInt(timeId)
+        }
+      }
+    },
+    include: {
+      times: {
+        include: {
+          time: true
+        }
+      }
+    }
+  });
+
+  let pontos = 0;
+  let golsMarcados = 0;
+  let golsSofridos = 0;
+  let vitorias = 0;
+  let empates = 0;
+  let derrotas = 0;
+
+  for (const partida of partidas) {
+    if (!partida.pontosCasa && !partida.pontosVisitante) continue;
+
+    const timeCasa = partida.times.find(pt => pt.posicao === 'CASA')?.time;
+    const timeVisitante = partida.times.find(pt => pt.posicao === 'VISITANTE')?.time;
+    
+    if (!timeCasa || !timeVisitante) continue;
+
+    const golsCasa = partida.pontosCasa || 0;
+    const golsVisitante = partida.pontosVisitante || 0;
+
+    if (timeCasa.id === timeId) {
+      // Time jogou em casa
+      golsMarcados += golsCasa;
+      golsSofridos += golsVisitante;
+      
+      if (golsCasa > golsVisitante) {
+        vitorias++;
+        pontos += 3;
+      } else if (golsCasa === golsVisitante) {
+        empates++;
+        pontos += 1;
+      } else {
+        derrotas++;
+      }
+    } else if (timeVisitante.id === timeId) {
+      // Time jogou como visitante
+      golsMarcados += golsVisitante;
+      golsSofridos += golsCasa;
+      
+      if (golsVisitante > golsCasa) {
+        vitorias++;
+        pontos += 3;
+      } else if (golsVisitante === golsCasa) {
+        empates++;
+        pontos += 1;
+      } else {
+        derrotas++;
+      }
+    }
+  }
+
+  return {
+    pontos,
+    golsMarcados,
+    golsSofridos,
+    saldoGols: golsMarcados - golsSofridos,
+    vitorias,
+    empates,
+    derrotas,
+    jogos: vitorias + empates + derrotas
+  };
+}
+
+// Determinar estrutura do mata-mata
+function determinarEstrutura(timesClassificados) {
+  const primeiroLugar = timesClassificados.filter(t => t.posicaoGrupo === 1);
+  const segundoLugar = timesClassificados.filter(t => t.posicaoGrupo === 2);
+  
+  const totalTimes = primeiroLugar.length + segundoLugar.length;
+  const totalGrupos = Math.max(...timesClassificados.map(t => parseInt(t.grupo.replace(/[^0-9]/g, '')) || 1));
+
+  if (totalGrupos === 3) {
+    // Triangular final com os 3 primeiros colocados
+    return {
+      tipo: 'TRIANGULAR',
+      descricao: 'Triangular Final',
+      participantes: primeiroLugar,
+      confrontos: gerarConfrontosTriangular(primeiroLugar)
+    };
+  } else if (totalGrupos === 4) {
+    // Semifinais: 1º vs 2º de outros grupos
+    return {
+      tipo: 'SEMIFINAL',
+      descricao: 'Semifinais',
+      participantes: [...primeiroLugar, ...segundoLugar],
+      confrontos: gerarConfrontosSemifinais(primeiroLugar, segundoLugar)
+    };
+  } else {
+    // Oitavas de final: todos classificados
+    return {
+      tipo: 'OITAVAS',
+      descricao: 'Oitavas de Final',
+      participantes: [...primeiroLugar, ...segundoLugar],
+      confrontos: gerarConfrontosOitavas(primeiroLugar, segundoLugar)
+    };
+  }
+}
+
+// Gerar confrontos para triangular
+function gerarConfrontosTriangular(times) {
+  if (times.length < 3) return [];
+  
+  return [
+    { casa: times[0], visitante: times[1], ordem: 1 },
+    { casa: times[1], visitante: times[2], ordem: 2 },
+    { casa: times[0], visitante: times[2], ordem: 3 }
+  ];
+}
+
+// Gerar confrontos para semifinais
+function gerarConfrontosSemifinais(primeiros, segundos) {
+  const confrontos = [];
+  
+  if (primeiros.length >= 2 && segundos.length >= 2) {
+    confrontos.push({ casa: primeiros[0], visitante: segundos[1], ordem: 1 });
+    confrontos.push({ casa: primeiros[1], visitante: segundos[0], ordem: 2 });
+  }
+  
+  return confrontos;
+}
+
+// Gerar confrontos para oitavas
+function gerarConfrontosOitavas(primeiros, segundos) {
+  const confrontos = [];
+  let ordem = 1;
+  
+  // Primeiros lugares vs segundos lugares de outros grupos
+  for (let i = 0; i < primeiros.length && i < segundos.length; i++) {
+    const segundoIndex = (i + 1) % segundos.length;
+    confrontos.push({ 
+      casa: primeiros[i], 
+      visitante: segundos[segundoIndex], 
+      ordem: ordem++ 
+    });
+  }
+  
+  return confrontos;
+}
+
+// Limpar eliminatórias existentes
+async function limparEliminatorias(torneioId, modalidadeId, genero) {
+  await prisma.partida.deleteMany({
+    where: {
+      torneioId: parseInt(torneioId),
+      modalidadeId: parseInt(modalidadeId),
+      genero: genero,
+      tipo: 'ELIMINATORIA'
+    }
+  });
+}
+
+// Gerar partidas das eliminatórias
+async function gerarPartidas(torneioId, modalidadeId, genero, estrutura) {
+  let partidasCriadas = 0;
+  
+  // Buscar local padrão
+  const local = await prisma.local.findFirst();
+  if (!local) {
+    throw new Error('Nenhum local encontrado para as partidas');
+  }
+
+  // Criar partidas para cada confronto
+  for (const confronto of estrutura.confrontos) {
+    const dataPartida = new Date();
+    dataPartida.setDate(dataPartida.getDate() + confronto.ordem); // Espaçar as partidas
+
+    const partida = await prisma.partida.create({
+      data: {
+        dataHora: dataPartida,
+        statusPartida: 'Agendada',
+        torneioId: parseInt(torneioId),
+        modalidadeId: parseInt(modalidadeId),
+        localId: local.id,
+        genero: genero,
+        tipo: 'ELIMINATORIA',
+        fase: estrutura.descricao,
+        ordem: confronto.ordem
+      }
+    });
+
+    // Associar times à partida
+    await prisma.partidaTime.createMany({
+      data: [
+        {
+          partidaId: partida.id,
+          timeId: confronto.casa.time.id,
+          posicao: 'CASA'
+        },
+        {
+          partidaId: partida.id,
+          timeId: confronto.visitante.time.id,
+          posicao: 'VISITANTE'
+        }
+      ]
+    });
+
+    partidasCriadas++;
+  }
+
+  return partidasCriadas;
+}
+
+async function obterClassificacao(torneioId, modalidadeId, genero) {
+  // Buscar todos os grupos da modalidade/gênero
+  const grupos = await prisma.grupo.findMany({
+    where: {
+      torneioId: torneioId,
+      modalidadeId: modalidadeId,
+      genero: genero
+    },
+    include: {
+      grupoTimes: {
+        include: {
+          time: true
+        }
+      }
+    }
+  });
+
+  if (grupos.length === 0) {
+    return [];
+  }
+
+  let todosOsTimes = [];
+
+  // Calcular classificação de cada grupo
+  for (const grupo of grupos) {
+    const classificacaoGrupo = await calcularClassificacaoGrupo(grupo.id);
+    
+    // Pegar os dois primeiros de cada grupo
+    const classificados = classificacaoGrupo.slice(0, 2);
+    
+    todosOsTimes.push(...classificados);
+  }
+
+  // Ordenar todos os times por pontos, vitórias, gols pró, gols contra
+  todosOsTimes.sort((a, b) => {
+    if (b.pontos !== a.pontos) return b.pontos - a.pontos;
+    if (b.vitorias !== a.vitorias) return b.vitorias - a.vitorias;
+    if (b.golsPro !== a.golsPro) return b.golsPro - a.golsPro;
+    return a.golsContra - b.golsContra;
+  });
+
+  return todosOsTimes;
+}
+
+async function calcularClassificacaoGrupo(grupoId) {
+  const grupoTimes = await prisma.grupoTime.findMany({
+    where: { grupoId },
+    include: { time: true }
+  });
+
+  let estatisticas = {};
+
+  // Inicializar estatísticas
+  grupoTimes.forEach(gt => {
+    estatisticas[gt.timeId] = {
+      time: gt.time,
+      pontos: 0,
+      jogos: 0,
+      vitorias: 0,
+      empates: 0,
+      derrotas: 0,
+      golsPro: 0,
+      golsContra: 0,
+      saldoGols: 0
+    };
+  });
+
+  // Buscar partidas do grupo
+  const partidas = await prisma.partida.findMany({
+    where: { grupoId },
+    include: {
+      partidaTimes: {
+        include: { time: true }
+      }
+    }
+  });
+
+  // Calcular estatísticas baseadas nas partidas
+  partidas.forEach(partida => {
+    if (partida.golsCasa !== null && partida.golsVisitante !== null) {
+      const timeCasa = partida.partidaTimes.find(pt => pt.posicao === 'CASA');
+      const timeVisitante = partida.partidaTimes.find(pt => pt.posicao === 'VISITANTE');
+
+      if (timeCasa && timeVisitante) {
+        const estatCasa = estatisticas[timeCasa.timeId];
+        const estatVisitante = estatisticas[timeVisitante.timeId];
+
+        if (estatCasa && estatVisitante) {
+          estatCasa.jogos++;
+          estatVisitante.jogos++;
+          estatCasa.golsPro += partida.golsCasa;
+          estatCasa.golsContra += partida.golsVisitante;
+          estatVisitante.golsPro += partida.golsVisitante;
+          estatVisitante.golsContra += partida.golsCasa;
+
+          if (partida.golsCasa > partida.golsVisitante) {
+            estatCasa.vitorias++;
+            estatCasa.pontos += 3;
+            estatVisitante.derrotas++;
+          } else if (partida.golsCasa < partida.golsVisitante) {
+            estatVisitante.vitorias++;
+            estatVisitante.pontos += 3;
+            estatCasa.derrotas++;
+          } else {
+            estatCasa.empates++;
+            estatVisitante.empates++;
+            estatCasa.pontos += 1;
+            estatVisitante.pontos += 1;
+          }
+
+          estatCasa.saldoGols = estatCasa.golsPro - estatCasa.golsContra;
+          estatVisitante.saldoGols = estatVisitante.golsPro - estatVisitante.golsContra;
+        }
+      }
+    }
+  });
+
+  return Object.values(estatisticas)
+    .sort((a, b) => {
+      if (b.pontos !== a.pontos) return b.pontos - a.pontos;
+      if (b.vitorias !== a.vitorias) return b.vitorias - a.vitorias;
+      if (b.saldoGols !== a.saldoGols) return b.saldoGols - a.saldoGols;
+      if (b.golsPro !== a.golsPro) return b.golsPro - a.golsPro;
+      return a.golsContra - b.golsContra;
+    });
+}
+
+function determinarFaseEliminatoria(times) {
+  const numTimes = times.length;
+  
+  if (numTimes < 2) {
+    return { fase: 'Sem eliminatórias', confrontos: [] };
+  }
+
+  let fase = '';
+  let confrontos = [];
+
+  if (numTimes <= 3) {
+    // Triangular final (cada time joga contra cada time)
+    fase = 'Triangular Final';
+    for (let i = 0; i < numTimes; i++) {
+      for (let j = i + 1; j < numTimes; j++) {
+        confrontos.push({
+          casa: times[i],
+          visitante: times[j]
+        });
+      }
+    }
+  } else if (numTimes <= 4) {
+    // Semifinais
+    fase = 'Semifinais';
+    confrontos = [
+      { casa: times[0], visitante: times[3] },
+      { casa: times[1], visitante: times[2] }
+    ];
+  } else if (numTimes <= 8) {
+    // Quartas de final
+    fase = 'Quartas de Final';
+    for (let i = 0; i < numTimes; i += 2) {
+      if (i + 1 < numTimes) {
+        confrontos.push({
+          casa: times[i],
+          visitante: times[i + 1]
+        });
+      }
+    }
+  } else {
+    // Oitavas de final
+    fase = 'Oitavas de Final';
+    for (let i = 0; i < Math.min(16, numTimes); i += 2) {
+      if (i + 1 < numTimes) {
+        confrontos.push({
+          casa: times[i],
+          visitante: times[i + 1]
+        });
+      }
+    }
+  }
+
+  return { fase, confrontos };
+}

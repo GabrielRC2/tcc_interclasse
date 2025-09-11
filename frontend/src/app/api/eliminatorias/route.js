@@ -26,7 +26,8 @@ export async function GET(request) {
           include: {
             time: true
           }
-        }
+        },
+        modalidade: true
       },
       orderBy: {
         fase: 'asc'
@@ -54,7 +55,8 @@ export async function GET(request) {
         resultado: partida.pontosCasa !== null && partida.pontosVisitante !== null 
           ? `${partida.pontosCasa} x ${partida.pontosVisitante}` 
           : null,
-        status: partida.status
+        status: partida.status,
+        modalidade: partida.modalidade.nome
       });
 
       return acc;

@@ -86,7 +86,9 @@ export async function POST(request) {
           statusPartida: 'AGENDADA',
           grupoId: partida.grupoId,
           localId: partida.localId,
-          torneioId: parseInt(torneioId)
+          torneioId: parseInt(torneioId),
+          modalidadeId: partida.modalidadeId,
+          genero: partida.genero,
         }
       });
 
@@ -150,6 +152,7 @@ function gerarRodizioPartidas(times, grupo) {
           time2Nome: time2.nome,
           grupoId: grupo.id,
           modalidade: grupo.modalidade.nome,
+          modalidadeId: grupo.modalidadeId,
           genero: time1.categoria.genero,
           rodada: r + 1
         });

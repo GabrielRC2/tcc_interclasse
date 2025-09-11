@@ -182,47 +182,10 @@ export const GroupsPage = () => {
         }
     };
 
-    const gerarChaveamento = async () => {
-        if (!selectedTournament || !selectedModalidade || !selectedGenero) {
-            alert('Selecione Modalidade e Gênero primeiro');
-            return;
-        }
+    
 
-        if (grupos.length === 0) {
-            alert('Realize o sorteio primeiro');
-            return;
-        }
+    
 
-        const modalidadeNome = modalidades.find(m => m.id == selectedModalidade)?.nome;
-        const confirm = window.confirm(`Gerar chaveamento para ${modalidadeNome} ${selectedGenero}? Partidas antigas desta modalidade/gênero serão substituídas.`);
-
-        if (!confirm) return;
-
-        try {
-            const response = await fetch('/api/matches/generate', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    torneioId: selectedTournament.id,
-                    modalidadeId: selectedModalidade,
-                    genero: selectedGenero
-                })
-            });
-
-            if (response.ok) {
-                const result = await response.json();
-                alert(`✅ ${result.partidasGeradas} partidas de ${result.modalidade} ${result.genero} geradas!`);
-            } else {
-                const error = await response.json();
-                alert('❌ ' + (error.error || 'Erro ao gerar chaveamento'));
-            }
-        } catch (error) {
-            console.error('Erro ao gerar chaveamento:', error);
-            alert('❌ Erro ao gerar chaveamento');
-        }
-    };
-
-    // Função para limpar grupos
     const limparGrupos = async () => {
         if (!selectedTournament || !selectedModalidade || !selectedGenero) {
             alert('Selecione Modalidade e Gênero primeiro');
@@ -235,11 +198,14 @@ export const GroupsPage = () => {
         }
 
         const modalidadeNome = modalidades.find(m => m.id == selectedModalidade)?.nome;
+        const partidasResponse = await fetch(`/api/partidas?torneioId=${selectedTournament.id}&modalidadeId=${selectedModalidade}&genero=${selectedGenero}`);
+        const partidas = await partidasResponse.json();
+
         const confirmacao = window.confirm(
             `⚠️ ATENÇÃO: Limpar TODOS os grupos de ${modalidadeNome} ${selectedGenero}?\n\n` +
             `Isso irá deletar:\n` +
             `• ${grupos.length} grupo(s)\n` +
-            `• Todas as partidas relacionadas\n` +
+            `• ${partidas.length} partida(s) relacionada(s)\n` +
             `• Todos os eventos e estatísticas\n\n` +
             `Esta ação NÃO PODE ser desfeita!`
         );
@@ -304,6 +270,8 @@ export const GroupsPage = () => {
                                 Limpar Grupos
                             </Button>
                         )}
+
+                        
                     </div>
                 </div>
 
@@ -347,10 +315,10 @@ export const GroupsPage = () => {
                                     onChange={(e) => updateFilterState('quantidadeGrupos', e.target.value)}
                                     disabled={timesDisponiveis.length === 0}
                                 >
-                                    <option value="">Selecione a quantidade</option>
+                                    <option value="">{timesDisponiveis.length > 0 ? 'Selecione a quantidade' : 'Sem times disponíveis'}</option>
                                     {timesDisponiveis.length > 0 && Array.from({ length: Math.max(1, Math.ceil(timesDisponiveis.length / 2)) }, (_, i) => i + 1).map(num => (
                                         <option key={num} value={num}>
-                                            {num} grupo{num > 1 ? 's' : ''} ({Math.ceil(timesDisponiveis.length / num)} times/grupo)
+                                            {num} grupo{num > 1 ? 's' : ''} (~{Math.ceil(timesDisponiveis.length / num)} times/grupo)
                                         </option>
                                     ))}
                                 </Select>

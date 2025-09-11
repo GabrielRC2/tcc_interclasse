@@ -11,12 +11,14 @@ export const Dashboard = () => {
 
   const [filters, setFilters] = useState(['Masculino', 'Feminino', 'Jogos Anteriores']);
   const [partidaSelecionada, setPartidaSelecionada] = useState(null);
-  const [stats, setStats] = useState({
-    totalTeams: 0,
-    totalMatches: 0,
-    completedMatches: 0,
-    totalPlayers: 0
-  });
+
+  // Estados para próximas partidas
+  const [proximasPartidas, setProximasPartidas] = useState([]);
+  const [carregandoProximas, setCarregandoProximas] = useState(false);
+
+  // Estados para jogadores em destaque
+  const [jogadoresDestaque, setJogadoresDestaque] = useState({});
+  const [carregandoJogadores, setCarregandoJogadores] = useState(false);
 
   // novos estados para partidas finalizadas (súmulas)
   const [partidasFinalizadas, setPartidasFinalizadas] = useState([]);
@@ -26,12 +28,48 @@ export const Dashboard = () => {
 
   useEffect(() => {
     if (selectedTournament) {
+      carregarProximasPartidas();
+      carregarJogadoresDestaque();
       carregarPartidasFinalizadas();
     } else {
+      setProximasPartidas([]);
+      setJogadoresDestaque({});
       setPartidasFinalizadas([]);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedTournament]);
+
+  // busca próximas partidas
+  const carregarProximasPartidas = async () => {
+    if (!selectedTournament) return;
+    setCarregandoProximas(true);
+    try {
+      const res = await fetch(`/api/partidas/proximas?torneioId=${selectedTournament.id}`);
+      const data = res.ok ? await res.json() : [];
+      setProximasPartidas(data);
+    } catch (err) {
+      console.error('Erro ao carregar próximas partidas:', err);
+      setProximasPartidas([]);
+    } finally {
+      setCarregandoProximas(false);
+    }
+  };
+
+  // busca jogadores em destaque
+  const carregarJogadoresDestaque = async () => {
+    if (!selectedTournament) return;
+    setCarregandoJogadores(true);
+    try {
+      const res = await fetch(`/api/jogadores/destaque?torneioId=${selectedTournament.id}`);
+      const data = res.ok ? await res.json() : {};
+      setJogadoresDestaque(data);
+    } catch (err) {
+      console.error('Erro ao carregar jogadores em destaque:', err);
+      setJogadoresDestaque({});
+    } finally {
+      setCarregandoJogadores(false);
+    }
+  };
 
   // busca partidas finalizadas do backend e guarda em estado
   const carregarPartidasFinalizadas = async () => {
@@ -54,10 +92,12 @@ export const Dashboard = () => {
     }
   };
 
-  // quando a súmula for enviada a partir do modal, recarrega as finalizadas
+  // quando a súmula for enviada a partir do modal, recarrega as finalizadas e próximas
   const tratarSumulaEnviada = async (partidaId) => {
-    // recarregar lista (a súmula acabou de ser criada e a partida deve aparecer como finalizada)
+    // recarregar listas (a súmula acabou de ser criada e a partida deve aparecer como finalizada)
     await carregarPartidasFinalizadas();
+    await carregarProximasPartidas(); // Atualizar próximas partidas também
+    await carregarJogadoresDestaque(); // Atualizar jogadores em destaque
   };
 
   return (
@@ -99,101 +139,106 @@ export const Dashboard = () => {
           </h1>
 
           <div className="space-y-8">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">Estatísticas</h2>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="flex items-center p-4 bg-gray-100 dark:bg-gray-700 rounded-lg">
-                    <Trophy className="h-6 w-6 text-gray-500 dark:text-gray-400 mr-2" />
-                    <div>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">Total de Equipes</p>
-                      <p className="text-lg font-bold text-gray-900 dark:text-gray-100">{stats.totalTeams}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center p-4 bg-gray-100 dark:bg-gray-700 rounded-lg">
-                    <Users className="h-6 w-6 text-gray-500 dark:text-gray-400 mr-2" />
-                    <div>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">Total de Jogadores</p>
-                      <p className="text-lg font-bold text-gray-900 dark:text-gray-100">{stats.totalPlayers}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center p-4 bg-gray-100 dark:bg-gray-700 rounded-lg">
-                    <Calendar className="h-6 w-6 text-gray-500 dark:text-gray-400 mr-2" />
-                    <div>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">Total de Partidas</p>
-                      <p className="text-lg font-bold text-gray-900 dark:text-gray-100">{stats.totalMatches}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center p-4 bg-gray-100 dark:bg-gray-700 rounded-lg">
-                    <Target className="h-6 w-6 text-gray-500 dark:text-gray-400 mr-2" />
-                    <div>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">Partidas Concluídas</p>
-                      <p className="text-lg font-bold text-gray-900 dark:text-gray-100">{stats.completedMatches}</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* PARTIDAS ATUAIS (mantém mock data) */}
+            {/* PARTIDAS ATUAIS (próximas partidas do banco de dados) */}
             <div>
               <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">PARTIDAS ATUAIS</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {mockData.matches.filter(m => m.status === 'Em andamento').slice(0, 2).map(match => (
-                  <div key={match.id} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm p-4 relative overflow-hidden">
-                    <div className="relative z-10">
-                      <div className="flex items-center justify-between mb-2">
-                        <p className="text-sm text-red-600 dark:text-red-400 font-semibold uppercase">🔴 AO VIVO</p>
+                {carregandoProximas ? (
+                  <div className="col-span-2 text-center py-8">Carregando próximas partidas...</div>
+                ) : proximasPartidas.length === 0 ? (
+                  <div className="col-span-2 text-center py-8 text-gray-500">Nenhuma partida agendada encontrada.</div>
+                ) : (
+                  proximasPartidas.slice(0, 2).map(match => (
+                    <div key={match.id} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm p-4 relative overflow-hidden">
+                      <div className="relative z-10">
+                        <div className="flex items-center justify-between mb-2">
+                          <p className="text-sm text-blue-600 dark:text-blue-400 font-semibold uppercase">� PRÓXIMA</p>
+                        </div>
+                        <p className="text-2xl font-bold my-2 text-gray-900 dark:text-gray-100">{match.team1} VS {match.team2}</p>
+                        <p className="text-xl font-bold text-blue-600 dark:text-blue-400 mb-2">{match.result}</p>
+                        <div className="space-y-1">
+                          <p className="text-sm text-gray-600 dark:text-gray-300">Esporte: {match.modality}</p>
+                          <p className="text-sm text-gray-600 dark:text-gray-300">Modalidade: {match.category}</p>
+                          <p className="text-sm text-gray-600 dark:text-gray-300">Local: {match.location}</p>
+                          {match.fase && <p className="text-sm text-gray-600 dark:text-gray-300">Fase: {match.fase}</p>}
+                        </div>
                       </div>
-                      <p className="text-2xl font-bold my-2 text-gray-900 dark:text-gray-100">{match.team1} VS {match.team2}</p>
-                      <p className="text-xl font-bold text-red-600 dark:text-red-400 mb-2">{match.result}</p>
-                      <div className="space-y-1">
-                        <p className="text-sm text-gray-600 dark:text-gray-300">Esporte: {match.modality}</p>
-                        <p className="text-sm text-gray-600 dark:text-gray-300">Modalidade: {match.category}</p>
-                        <p className="text-sm text-gray-600 dark:text-gray-300">Local: {match.location}</p>
+                      <CardSplat />
+                      <div className="absolute bottom-4 right-4 z-10">
+                        <p className="text-sm text-gray-500 dark:text-gray-400">{match.time}</p>
                       </div>
                     </div>
-                    <CardSplat />
-                    <div className="absolute bottom-4 right-4 z-10">
-                      <p className="text-sm text-gray-500 dark:text-gray-400">{match.time}</p>
-                    </div>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
             </div>
 
-            {/* JOGADORES EM DESTAQUE (mock) */}
+            {/* JOGADORES EM DESTAQUE (dados reais do banco) */}
             <div>
               <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">JOGADORES(AS) EM DESTAQUE</h2>
               <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm p-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                  <div>
-                    <h3 className="font-bold text-lg mb-2 text-gray-900 dark:text-gray-100">FUTSAL</h3>
-                    {mockData.highlightedPlayers.futsal.map((player, i) => (
-                      <p key={i} className="text-gray-600 dark:text-gray-300 text-sm">{player.name} - {player.points} pontos</p>
-                    ))}
+                {carregandoJogadores ? (
+                  <div className="text-center py-8">Carregando jogadores em destaque...</div>
+                ) : Object.keys(jogadoresDestaque).length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">Nenhum jogador encontrado para este torneio.</div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    {jogadoresDestaque.futsal && jogadoresDestaque.futsal.length > 0 && (
+                      <div>
+                        <h3 className="font-bold text-lg mb-2 text-gray-900 dark:text-gray-100">FUTSAL</h3>
+                        {jogadoresDestaque.futsal.map((player, i) => (
+                          <p key={i} className="text-gray-600 dark:text-gray-300 text-sm mb-1">
+                            <span className="font-medium">{player.name}</span>
+                            <br />
+                            <span className="text-xs text-gray-500">{player.team} - {player.points} pts</span>
+                          </p>
+                        ))}
+                      </div>
+                    )}
+                    {jogadoresDestaque.volei && jogadoresDestaque.volei.length > 0 && (
+                      <div>
+                        <h3 className="font-bold text-lg mb-2 text-gray-900 dark:text-gray-100">VÔLEI</h3>
+                        {jogadoresDestaque.volei.map((player, i) => (
+                          <p key={i} className="text-gray-600 dark:text-gray-300 text-sm mb-1">
+                            <span className="font-medium">{player.name}</span>
+                            <br />
+                            <span className="text-xs text-gray-500">{player.team} - {player.points} pts</span>
+                          </p>
+                        ))}
+                      </div>
+                    )}
+                    {jogadoresDestaque.basquete && jogadoresDestaque.basquete.length > 0 && (
+                      <div>
+                        <h3 className="font-bold text-lg mb-2 text-gray-900 dark:text-gray-100">BASQUETE</h3>
+                        {jogadoresDestaque.basquete.map((player, i) => (
+                          <p key={i} className="text-gray-600 dark:text-gray-300 text-sm mb-1">
+                            <span className="font-medium">{player.name}</span>
+                            <br />
+                            <span className="text-xs text-gray-500">{player.team} - {player.points} pts</span>
+                          </p>
+                        ))}
+                      </div>
+                    )}
+                    {jogadoresDestaque.handebol && jogadoresDestaque.handebol.length > 0 && (
+                      <div>
+                        <h3 className="font-bold text-lg mb-2 text-gray-900 dark:text-gray-100">HANDEBOL</h3>
+                        {jogadoresDestaque.handebol.map((player, i) => (
+                          <p key={i} className="text-gray-600 dark:text-gray-300 text-sm mb-1">
+                            <span className="font-medium">{player.name}</span>
+                            <br />
+                            <span className="text-xs text-gray-500">{player.team} - {player.points} pts</span>
+                          </p>
+                        ))}
+                      </div>
+                    )}
+                    {/* Mostrar mensagem se não há modalidades */}
+                    {!jogadoresDestaque.futsal && !jogadoresDestaque.volei && !jogadoresDestaque.basquete && !jogadoresDestaque.handebol && (
+                      <div className="col-span-4 text-center text-gray-500">
+                        Nenhuma modalidade encontrada para este torneio.
+                      </div>
+                    )}
                   </div>
-                  <div>
-                    <h3 className="font-bold text-lg mb-2 text-gray-900 dark:text-gray-100">VÔLEI</h3>
-                    {mockData.highlightedPlayers.volei.map((player, i) => (
-                      <p key={i} className="text-gray-600 dark:text-gray-300 text-sm">{player.name} - {player.points} pontos</p>
-                    ))}
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-lg mb-2 text-gray-900 dark:text-gray-100">BASQUETE</h3>
-                    {mockData.highlightedPlayers.basquete.map((player, i) => (
-                      <p key={i} className="text-gray-600 dark:text-gray-300 text-sm">{player.name} - {player.points} pontos</p>
-                    ))}
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-lg mb-2 text-gray-900 dark:text-gray-100">HANDEBOL</h3>
-                    {mockData.highlightedPlayers.handebol.map((player, i) => (
-                      <p key={i} className="text-gray-600 dark:text-gray-300 text-sm">{player.name} - {player.points} pontos</p>
-                    ))}
-                  </div>
-                </div>
+                )}
               </div>
             </div>
 
@@ -252,7 +297,12 @@ export const Dashboard = () => {
 
           <SumulaModal
             isOpen={!!partidaSelecionada}
-            onClose={() => { setPartidaSelecionada(null); carregarPartidasFinalizadas(); }}
+            onClose={() => { 
+              setPartidaSelecionada(null); 
+              carregarPartidasFinalizadas();
+              carregarProximasPartidas();
+              carregarJogadoresDestaque();
+            }}
             match={partidaSelecionada}
             mode="final"
             onSumulaEnviada={(id) => tratarSumulaEnviada(id)}
