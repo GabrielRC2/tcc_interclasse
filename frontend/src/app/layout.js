@@ -1,4 +1,5 @@
 import { Inter } from 'next/font/google';
+import { TournamentProvider } from '@/contexts/TournamentContext';
 import './globals.css';
 
 const inter = Inter({ subsets: ['latin'] });
@@ -12,7 +13,9 @@ export default function RootLayout({ children }) {
   return (
     <html lang="pt-BR">
       <body className={inter.className}>
-        {children}
+        <TournamentProvider>
+          {children}
+        </TournamentProvider>
       </body>
     </html>
   );
