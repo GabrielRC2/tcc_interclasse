@@ -1,15 +1,11 @@
-// Este é o seu arquivo de esquema Prisma.
-// Saiba mais em https://pris.ly/d/prisma-schema
+// Prisma schema para PostgreSQL
 
-// 1. Define o gerador de cliente. O Prisma Client é o ORM que você usará no seu código.
 generator client {
   provider = "prisma-client-js"
 }
 
-// 2. Define a fonte de dados. Aqui, configuramos para usar MySQL.
-//    Você precisará definir a variável de ambiente DATABASE_URL no seu arquivo .env.
 datasource db {
-  provider = "mysql"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -18,14 +14,13 @@ datasource db {
 // ------------------------------------------
 
 // Tabela: Torneio
-// Descrição: Armazena as informações gerais sobre cada torneio.
 model Torneio {
   id                 Int                 @id @default(autoincrement()) @map("id_torneio")
-  nome               String              @map("nome_torneio") @db.VarChar(200)
-  status             String              @map("status_torneio") @db.VarChar(20)
-  inicio             DateTime            @map("inicio_torneio") @db.DateTime
-  fim                DateTime            @map("fim_torneio") @db.DateTime
-  times              Time[]              // ADICIONAR ESTA LINHA
+  nome               String              @map("nome_torneio")
+  status             String              @map("status_torneio")
+  inicio             DateTime            @map("inicio_torneio")
+  fim                DateTime            @map("fim_torneio")
+  times              Time[]
   grupos             Grupo[]
   partidas           Partida[]
   torneioModalidades TorneioModalidade[]
@@ -34,25 +29,23 @@ model Torneio {
 }
 
 // Tabela: Modalidade
-// Descrição: Define as modalidades esportivas ou de jogos.
 model Modalidade {
   id                 Int                   @id @default(autoincrement()) @map("id_modalidade")
-  nome               String                @map("nome_modalidade") @db.VarChar(50)
+  nome               String                @map("nome_modalidade")
   categorias         Categoria[]
   grupos             Grupo[]
-  partidas           Partida[]             // Para partidas eliminatórias
+  partidas           Partida[]
   torneioModalidades TorneioModalidade[]
 
   @@map("Modalidade")
 }
 
 // Tabela: Categoria
-// Descrição: Define as categorias dentro de cada modalidade.
 model Categoria {
-  id            Int      @id @default(autoincrement()) @map("id_categoria")
-  nome          String   @map("nome_categoria") @db.VarChar(50)
-  genero        String   @map("genero_categoria") @db.VarChar(10) // ADICIONAR ESTA LINHA
-  modalidadeId  Int      @map("fk_id_modalidade")
+  id            Int        @id @default(autoincrement()) @map("id_categoria")
+  nome          String     @map("nome_categoria")
+  genero        String     @map("genero_categoria")
+  modalidadeId  Int        @map("fk_id_modalidade")
   modalidade    Modalidade @relation(fields: [modalidadeId], references: [id])
   times         Time[]
 
@@ -60,11 +53,10 @@ model Categoria {
 }
 
 // Tabela: Curso
-// Descrição: Armazena os cursos de origem dos jogadores.
 model Curso {
-  id      Int       @id @default(autoincrement()) @map("id_curso")
-  nome    String    @map("nome_curso") @db.VarChar(100)
-  sigla   String    @unique @map("sigla_curso") @db.VarChar(10)
+  id        Int       @id @default(autoincrement()) @map("id_curso")
+  nome      String    @map("nome_curso")
+  sigla     String    @unique @map("sigla_curso")
   jogadores Jogador[]
   times     Time[]
 
@@ -72,12 +64,11 @@ model Curso {
 }
 
 // Tabela: Jogador
-// Descrição: Armazena os dados da pessoa que joga.
 model Jogador {
   id             Int             @id @default(autoincrement()) @map("id_jogador")
-  nome           String          @map("nome_jogador") @db.VarChar(70)
-  sala           String          @map("sala_jogador") @db.VarChar(10)
-  genero         String          @map("genero_jogador") @db.VarChar(10) // NOVO CAMPO
+  nome           String          @map("nome_jogador")
+  sala           String          @map("sala_jogador")
+  genero         String          @map("genero_jogador")
   cursoId        Int             @map("fk_id_curso")
   curso          Curso           @relation(fields: [cursoId], references: [id])
   eventosPartida EventoPartida[]
@@ -87,17 +78,16 @@ model Jogador {
 }
 
 // Tabela: Time
-// Descrição: Define uma equipe específica.
 model Time {
   id           Int            @id @default(autoincrement()) @map("id_time")
-  nome         String         @map("nome_time") @db.VarChar(100)
-  sala         String         @map("sala_time") @db.VarChar(10)
+  nome         String         @map("nome_time")
+  sala         String         @map("sala_time")
   cursoId      Int            @map("fk_id_curso")
   categoriaId  Int            @map("fk_id_categoria")
-  torneioId    Int            @map("fk_id_torneio") // ADICIONAR ESTA LINHA
+  torneioId    Int            @map("fk_id_torneio")
   curso        Curso          @relation(fields: [cursoId], references: [id])
   categoria    Categoria      @relation(fields: [categoriaId], references: [id])
-  torneio      Torneio        @relation(fields: [torneioId], references: [id]) // ADICIONAR ESTA LINHA
+  torneio      Torneio        @relation(fields: [torneioId], references: [id])
   jogadores    TimeJogador[]
   partidas     PartidaTime[]
   grupos       GrupoTime[]
@@ -106,10 +96,9 @@ model Time {
 }
 
 // Tabela: Grupo
-// Descrição: Organiza os times dentro de um torneio.
 model Grupo {
   id            Int         @id @default(autoincrement()) @map("id_grupo")
-  nome          String      @map("nome_grupo") @db.VarChar(50)
+  nome          String      @map("nome_grupo")
   modalidadeId  Int         @map("fk_id_modalidade")
   torneioId     Int         @map("fk_id_torneio")
   modalidade    Modalidade  @relation(fields: [modalidadeId], references: [id])
@@ -121,46 +110,43 @@ model Grupo {
 }
 
 // Tabela: Local
-// Descrição: Armazena os locais onde as partidas podem acontecer.
 model Local {
   id        Int       @id @default(autoincrement()) @map("id_local")
-  nome      String    @map("nome_local") @db.VarChar(100)
+  nome      String    @map("nome_local")
   partidas  Partida[]
 
   @@map("Local")
 }
 
 // Tabela: Partida
-// Descrição: Registra cada partida que ocorre.
 model Partida {
   id               Int               @id @default(autoincrement()) @map("id_partida")
-  dataHora         DateTime          @map("data_hora_partida") @db.DateTime
-  statusPartida    String            @map("status_partida") @db.VarChar(20)
+  dataHora         DateTime          @map("data_hora_partida")
+  statusPartida    String            @map("status_partida")
   pontosCasa       Int?              @map("pontos_casa")
   pontosVisitante  Int?              @map("pontos_visitante")
-  grupoId          Int?              @map("fk_id_grupo") // Opcional para partidas eliminatórias
+  grupoId          Int?              @map("fk_id_grupo")
   localId          Int               @map("fk_id_local")
   torneioId        Int               @map("fk_id_torneio")
-  modalidadeId     Int?              @map("fk_id_modalidade") // Para partidas eliminatórias
-  genero           String?           @map("genero") @db.VarChar(10) // Para partidas eliminatórias
-  tipo             String            @default("GRUPO") @map("tipo") @db.VarChar(20) // GRUPO ou ELIMINATORIA
-  fase             String?           @map("fase") @db.VarChar(50) // Ex: "Oitavas de Final", "Quartas", etc.
-  ordem            Int?              @map("ordem") // Ordem da partida no torneio
+  modalidadeId     Int?              @map("fk_id_modalidade")
+  genero           String?           @map("genero")
+  tipo             String            @default("GRUPO") @map("tipo")
+  fase             String?           @map("fase")
+  ordem            Int?              @map("ordem")
   grupo            Grupo?            @relation(fields: [grupoId], references: [id])
   local            Local             @relation(fields: [localId], references: [id])
   torneio          Torneio           @relation(fields: [torneioId], references: [id])
   modalidade       Modalidade?       @relation(fields: [modalidadeId], references: [id])
   eventosPartida   EventoPartida[]
-  times            PartidaTime[]     // ADICIONADO: relacionamento com times
+  times            PartidaTime[]
 
   @@map("Partida")
 }
 
 // Tabela: EventoPartida
-// Descrição: Registra eventos específicos durante uma partida.
 model EventoPartida {
   id            Int      @id @default(autoincrement()) @map("id_evento")
-  tipo          String   @map("tipo_evento") @db.VarChar(30)
+  tipo          String   @map("tipo_evento")
   pontosGerados Int      @map("pontos_gerados")
   partidaId     Int      @map("fk_id_partida")
   jogadorId     Int      @map("fk_id_jogador")
@@ -171,23 +157,20 @@ model EventoPartida {
 }
 
 // Tabela: Usuario
-// Descrição: Controla o acesso ao sistema.
 model Usuario {
   id        Int    @id @default(autoincrement()) @map("id_usuario")
-  nome      String @map("nome_usuario") @db.VarChar(70)
-  email     String @unique @map("email_usuario") @db.VarChar(70)
-  senhaHash String @map("senha_hash") @db.VarChar(255)
+  nome      String @map("nome_usuario")
+  email     String @unique @map("email_usuario")
+  senhaHash String @map("senha_hash")
 
   @@map("Usuario")
 }
-
 
 // ----------------------------------------------------
 // 2. TABELAS ASSOCIATIVAS (RELACIONAMENTOS N:M)
 // ----------------------------------------------------
 
 // Tabela: Torneio_Modalidades
-// Descrição: Associa Torneios a Modalidades.
 model TorneioModalidade {
   torneioId    Int @map("fk_id_torneio")
   modalidadeId Int @map("fk_id_modalidade")
@@ -199,7 +182,6 @@ model TorneioModalidade {
 }
 
 // Tabela: Grupo_Times
-// Descrição: Define quais Times pertencem a quais Grupos.
 model GrupoTime {
   grupoId Int   @map("fk_id_grupo")
   timeId  Int   @map("fk_id_time")
@@ -211,7 +193,6 @@ model GrupoTime {
 }
 
 // Tabela: Time_Jogadores
-// Descrição: Representa a inscrição de um Jogador em um Time específico.
 model TimeJogador {
   timeId       Int     @map("fk_id_time")
   jogadorId    Int     @map("fk_id_jogador")
@@ -224,13 +205,12 @@ model TimeJogador {
 }
 
 // Tabela: Partida_Times
-// Descrição: Registra os Times que disputam uma Partida.
 model PartidaTime {
   partidaId       Int     @map("fk_id_partida")
   timeId          Int     @map("fk_id_time")
-  ehCasa          Boolean @map("eh_casa") // true = casa, false = visitante
+  ehCasa          Boolean @map("eh_casa")
   resultado       String  @default("PENDENTE") @map("resutado_partida") // VENCEDOR, PERDEDOR, WO, EMPATE, PENDENTE
-  pontosTorneio   Int     @default(0) @map("pontos_torneio") // Pontos ganhos no torneio (3-1-0)
+  pontosTorneio   Int     @default(0) @map("pontos_torneio")
   partida         Partida @relation(fields: [partidaId], references: [id])
   time            Time    @relation(fields: [timeId], references: [id])
 
