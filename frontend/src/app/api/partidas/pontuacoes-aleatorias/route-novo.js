@@ -59,9 +59,6 @@ export async function POST(request) {
           continue;
         }
 
-        console.log(`Time 1 (${time1.time.nome}): ${time1.time.jogadores.length} jogadores`);
-        console.log(`Time 2 (${time2.time.nome}): ${time2.time.jogadores.length} jogadores`);
-
         // Gerar pontuação realista (0-4 gols é mais comum)
         const pontosCasa = Math.floor(Math.random() * 5);
         const pontosVisitante = Math.floor(Math.random() * 5);
@@ -111,22 +108,12 @@ export async function POST(request) {
 
 // Função para gerar eventos realistas dos jogadores
 async function gerarEventosJogadores(partida, partidaTime, totalPontos, lado) {
-  console.log(`🎯 gerarEventosJogadores - Partida: ${partida.id}, Time: ${partidaTime.time.nome}, Pontos: ${totalPontos}, Lado: ${lado}`);
-  
-  if (totalPontos === 0) {
-    console.log(`❌ Não há pontos para gerar eventos`);
-    return; // Não gerar eventos se não há pontos
-  }
+  if (totalPontos === 0) return; // Não gerar eventos se não há pontos
 
   const jogadores = partidaTime.time.jogadores;
-  console.log(`👥 Jogadores disponíveis: ${jogadores.length}`);
-  
-  if (jogadores.length === 0) {
-    console.log(`❌ Time ${partidaTime.time.nome} não tem jogadores!`);
-    return;
-  }
+  if (jogadores.length === 0) return;
 
-  console.log(`🎲 Gerando ${totalPontos} eventos para ${partidaTime.time.nome} (${jogadores.length} jogadores)`);
+  console.log(`Gerando ${totalPontos} eventos para ${partidaTime.time.nome} (${jogadores.length} jogadores)`);
 
   // Distribuir os pontos entre os jogadores de forma realista
   for (let i = 0; i < totalPontos; i++) {
@@ -137,10 +124,8 @@ async function gerarEventosJogadores(partida, partidaTime, totalPontos, lado) {
     // Determinar tipo de evento baseado na modalidade
     const tipoEvento = obterTipoEventoPorModalidade(partida.modalidadeId);
 
-    console.log(`🏃 Tentando criar evento para jogador: ${jogador.nome} (ID: ${jogador.id}) - Tipo: ${tipoEvento}`);
-
     try {
-      const evento = await prisma.eventoPartida.create({
+      await prisma.eventoPartida.create({
         data: {
           partidaId: partida.id,
           jogadorId: jogador.id,
@@ -149,9 +134,9 @@ async function gerarEventosJogadores(partida, partidaTime, totalPontos, lado) {
         }
       });
 
-      console.log(`✅ Evento criado: ID ${evento.id} - ${jogador.nome} - ${tipoEvento}`);
+      console.log(`Evento criado: ${jogador.nome} - ${tipoEvento}`);
     } catch (error) {
-      console.error(`❌ Erro ao criar evento para jogador ${jogador.nome}:`, error);
+      console.error(`Erro ao criar evento para jogador ${jogador.nome}:`, error);
     }
   }
 }

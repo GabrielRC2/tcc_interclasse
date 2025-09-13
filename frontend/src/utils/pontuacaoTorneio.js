@@ -197,6 +197,10 @@ export async function processarWO(prisma, partidaId, timeWOId) {
  * @returns {Array} Lista de times com pontuação
  */
 export async function obterClassificacao(prisma, torneioId, filtro = null) {
+  console.log('=== DEBUG CLASSIFICAÇÃO ===');
+  console.log('TorneioId:', torneioId);
+  console.log('Filtro:', filtro);
+
   let whereClause;
 
   if (typeof filtro === 'number') {
@@ -219,6 +223,10 @@ export async function obterClassificacao(prisma, torneioId, filtro = null) {
     };
   }
 
+  console.log('WhereClause:', JSON.stringify(whereClause, null, 2));
+
+  console.log('🔍 Buscando classificação com whereClause:', JSON.stringify(whereClause, null, 2));
+
   const resultados = await prisma.partidaTime.findMany({
     where: whereClause,
     include: {
@@ -227,9 +235,28 @@ export async function obterClassificacao(prisma, torneioId, filtro = null) {
     }
   });
 
+  console.log(`📊 Encontrados ${resultados.length} registros de partidaTime`);
+  
+  // Log dos primeiros registros para debug
+  if (resultados.length > 0) {
+    console.log('🎯 Primeiro registro:', {
+      timeId: resultados[0].timeId,
+      timeNome: resultados[0].time.nome,
+      pontosTorneio: resultados[0].pontosTorneio,
+      resultado: resultados[0].resultado,
+      partidaId: resultados[0].partidaId
+    });
+  }
+
   // Agrupar por time e calcular estatísticas
   const classificacao = resultados.reduce((acc, partidaTime) => {
     const timeId = partidaTime.timeId;
+    
+    console.log(`💫 Processando time ${partidaTime.time.nome}:`, {
+      pontosTorneio: partidaTime.pontosTorneio,
+      resultado: partidaTime.resultado,
+      partidaStatus: partidaTime.partida.statusPartida
+    });
     
     if (!acc[timeId]) {
       acc[timeId] = {
@@ -247,7 +274,7 @@ export async function obterClassificacao(prisma, torneioId, filtro = null) {
     }
 
     const team = acc[timeId];
-    team.pontos += partidaTime.pontosTorneio;
+    team.pontos += partidaTime.pontosTorneio || 0; // Garantir que não seja null
     team.jogos += 1;
 
     // Contar resultados
@@ -282,10 +309,20 @@ export async function obterClassificacao(prisma, torneioId, filtro = null) {
   }, {});
 
   // Converter para array e ordenar
-  return Object.values(classificacao).sort((a, b) => {
+  const classificacaoArray = Object.values(classificacao).sort((a, b) => {
     // Ordenar por: pontos desc, saldo de gols desc, gols pró desc
     if (b.pontos !== a.pontos) return b.pontos - a.pontos;
     if (b.saldoGols !== a.saldoGols) return b.saldoGols - a.saldoGols;
     return b.golsPro - a.golsPro;
   });
+
+  console.log('🏆 Classificação final:', classificacaoArray.map(t => ({
+    nome: t.nome,
+    pontos: t.pontos,
+    vitorias: t.vitorias,
+    empates: t.empates,
+    derrotas: t.derrotas
+  })));
+
+  return classificacaoArray;
 }
