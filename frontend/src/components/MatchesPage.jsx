@@ -191,6 +191,7 @@ export const MatchesPage = () => {
           configPadrao[modalidade.nome] = modalidade.localPadrao;
       });
       setConfiguracaoLocais(configPadrao);
+      console.log('📍 Configuração de locais carregada:', configPadrao);
     } catch (error) {
       console.error('Erro ao carregar configuração de locais:', error);
     }
@@ -384,22 +385,24 @@ export const MatchesPage = () => {
   const gerarPartidasDeGrupos = async () => {
     if (!selectedTournament) return;
     
-    const confirmar = window.confirm('Deseja gerar todas as partidas de grupos para todas as modalidades e gêneros do torneio?');
+    const confirmar = window.confirm('Deseja gerar todas as partidas de grupos para todas as modalidades e gêneros do torneio?\n\n📋 Regra aplicada: Sempre um jogo masculino e um feminino simultaneamente, um em cada quadra.\n🏟️ As partidas serão distribuídas entre as quadras conforme a configuração de locais.');
     if (!confirmar) return;
 
     setGenerating(true);
     try {
-      const response = await fetch('/api/matches/generate', {
+      console.log('🚀 Enviando configuração de locais:', configuracaoLocais);
+      const response = await fetch('/api/partidas/gerar-otimizadas', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          torneioId: selectedTournament.id
+          torneioId: selectedTournament.id,
+          configuracaoLocais
         })
       });
 
       if (response.ok) {
         const result = await response.json();
-        alert(`✅ Partidas geradas! ${result.partidasCriadas} partidas criadas`);
+        alert(`✅ ${result.partidasGeradas} partidas geradas em ${result.slots} slots de tempo!\n⚽ Cada slot contém 1 jogo masculino + 1 feminino simultâneos.\n🏟️ ${result.modalidades} modalidades distribuídas entre as quadras.`);
         await carregarPartidas();
       } else {
         const error = await response.json();
@@ -411,9 +414,7 @@ export const MatchesPage = () => {
     } finally {
       setGenerating(false);
     }
-  };
-
-  if (carregando) {
+  };  if (carregando) {
     return <div className="flex justify-center items-center h-64">Carregando...</div>;
   }
 
@@ -520,8 +521,12 @@ export const MatchesPage = () => {
           ) : (
             <div className="space-y-4">
               <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-                <h3 className="font-semibold text-blue-900 dark:text-blue-100 mb-2">📋 Ordem Otimizada de Partidas</h3>
-                <p className="text-sm text-blue-700 dark:text-blue-300">As partidas abaixo foram organizadas automaticamente para maximizar o tempo de descanso entre jogos dos times, garantindo uma distribuição equilibrada ao longo do torneio.</p>
+                <h3 className="font-semibold text-blue-900 dark:text-blue-100 mb-2">📋 Organização Otimizada de Partidas</h3>
+                <p className="text-sm text-blue-700 dark:text-blue-300">
+                  ⚽ <strong>Regra aplicada:</strong> Sempre um jogo masculino e um feminino simultâneos, um em cada quadra.<br/>
+                  🏟️ <strong>Distribuição:</strong> Locais definidos pela configuração de modalidades.<br/>
+                  ⏱️ <strong>Otimização:</strong> Maximiza o tempo de descanso entre jogos dos times.
+                </p>
               </div>
 
               {partidasFiltradas.map(p => (
