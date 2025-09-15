@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, MapPin, Trophy, Filter, Play, Settings, Shuffle } from 'lucide-react';
+import { Calendar, MapPin, Trophy, Filter, Play, Settings, Shuffle } from 'lucide-react';
 import { Button, Select } from '@/components/common';
 import { useTournament } from '@/contexts/TournamentContext';
 import { SumulaModal } from '@/components/SumulaModal';
@@ -587,10 +587,6 @@ export const MatchesPage = () => {
                           <span>{p.date}</span>
                         </div>
                         <div className="flex items-center gap-1">
-                          <Clock size={14} />
-                          <span>{p.time}</span>
-                        </div>
-                        <div className="flex items-center gap-1">
                           <MapPin size={14} />
                           <span>{p.location}</span>
                         </div>
@@ -613,16 +609,16 @@ export const MatchesPage = () => {
           {showConfigModal && (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
               <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md">
-                <h3 className="text-lg font-bold mb-4">Configurar Locais por Modalidade</h3>
+                <h3 className="text-lg font-bold mb-4 text-gray-900 dark:text-gray-100">Configurar Locais por Modalidade</h3>
                 
                 <div className="space-y-4">
                   {modalidadesDisponiveis.map(modalidade => (
                     <div key={modalidade.id}>
-                      <label className="block text-sm font-medium mb-1">
+                      <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">
                         {modalidade.nome}
                       </label>
                       <select 
-                        className="w-full p-2 border rounded"
+                        className="w-full p-2 border rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600"
                         value={configuracaoLocais[modalidade.nome] || modalidade.localPadrao}
                         onChange={(e) => setConfiguracaoLocais(prev => ({
                             ...prev,

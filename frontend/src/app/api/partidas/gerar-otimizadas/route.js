@@ -89,6 +89,7 @@ export async function POST(request) {
           torneioId: parseInt(torneioId),
           modalidadeId: partida.modalidadeId,
           genero: partida.genero,
+          ordem: i + 1, // Adicionar a ordem da partida
         }
       });
 
