@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useSession, signOut } from 'next-auth/react';
 import { Sidebar } from '@/components/Sidebar';
 import { LoginPage } from '@/components/LoginPage';
 import { Dashboard } from '@/components/DashboardPage';
@@ -12,25 +13,88 @@ import { MatchesPage } from '@/components/MatchesPage';
 import { GroupsPage } from '@/components/GroupsPage';
 import { TournamentProvider } from '@/contexts/TournamentContext';
 
+// Função utilitária centralizada para verificar permissões
+const checkUserAccess = (userType, pageName) => {
+  if (!userType) return pageName === 'dashboard';
+  
+  // REPRESENTANTE só pode acessar dashboard e teams
+  if (userType === 'REPRESENTANTE') {
+    return pageName === 'dashboard' || pageName === 'teams';
+  }
+  
+  // STAFF pode acessar dashboard, teams e registrations
+  if (userType === 'STAFF') {
+    return pageName === 'dashboard' || pageName === 'teams' || pageName === 'registrations';
+  }
+  
+  // ADMIN tem acesso total
+  return true;
+};
+
+// Função utilitária para obter páginas permitidas para um tipo de usuário
+const getAllowedPages = (userType) => {
+  if (!userType) return ['dashboard'];
+  
+  if (userType === 'REPRESENTANTE') {
+    return ['dashboard', 'teams'];
+  }
+  
+  if (userType === 'STAFF') {
+    return ['dashboard', 'teams'];
+  }
+  
+  // ADMIN tem acesso a todas as páginas
+  return ['dashboard', 'seasons', 'teams', 'registrations', 'brackets', 'matches', 'groups'];
+};
+
 export default function Home() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [currentPage, setCurrentPage] = useState('dashboard');
+  const { data: session, status } = useSession();
+  const [currentPage, setCurrentPage] = useState('dashboard'); // Começa no dashboard
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   const toggleDarkMode = () => setIsDarkMode(!isDarkMode);
-  
+
   useEffect(() => {
     document.documentElement.classList.toggle('dark', isDarkMode);
   }, [isDarkMode]);
 
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
-  
-  if (!isLoggedIn) {
-    return <LoginPage onLogin={() => setIsLoggedIn(true)} />;
-  }
 
+  // Verifica se o usuário tem permissão para acessar a página usando função centralizada
+  const hasPageAccess = (pageName) => {
+    const userType = session?.user?.tipo_usuario;
+    return checkUserAccess(userType, pageName);
+  };
+
+  // Intercepta mudanças de página para verificar permissões
+  const handlePageChange = (pageName) => {
+    if (hasPageAccess(pageName)) {
+      setCurrentPage(pageName);
+    }
+  };
+
+  // Lógica principal de renderização de conteúdo
   const renderPage = () => {
+    // Se o usuário NÃO está logado:
+    if (!session) {
+      // Permite apenas Dashboard e Login
+      if (currentPage === 'login') {
+        return <LoginPage onLogin={handleLogin} />;
+      } else {
+        // Qualquer outra página (seasons, teams, etc.) quando deslogado
+        // será redirecionada para o Dashboard.
+        // O Dashboard sempre será acessível para deslogados.
+        return <Dashboard />;
+      }
+    }
+
+    // Verifica se o usuário tem acesso à página atual
+    if (!hasPageAccess(currentPage)) {
+      setCurrentPage('dashboard');
+      return <Dashboard />;
+    }
+
     switch (currentPage) {
       case 'dashboard': return <Dashboard />;
       case 'seasons': return <SeasonsPage />;
@@ -43,17 +107,35 @@ export default function Home() {
     }
   };
 
+  // Funções de login e logout
+  const handleLogin = () => {
+    setCurrentPage('dashboard'); // Redireciona para dashboard após login
+  };
+
+  const handleLogout = async () => {
+    await signOut({ redirect: false });
+    setCurrentPage('dashboard'); // Redireciona para dashboard após logout
+  };
+
+  const handleLoginClick = () => {
+    setCurrentPage('login');
+  };
+
   return (
     <TournamentProvider>
       <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
-        <Sidebar 
+        <Sidebar
           isSidebarOpen={isSidebarOpen}
           toggleSidebar={toggleSidebar}
           currentPage={currentPage}
-          setCurrentPage={setCurrentPage}
+          setCurrentPage={handlePageChange}
           isDarkMode={isDarkMode}
           toggleDarkMode={toggleDarkMode}
-          logout={() => setIsLoggedIn(false)}
+          isLoggedIn={!!session}
+          userType={session?.user?.tipo_usuario}
+          allowedPages={getAllowedPages(session?.user?.tipo_usuario)}
+          onLogout={handleLogout}
+          onLoginClick={handleLoginClick}
         />
         <div className="flex-1 flex flex-col overflow-hidden">
           <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto">

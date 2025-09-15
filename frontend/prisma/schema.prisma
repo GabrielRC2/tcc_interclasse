@@ -13,6 +13,13 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// Adicione esta parte logo depois do datasource db
+enum TipoUsuario {
+  ADMIN
+  STAFF  
+  REPRESENTANTE
+}
+
 // ------------------------------------------
 // 1. ENTIDADES PRINCIPAIS
 // ------------------------------------------
@@ -173,10 +180,13 @@ model EventoPartida {
 // Tabela: Usuario
 // Descrição: Controla o acesso ao sistema.
 model Usuario {
-  id        Int    @id @default(autoincrement()) @map("id_usuario")
-  nome      String @map("nome_usuario") @db.VarChar(70)
-  email     String @unique @map("email_usuario") @db.VarChar(70)
-  senhaHash String @map("senha_hash") @db.VarChar(255)
+  id_usuario    Int         @id @default(autoincrement()) @map("id_usuario")
+  nome_usuario  String      @map("nome_usuario") @db.VarChar(100)
+  email_usuario String      @unique @map("email_usuario") @db.VarChar(255)
+  senha_hash    String      @map("senha_hash") @db.VarChar(255)
+  tipo_usuario  TipoUsuario @map("tipo_usuario")
+  createdAt     DateTime    @default(now()) @map("created_at")
+  updatedAt     DateTime    @updatedAt @map("updated_at")
 
   @@map("Usuario")
 }

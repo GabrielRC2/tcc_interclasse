@@ -1,12 +1,14 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import { Plus, Edit, Trash2, UserCircle, Filter, X } from 'lucide-react';
+import { useSession } from 'next-auth/react';
 import { Modal } from '@/components/Modal';
 import { Button, Input, Select, CardSplat } from '@/components/common';
 import { useTournament } from '@/contexts/TournamentContext';
 
 function TeamsPage() {
   const { selectedTournament } = useTournament();
+  const { data: session } = useSession();
   const [teams, setTeams] = useState([]);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [selectedTeam, setSelectedTeam] = useState(null);
@@ -45,7 +47,7 @@ function TeamsPage() {
       setLoading(true);
       const response = await fetch(`/api/teams?torneioId=${selectedTournament.id}`);
       if (!response.ok) throw new Error('Erro ao carregar times');
-      
+
       const data = await response.json();
       setTeams(data);
     } catch (error) {
@@ -164,7 +166,7 @@ function TeamsPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!selectedTournament) {
       alert('Selecione um torneio no Dashboard primeiro');
       return;
@@ -256,11 +258,11 @@ function TeamsPage() {
   // Adicionar função para gerar nome automaticamente
   const generateTeamName = (year, course) => {
     if (!year || !course) return '';
-    
+
     // Buscar sigla do curso no estado cursos
     const cursoObj = cursos.find(c => c.nome === course);
     const sigla = cursoObj ? cursoObj.sigla : course.substring(0, 4).toUpperCase();
-    
+
     return `${year}${sigla}`;
   };
 
@@ -447,8 +449,8 @@ function TeamsPage() {
             </p>
           </div>
           <div className="flex items-center gap-4">
-            {/* Mostrar contador e botão delete quando há seleções */}
-            {selectedTeamsIds.length > 0 && (
+            {/* Mostrar contador e botão delete quando há seleções - oculto para STAFF */}
+            {selectedTeamsIds.length > 0 && session?.user?.tipo_usuario !== 'STAFF' && (
               <>
                 <span className="text-sm text-gray-600 dark:text-gray-400">
                   {selectedTeamsIds.length} selecionado(s)
@@ -462,7 +464,10 @@ function TeamsPage() {
                 </button>
               </>
             )}
-            <Button onClick={() => openDetails(null)}>Criar Novo Time</Button>
+            {/* Botão Criar Novo Time - oculto para usuários STAFF */}
+            {session?.user?.tipo_usuario !== 'STAFF' && (
+              <Button onClick={() => openDetails(null)}>Criar Novo Time</Button>
+            )}
           </div>
         </div>
 
@@ -577,15 +582,18 @@ function TeamsPage() {
                 onClick={() => openDetails(team)}
                 className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm p-4 relative overflow-hidden cursor-pointer hover:border-red-500 dark:hover:border-red-500 transition-colors"
               >
-                <input
-                  type="checkbox"
-                  checked={selectedTeamsIds.includes(team.id)}
-                  onChange={(e) => {
-                    e.stopPropagation();
-                    toggleTeamSelection(team.id);
-                  }}
-                  className="absolute top-2 right-2 z-20 form-checkbox h-4 w-4 text-red-600 rounded border-gray-300 dark:border-gray-600 focus:ring-red-500 bg-white dark:bg-gray-900"
-                />
+                {/* Checkbox de seleção - oculto para usuários STAFF */}
+                {session?.user?.tipo_usuario !== 'STAFF' && (
+                  <input
+                    type="checkbox"
+                    checked={selectedTeamsIds.includes(team.id)}
+                    onChange={(e) => {
+                      e.stopPropagation();
+                      toggleTeamSelection(team.id);
+                    }}
+                    className="absolute top-2 right-2 z-20 form-checkbox h-4 w-4 text-red-600 rounded border-gray-300 dark:border-gray-600 focus:ring-red-500 bg-white dark:bg-gray-900"
+                  />
+                )}
                 <div className="relative z-10 text-center">
                   <p className="text-xl font-bold my-2 text-gray-900 dark:text-gray-100">{team.name}</p>
                   <div className="space-y-1 text-xs text-gray-500 dark:text-gray-400">
@@ -617,22 +625,25 @@ function TeamsPage() {
                     <p><strong>Modalidade:</strong> {selectedTeam.sport}</p>
                   </div>
                 </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setIsEditing(true)}
-                    className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
-                    title="Editar time"
-                  >
-                    <Edit size={20} />
-                  </button>
-                  <button
-                    onClick={() => deleteTeam(selectedTeam.id)}
-                    className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
-                    title="Excluir time"
-                  >
-                    <Trash2 size={20} />
-                  </button>
-                </div>
+                {/* Botões de ação - ocultos para usuários STAFF */}
+                {session?.user?.tipo_usuario !== 'STAFF' && (
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setIsEditing(true)}
+                      className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+                      title="Editar time"
+                    >
+                      <Edit size={20} />
+                    </button>
+                    <button
+                      onClick={() => deleteTeam(selectedTeam.id)}
+                      className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+                      title="Excluir time"
+                    >
+                      <Trash2 size={20} />
+                    </button>
+                  </div>
+                )}
               </div>
 
               <div>
@@ -640,18 +651,19 @@ function TeamsPage() {
                   <h4 className="text-md font-semibold text-gray-900 dark:text-gray-100">
                     Jogadores ({selectedTeam.players?.length || 0})
                   </h4>
-                  <Button 
-                    onClick={() => {
-                      loadAvailablePlayers();
-                      setShowAddPlayer(true);
-                    }}
-                    className="text-sm"
-                  >
-                    <Plus size={16} className="mr-1" />
-                    Adicionar Jogador
-                  </Button>
+                    <Button
+                      onClick={() => {
+                        loadAvailablePlayers();
+                        setShowAddPlayer(true);
+                      }}
+                      className="text-sm"
+                    >
+                      <Plus size={16} className="mr-1" />
+                      Adicionar Jogador
+                    </Button>
+                  
                 </div>
-                
+
                 {selectedTeam.players && selectedTeam.players.length > 0 ? (
                   <div className="space-y-2 max-h-60 overflow-y-auto">
                     {selectedTeam.players.map((player, index) => (
@@ -672,7 +684,7 @@ function TeamsPage() {
                   <div className="text-center py-8 text-gray-500 dark:text-gray-400">
                     <UserCircle size={48} className="mx-auto mb-2" />
                     <p>Nenhum jogador cadastrado</p>
-                    <Button 
+                    <Button
                       onClick={() => {
                         loadAvailablePlayers();
                         setShowAddPlayer(true);

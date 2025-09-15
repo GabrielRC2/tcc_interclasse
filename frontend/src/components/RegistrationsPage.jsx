@@ -2,34 +2,69 @@
 import React, { useState, useEffect } from 'react';
 import { Trash2 } from 'lucide-react';
 import { Modal } from '@/components/Modal';
-import { Button, Input, Select, CardSplat } from '@/components/common';
+import { Button, Input, Select, Textarea, CardSplat } from '@/components/common';
+// import { TournamentContext } from '@/contexts/TournamentContext';
 
 export const RegistrationsPage = () => {
+    // Estados de controle
+    const [currentUser, setCurrentUser] = useState(null);
+    const [userLoading, setUserLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingItem, setEditingItem] = useState(null);
     const [category, setCategory] = useState('');
-    
+    const [selectedUserCategory, setSelectedUserCategory] = useState('Administradores');
+
+    // Estados para dados principais
     const [sports, setSports] = useState([]);
     const [locations, setLocations] = useState([]);
     const [courses, setCourses] = useState([]);
-    const [administrators, setAdministrators] = useState([
-        { id: 1, name: 'Admin Principal', email: 'admin@interclasse.com', role: 'Super Admin' },
-        { id: 2, name: 'João Silva', email: 'joao@interclasse.com', role: 'Moderador' },
-        { id: 3, name: 'Maria Santos', email: 'maria@interclasse.com', role: 'Editor' }
-    ]);
+
+    // Estados para usuários (importante para login)
+    const [users, setUsers] = useState({
+        administradores: [],
+        staff: [],
+        representantes: []
+    });
+
     const [loading, setLoading] = useState(true);
 
     const [formData, setFormData] = useState({
         name: '',
-        sigla: ''
+        sigla: '',
+        email: '',
+        senha: '',
+        tipo_usuario: ''
     });
 
     useEffect(() => {
         loadAllData();
+        loadCurrentUser();
     }, []);
 
+    // Função para buscar dados do usuário logado
+    const loadCurrentUser = async () => {
+        try {
+            const response = await fetch('/api/users/me');
+
+            if (response.ok) {
+                const userData = await response.json();
+                setCurrentUser(userData);
+            } else {
+                console.error('Erro ao buscar dados do usuário');
+                setCurrentUser(null);
+            }
+        } catch (error) {
+            console.error('Erro ao buscar dados do usuário:', error);
+            setCurrentUser(null);
+        } finally {
+            setUserLoading(false);
+        }
+    };
+
+    // Função para carregar todos os dados (cadastros + usuários)
     const loadAllData = async () => {
         try {
+            // Carregar cadastros básicos
             const [sportsRes, locationsRes, coursesRes] = await Promise.all([
                 fetch('/api/modalidades'),
                 fetch('/api/locais'),
@@ -40,36 +75,90 @@ export const RegistrationsPage = () => {
             const locationsData = await locationsRes.json();
             const coursesData = await coursesRes.json();
 
-            setSports(sportsData);
-            setLocations(locationsData);
-            setCourses(coursesData);
+            // Garantir que sejam arrays
+            setSports(Array.isArray(sportsData) ? sportsData : []);
+            setLocations(Array.isArray(locationsData) ? locationsData : []);
+            setCourses(Array.isArray(coursesData) ? coursesData : []);
+
+            // Carregar usuários (importante para login)
+            await loadUsers();
         } catch (error) {
             console.error('Erro ao carregar dados:', error);
+            // Definir arrays vazios em caso de erro
+            setSports([]);
+            setLocations([]);
+            setCourses([]);
         } finally {
             setLoading(false);
+        }
+    };
+
+    // Função para carregar usuários (ESSENCIAL PARA LOGIN)
+    const loadUsers = async () => {
+        try {
+            const response = await fetch('/api/users');
+            const usersData = await response.json();
+
+            // Separar usuários por tipo (importante para controle de acesso)
+            setUsers({
+                administradores: usersData.filter(u => u.tipo_usuario?.toLowerCase() === 'admin'),
+                staff: usersData.filter(u => u.tipo_usuario?.toLowerCase() === 'staff'),
+                representantes: usersData.filter(u => u.tipo_usuario?.toLowerCase() === 'representante')
+            });
+        } catch (error) {
+            console.error('Erro ao carregar usuários:', error);
+            // Se a API não existe ainda, usar dados mock
+            setUsers({
+                administradores: [
+                    { id: 1, nome_usuario: 'Admin Principal', email_usuario: 'admin@icm.com', tipo_usuario: 'admin' }
+                ],
+                staff: [
+                    { id: 1, nome_usuario: 'Staff Principal', email_usuario: 'staff@icm.com', tipo_usuario: 'staff' }
+                ],
+                representantes: [
+                    { id: 1, nome_usuario: 'Representante Principal', email_usuario: 'representante@icm.com', tipo_usuario: 'representante' }
+                ]
+            });
         }
     };
 
     const handleEdit = (item, type) => {
         setEditingItem(item);
         setCategory(type);
-        setFormData({
-            name: item.nome || item.name || '',
-            sigla: item.sigla || ''
-        });
+
+        if (type === 'Usuários') {
+            // Para usuários (importante para login)
+
+            setFormData({
+                name: item.nome_usuario || '',
+                sigla: '',
+                email: item.email_usuario || '',
+                senha: '',
+                tipo_usuario: item.tipo_usuario || ''
+            });
+        } else {
+            // Para outros cadastros
+            setFormData({
+                name: item.nome || item.name || '',
+                sigla: item.sigla || '',
+                email: '',
+                senha: '',
+                tipo_usuario: ''
+            });
+        }
         setIsModalOpen(true);
     };
 
     const handleCreate = () => {
         setEditingItem(null);
         setCategory('');
-        setFormData({ name: '', sigla: '' });
+        setFormData({ name: '', sigla: '', email: '', senha: '', tipo_usuario: '' });
         setIsModalOpen(true);
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        
+
         try {
             let endpoint = '';
             let body = {};
@@ -88,6 +177,16 @@ export const RegistrationsPage = () => {
                     endpoint = editingItem ? `/api/cursos/${editingItem.id}` : '/api/cursos';
                     body = { name: formData.name, sigla: formData.sigla };
                     break;
+                case 'Usuários':
+                    // IMPORTANTE PARA LOGIN: Gerenciamento de usuários
+                    endpoint = editingItem ? `/api/users/${editingItem.id_usuario}` : '/api/users';
+                    body = {
+                        nome_usuario: formData.name,
+                        email_usuario: formData.email,
+                        tipo_usuario: formData.tipo_usuario,
+                        ...(formData.senha && { senha: formData.senha })
+                    };
+                    break;
                 default:
                     alert('Selecione uma categoria');
                     return;
@@ -100,11 +199,16 @@ export const RegistrationsPage = () => {
             });
 
             if (response.ok) {
-                await loadAllData();
+                if (category === 'Usuários') {
+                    await loadUsers(); // Recarregar usuários
+                } else {
+                    await loadAllData(); // Recarregar outros dados
+                }
                 setIsModalOpen(false);
                 alert(`${category.slice(0, -1)} ${editingItem ? 'editado' : 'criado'} com sucesso!`);
             } else {
-                alert(`Erro ao ${editingItem ? 'editar' : 'criar'} cadastro`);
+                const error = await response.json();
+                alert(error.message || `Erro ao ${editingItem ? 'editar' : 'criar'} cadastro`);
             }
         } catch (error) {
             console.error('Erro ao salvar:', error);
@@ -113,7 +217,7 @@ export const RegistrationsPage = () => {
     };
 
     const handleDelete = async (item, type) => {
-        if (!confirm(`Tem certeza que deseja excluir "${item.nome || item.name}"?`)) {
+        if (!confirm(`Tem certeza que deseja excluir "${item.nome || item.name || item.nome_usuario}"?`)) {
             return;
         }
 
@@ -129,6 +233,10 @@ export const RegistrationsPage = () => {
                 case 'Cursos':
                     endpoint = `/api/cursos/${item.id}`;
                     break;
+                case 'Usuários':
+                    // IMPORTANTE PARA LOGIN: Exclusão de usuários
+                    endpoint = `/api/users/${item.id_usuario}`;
+                    break;
                 default:
                     return;
             }
@@ -138,10 +246,15 @@ export const RegistrationsPage = () => {
             });
 
             if (response.ok) {
-                await loadAllData();
+                if (type === 'Usuários') {
+                    await loadUsers(); // Recarregar usuários
+                } else {
+                    await loadAllData(); // Recarregar outros dados
+                }
                 alert(`${type.slice(0, -1)} excluído com sucesso!`);
             } else {
-                alert('Erro ao excluir cadastro');
+                const error = await response.json();
+                alert(error.message || 'Erro ao excluir cadastro');
             }
         } catch (error) {
             console.error('Erro ao excluir:', error);
@@ -151,13 +264,28 @@ export const RegistrationsPage = () => {
 
     const closeModal = () => {
         setIsModalOpen(false);
-        setFormData({ name: '', sigla: '' });
+        setFormData({ name: '', sigla: '', email: '', senha: '', tipo_usuario: '' });
         setCategory('');
         setEditingItem(null);
     };
 
-    if (loading) {
+    if (loading || userLoading) {
         return <div className="flex justify-center items-center h-64">Carregando...</div>;
+    }
+
+    // Bloquear acesso para usuários do tipo 'staff'
+    if (currentUser && currentUser.tipo_usuario === 'staff') {
+        return (
+            <div className="flex flex-col items-center justify-center h-64 text-center">
+                <h2 className="text-2xl font-bold text-red-600 mb-2">Acesso Negado</h2>
+                <p className="text-gray-700 dark:text-gray-300">
+                    Usuários do tipo <b>staff</b> não têm permissão para acessar a área de cadastros.
+                </p>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
+                    Entre em contato com um administrador se precisar de acesso.
+                </p>
+            </div>
+        );
     }
 
     return (
@@ -177,7 +305,7 @@ export const RegistrationsPage = () => {
                                     <h3 className="font-bold text-lg mb-4 text-gray-900 dark:text-gray-100">{item.nome}</h3>
                                     <div className="flex gap-2">
                                         <Button onClick={() => handleEdit(item, 'Esportes')}>Editar</Button>
-                                        <Button 
+                                        <Button
                                             onClick={() => handleDelete(item, 'Esportes')}
                                             className="bg-red-600 hover:bg-red-700"
                                         >
@@ -200,7 +328,7 @@ export const RegistrationsPage = () => {
                                     <h3 className="font-bold text-lg mb-4 text-gray-900 dark:text-gray-100">{item.nome}</h3>
                                     <div className="flex gap-2">
                                         <Button onClick={() => handleEdit(item, 'Locais')}>Editar</Button>
-                                        <Button 
+                                        <Button
                                             onClick={() => handleDelete(item, 'Locais')}
                                             className="bg-red-600 hover:bg-red-700"
                                         >
@@ -224,7 +352,7 @@ export const RegistrationsPage = () => {
                                     <p className="text-gray-600 dark:text-gray-300 text-sm mb-4">Sigla: {item.sigla}</p>
                                     <div className="flex gap-2">
                                         <Button onClick={() => handleEdit(item, 'Cursos')}>Editar</Button>
-                                        <Button 
+                                        <Button
                                             onClick={() => handleDelete(item, 'Cursos')}
                                             className="bg-red-600 hover:bg-red-700"
                                         >
@@ -238,23 +366,100 @@ export const RegistrationsPage = () => {
                     </div>
                 </div>
 
+                {/* Seção USUÁRIOS (ESSENCIAL PARA LOGIN) */}
                 <div>
-                    <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">ADMINISTRADORES</h2>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {administrators.map(admin => (
-                            <div key={admin.id} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm p-4 relative overflow-hidden">
-                                <div className="relative z-10">
-                                    <h3 className="font-bold text-lg mb-2 text-gray-900 dark:text-gray-100">{admin.name}</h3>
-                                    <p className="text-gray-600 dark:text-gray-300 text-sm mb-1">{admin.email}</p>
-                                    <p className="text-gray-500 dark:text-gray-400 text-xs mb-4">{admin.role}</p>
-                                    <div className="flex gap-2">
-                                        <Button>Editar</Button>
-                                        <Button className="bg-red-600 hover:bg-red-700">Excluir</Button>
-                                    </div>
-                                </div>
-                                <CardSplat />
+                    <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">GERENCIAMENTO DE USUÁRIOS</h2>
+                    <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm p-6 relative overflow-hidden">
+                        <div className="relative z-10">
+                            <div className="flex justify-between items-center mb-6">
+                                <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">
+                                    Sistema de Autenticação
+                                </h3>
+                                <Button onClick={() => {
+                                    setEditingItem(null);
+                                    setCategory('Usuários');
+                                    // Manter a categoria atualmente selecionada
+                                    const tipoUsuario = selectedUserCategory === 'Administradores' ? 'admin' : 
+                                                       selectedUserCategory === 'Staff' ? 'staff' : 'representante';
+                                    setFormData({ name: '', sigla: '', email: '', senha: '', tipo_usuario: tipoUsuario });
+                                    setIsModalOpen(true);
+                                }}>
+                                    Cadastrar Novo Usuário
+                                </Button>
                             </div>
-                        ))}
+
+                            {/* Tabs para tipos de usuários */}
+                            <div className="flex border-b border-gray-200 dark:border-gray-700 mb-4">
+                                {['Administradores', 'Staff', 'Representantes'].map((tab) => (
+                                    <button
+                                        key={tab}
+                                        onClick={() => setSelectedUserCategory(tab)}
+                                        className={`py-2 px-4 border-b-2 transition-colors ${selectedUserCategory === tab
+                                            ? 'border-red-600 text-red-600'
+                                            : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
+                                            }`}
+                                    >
+                                        {tab}
+                                    </button>
+                                ))}
+                            </div>
+
+                            {/* Lista de usuários por categoria */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {users[selectedUserCategory.toLowerCase()]?.map((user) => (
+                                    <div
+                                        key={user.id_usuario || user.id}
+                                        className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg"
+                                    >
+                                        <div className="flex justify-between items-start">
+                                            <div>
+                                                <h4 className="font-semibold text-gray-900 dark:text-gray-100">
+                                                    {user.nome_usuario}
+                                                </h4>
+                                                <p className="text-sm text-gray-600 dark:text-gray-400">
+                                                    {user.email_usuario}
+                                                </p>
+                                                <span className="inline-block mt-1 px-2 py-1 text-xs bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 rounded">
+                                                    {user.tipo_usuario}
+                                                </span>
+                                            </div>
+                                            <div className="flex gap-2">
+                                                <Button
+                                                    size="sm"
+                                                    onClick={() => handleEdit(user, 'Usuários')}
+                                                >
+                                                    Editar
+                                                </Button>
+                                                <Button
+                                                    size="sm"
+                                                    className="bg-red-600 hover:bg-red-700"
+                                                    onClick={() => handleDelete(user, 'Usuários')}
+                                                >
+                                                    Excluir
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                                {(!users[selectedUserCategory.toLowerCase()] || users[selectedUserCategory.toLowerCase()].length === 0) && (
+                                    <div className="col-span-2 text-center py-8 text-gray-500 dark:text-gray-400">
+                                        <p>Nenhum usuário do tipo "{selectedUserCategory}" encontrado.</p>
+                                        <Button
+                                            onClick={() => {
+                                                setEditingItem(null);
+                                                setCategory('Usuários');
+                                                setFormData({ name: '', sigla: '', email: '', senha: '', tipo_usuario: selectedUserCategory === 'Administradores' ? 'admin' : selectedUserCategory === 'Staff' ? 'staff' : 'representante'});
+                                                setIsModalOpen(true);
+                                            }}
+                                            className="mt-2"
+                                        >
+                                            Criar Primeiro {selectedUserCategory === 'Administradores' ? 'Administrador' : selectedUserCategory === 'Staff' ? 'Staff' : 'Representante'}
+                                        </Button>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                        <CardSplat />
                     </div>
                 </div>
             </div>
@@ -271,26 +476,61 @@ export const RegistrationsPage = () => {
                         <option value="Esportes">Esportes</option>
                         <option value="Locais">Locais</option>
                         <option value="Cursos">Cursos</option>
+                        <option value="Usuários">Usuários (Login)</option>
                     </Select>
-                    
-                    <Input 
-                        label="Nome" 
-                        placeholder="Digite o nome" 
+
+                    <Input
+                        label="Nome"
+                        placeholder="Digite o nome"
                         value={formData.name}
-                        onChange={(e) => setFormData({...formData, name: e.target.value})}
+                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                         required
                     />
-                    
+
                     {category === 'Cursos' && (
-                        <Input 
-                            label="Sigla" 
-                            placeholder="Digite a sigla" 
+                        <Input
+                            label="Sigla"
+                            placeholder="Digite a sigla"
                             value={formData.sigla}
-                            onChange={(e) => setFormData({...formData, sigla: e.target.value})}
+                            onChange={(e) => setFormData({ ...formData, sigla: e.target.value })}
                             required
                         />
                     )}
-                    
+
+                    {category === 'Usuários' && (
+                        <>
+                            <Input
+                                label="Email"
+                                type="email"
+                                placeholder="usuario@exemplo.com"
+                                value={formData.email}
+                                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                                required
+                            />
+
+                            <Input
+                                label="Senha"
+                                type="password"
+                                placeholder={editingItem ? "Deixe em branco para manter a senha atual" : "Digite a senha"}
+                                value={formData.senha}
+                                onChange={(e) => setFormData({ ...formData, senha: e.target.value })}
+                                required={!editingItem}
+                            />
+
+                            <Select
+                                label="Tipo de Usuário"
+                                value={formData.tipo_usuario}
+                                onChange={(e) => setFormData({ ...formData, tipo_usuario: e.target.value })}
+                                required
+                            >
+                                <option value="">Selecionar tipo</option>
+                                <option value="admin">Administrador</option>
+                                <option value="staff">Staff</option>
+                                <option value="representante">Representante</option>
+                            </Select>
+                        </>
+                    )}
+
                     <div className="flex justify-end gap-2 pt-4">
                         <Button type="button" onClick={closeModal} className="bg-gray-500">
                             Cancelar

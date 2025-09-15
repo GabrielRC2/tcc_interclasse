@@ -5,6 +5,10 @@ import { Modal } from '@/components/Modal';
 import { Button, Input, Select, CardSplat } from '@/components/common';
 
 export const SeasonsPage = () => {
+    // Estados de controle de usuário
+    const [currentUser, setCurrentUser] = useState(null);
+    const [userLoading, setUserLoading] = useState(true);
+    
     const [seasons, setSeasons] = useState([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingSeason, setEditingSeason] = useState(null);
@@ -28,7 +32,28 @@ export const SeasonsPage = () => {
 
     useEffect(() => {
         loadSeasons();
+        loadCurrentUser();
     }, []);
+
+    // Função para buscar dados do usuário logado
+    const loadCurrentUser = async () => {
+        try {
+            const response = await fetch('/api/users/me');
+            
+            if (response.ok) {
+                const userData = await response.json();
+                setCurrentUser(userData);
+            } else {
+                console.error('Erro ao buscar dados do usuário');
+                setCurrentUser(null);
+            }
+        } catch (error) {
+            console.error('Erro ao buscar dados do usuário:', error);
+            setCurrentUser(null);
+        } finally {
+            setUserLoading(false);
+        }
+    };
 
     useEffect(() => {
         // Atualizar modalidades quando o nome do torneio mudar
@@ -54,11 +79,11 @@ export const SeasonsPage = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        
+
         try {
             let endpoint = '/api/torneios';
             let method = 'POST';
-            
+
             if (editingSeason) {
                 endpoint = `/api/torneios/${editingSeason.id}`;
                 method = 'PUT';
@@ -152,7 +177,7 @@ export const SeasonsPage = () => {
             }
             grouped[year].push(season);
         });
-        
+
         // Ordenar anos de forma decrescente
         return Object.keys(grouped)
             .sort((a, b) => parseInt(b) - parseInt(a))
@@ -172,8 +197,23 @@ export const SeasonsPage = () => {
         setExpandedYears(newExpanded);
     };
 
-    if (loading) {
+    if (loading || userLoading) {
         return <div className="flex justify-center items-center h-64">Carregando...</div>;
+    }
+
+    // Bloquear acesso para usuários do tipo 'staff'
+    if (currentUser && currentUser.tipo_usuario === 'staff') {
+        return (
+            <div className="flex flex-col items-center justify-center h-64 text-center">
+                <h2 className="text-2xl font-bold text-red-600 mb-2">Acesso Negado</h2>
+                <p className="text-gray-700 dark:text-gray-300">
+                    Usuários do tipo <b>staff</b> não têm permissão para acessar a área de temporadas.
+                </p>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
+                    Entre em contato com um administrador se precisar de acesso.
+                </p>
+            </div>
+        );
     }
 
     const groupedSeasons = groupSeasonsByYear();
@@ -240,7 +280,7 @@ export const SeasonsPage = () => {
                                                             <Button onClick={() => handleEdit(season)} className="text-sm">
                                                                 Editar
                                                             </Button>
-                                                            <Button 
+                                                            <Button
                                                                 onClick={() => handleDelete(season)}
                                                                 className="bg-red-600 hover:bg-red-700 text-sm"
                                                             >
@@ -288,39 +328,39 @@ export const SeasonsPage = () => {
                     <Select
                         label="Nome do Torneio"
                         value={formData.name}
-                        onChange={(e) => setFormData({...formData, name: e.target.value})}
+                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                         required
                     >
                         <option value="">Selecione o tipo de torneio</option>
                         <option value="Meio do Ano">Meio do Ano</option>
                         <option value="Fim de Ano">Fim de Ano</option>
                     </Select>
-                    
-                    <Input 
-                        label="Local" 
-                        placeholder="Digite o local" 
+
+                    <Input
+                        label="Local"
+                        placeholder="Digite o local"
                         value={formData.location}
-                        onChange={(e) => setFormData({...formData, location: e.target.value})}
+                        onChange={(e) => setFormData({ ...formData, location: e.target.value })}
                         required
                     />
 
                     <div className="grid grid-cols-2 gap-4">
-                        <Input 
-                            label="Data de Início" 
-                            type="date" 
+                        <Input
+                            label="Data de Início"
+                            type="date"
                             value={formData.startDate}
-                            onChange={(e) => setFormData({...formData, startDate: e.target.value})}
+                            onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
                             required
                         />
-                        <Input 
-                            label="Data de Fim" 
-                            type="date" 
+                        <Input
+                            label="Data de Fim"
+                            type="date"
                             value={formData.endDate}
-                            onChange={(e) => setFormData({...formData, endDate: e.target.value})}
+                            onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
                             required
                         />
                     </div>
-                    
+
                     <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                             Modalidades (Automático)
@@ -333,14 +373,14 @@ export const SeasonsPage = () => {
                     <Select
                         label="Status do Torneio"
                         value={formData.status}
-                        onChange={(e) => setFormData({...formData, status: e.target.value})}
+                        onChange={(e) => setFormData({ ...formData, status: e.target.value })}
                         required
                     >
                         <option value="PLANEJAMENTO">Planejamento</option>
                         <option value="EM ANDAMENTO">Em Andamento</option>
                         <option value="FINALIZADO">Finalizado</option>
                     </Select>
-                    
+
                     <div className="flex justify-end gap-2 pt-4">
                         <Button type="button" onClick={closeModal} className="bg-gray-500">
                             Cancelar

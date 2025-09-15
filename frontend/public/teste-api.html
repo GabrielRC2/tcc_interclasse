@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Teste API Usuários</title>
+</head>
+
+<body>
+    <h1>Teste da API de Usuários</h1>
+
+    <button onclick="testarGET()">Testar GET /api/users</button>
+    <button onclick="testarPOST()">Testar POST /api/users</button>
+
+    <pre id="resultado"></pre>
+
+    <script>
+        const resultado = document.getElementById('resultado');
+
+        async function testarGET() {
+            try {
+                resultado.textContent = '🔄 Testando GET...';
+                const response = await fetch('/api/users');
+                const data = await response.json();
+                resultado.textContent = `GET Response:\nStatus: ${response.status}\nData: ${JSON.stringify(data, null, 2)}`;
+            } catch (error) {
+                resultado.textContent = `Erro GET: ${error.message}`;
+            }
+        }
+
+        async function testarPOST() {
+            try {
+                resultado.textContent = '🔄 Testando POST...';
+                const response = await fetch('/api/users', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        nome_usuario: 'Teste Frontend',
+                        email_usuario: 'frontend@teste.com',
+                        senha: '123456',
+                        tipo_usuario: 'ADMIN'
+                    })
+                });
+
+                const data = await response.json();
+                resultado.textContent = `POST Response:\nStatus: ${response.status}\nData: ${JSON.stringify(data, null, 2)}`;
+            } catch (error) {
+                resultado.textContent = `Erro POST: ${error.message}`;
+            }
+        }
+    </script>
+</body>
+
+</html>
