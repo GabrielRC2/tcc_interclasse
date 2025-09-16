@@ -391,7 +391,7 @@ export const BracketsPage = () => {
                                     FASE DE GRUPOS
                                 </h2>
 
-                                <div className="grid gap-6">
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                                     {gruposData.map(grupo => (
                                         <div key={grupo.nome} className="space-y-4">
                                             {/* Classificação do grupo */}
