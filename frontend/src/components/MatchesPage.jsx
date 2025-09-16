@@ -4,6 +4,7 @@ import { Calendar, Clock, MapPin, Trophy, Filter, Play, Settings, Shuffle, List,
 import { Button, Select } from '@/components/common';
 import { useTournament } from '@/contexts/TournamentContext';
 import { SumulaModal } from '@/components/SumulaModal';
+import { Modal } from '@/components/Modal';
 
 export const MatchesPage = () => {
   const { selectedTournament } = useTournament();
@@ -694,53 +695,52 @@ export const MatchesPage = () => {
             onSumulaEnviada={(id) => tratarSumulaEnviada(id)}
           />
 
-          {showConfigModal && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-              <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md">
-                <h3 className="text-lg font-bold mb-4">Configurar Locais por Modalidade</h3>
-
-                <div className="space-y-4">
-                  {modalidadesDisponiveis.map(modalidade => (
-                    <div key={modalidade.id}>
-                      <label className="block text-sm font-medium mb-1">
-                        {modalidade.nome}
-                      </label>
-                      <select
-                        className="w-full p-2 border rounded"
-                        value={configuracaoLocais[modalidade.nome] || modalidade.localPadrao}
-                        onChange={(e) => setConfiguracaoLocais(prev => ({
-                          ...prev,
-                          [modalidade.nome]: e.target.value
-                        }))}
-                      >
-                        <option value="Quadra de Baixo">Quadra de Baixo</option>
-                        <option value="Quadra de Cima">Quadra de Cima</option>
-                      </select>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="flex gap-2 mt-6">
-                  <Button
-                    onClick={() => setShowConfigModal(false)}
-                    variant="outline"
-                    className="flex-1"
+          <Modal
+            isOpen={showConfigModal}
+            onClose={() => setShowConfigModal(false)}
+            title="Configurar Locais por Modalidade"
+            size="max-w-md"
+          >
+            <div className="space-y-4">
+              {modalidadesDisponiveis.map(modalidade => (
+                <div key={modalidade.id}>
+                  <label className="block text-sm font-medium mb-1">
+                    {modalidade.nome}
+                  </label>
+                  <select
+                    className="w-full p-2 border rounded"
+                    value={configuracaoLocais[modalidade.nome] || modalidade.localPadrao}
+                    onChange={(e) => setConfiguracaoLocais(prev => ({
+                      ...prev,
+                      [modalidade.nome]: e.target.value
+                    }))}
                   >
-                    Cancelar
-                  </Button>
-                  <Button
-                    onClick={() => {
-                      setShowConfigModal(false);
-                      // Salvar configurações se necessário
-                    }}
-                    className="flex-1"
-                  >
-                    Salvar
-                  </Button>
+                    <option value="Quadra de Baixo">Quadra de Baixo</option>
+                    <option value="Quadra de Cima">Quadra de Cima</option>
+                  </select>
                 </div>
-              </div>
+              ))}
             </div>
-          )}
+
+            <div className="flex gap-2 mt-6">
+              <Button
+                onClick={() => setShowConfigModal(false)}
+                variant="outline"
+                className="flex-1"
+              >
+                Cancelar
+              </Button>
+              <Button
+                onClick={() => {
+                  setShowConfigModal(false);
+                  // Salvar configurações se necessário
+                }}
+                className="flex-1"
+              >
+                Salvar
+              </Button>
+            </div>
+          </Modal>
         </>
       )}
     </div>
