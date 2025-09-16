@@ -62,6 +62,8 @@ export const BracketsPage = () => {
             // Carregar classificações individuais para cada grupo
             if (data.length > 0) {
                 await loadClassificacoesPorGrupo(data);
+            } else {
+                setClassificacoesPorGrupo({});
             }
         } catch (error) {
             console.error('Erro ao carregar grupos:', error);
@@ -77,7 +79,26 @@ export const BracketsPage = () => {
             // Carregar classificação para cada grupo individualmente
             await Promise.all(grupos.map(async (grupo) => {
                 try {
-                    const response = await fetch(`/api/classificacao?torneioId=${selectedTournament.id}&grupoId=${grupo.id}`);
+                    // CORREÇÃO: Adicionar filtro de gênero para manter consistência
+                    const params = new URLSearchParams({
+                        torneioId: selectedTournament.id.toString(),
+                        grupoId: grupo.id.toString()
+                    });
+                    
+                    // Adicionar filtro de gênero se disponível
+                    if (selectedGenero) {
+                        params.append('genero', selectedGenero);
+                    }
+                    
+                    const url = `/api/classificacao?${params.toString()}`;
+                    const response = await fetch(url);
+                    
+                    if (!response.ok) {
+                        console.error(`Erro ${response.status} ao carregar classificação do grupo ${grupo.nome}`);
+                        classificacoesPorGrupo[grupo.nome] = [];
+                        return;
+                    }
+                    
                     const data = await response.json();
                     classificacoesPorGrupo[grupo.nome] = data.classificacao || [];
                 } catch (error) {
