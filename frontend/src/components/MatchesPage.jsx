@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { Calendar, MapPin, Trophy, Filter, Play, Settings, Shuffle } from 'lucide-react';
+import { Calendar, MapPin, Trophy, Filter, Play, Settings, Shuffle, RefreshCcw } from 'lucide-react';
 import { Button, Select } from '@/components/common';
 import { useTournament } from '@/contexts/TournamentContext';
 import { SumulaModal } from '@/components/SumulaModal';
@@ -234,6 +234,105 @@ export const MatchesPage = () => {
     }
   };
 
+  // refazer sorteio de partidas com as mesmas regras otimizadas
+  const refazerSorteioPartidas = async () => {
+    if (!selectedTournament) {
+      alert('❌ Selecione um torneio primeiro');
+      return;
+    }
+
+    if (partidas.length === 0) {
+      alert('❌ Não há partidas para refazer o sorteio. Gere as partidas primeiro.');
+      return;
+    }
+
+    const partidasFinalizadas = partidas.filter(p => p.status === 'Finalizada' || p.status === 'FINALIZADA');
+    if (partidasFinalizadas.length > 0) {
+      const confirmar = window.confirm(
+        `⚠️ ATENÇÃO: Existem ${partidasFinalizadas.length} partidas já finalizadas.\n\n` +
+        `Refazer o sorteio irá:\n` +
+        `• Apagar TODAS as partidas existentes\n` +
+        `• Recriar as partidas com novos horários e confrontos\n` +
+        `• PERDER todos os resultados das partidas finalizadas\n\n` +
+        `Deseja continuar mesmo assim?`
+      );
+      if (!confirmar) return;
+    } else {
+      const confirmar = window.confirm(
+        `🔄 Refazer sorteio de partidas?\n\n` +
+        `Esta ação irá:\n` +
+        `• Apagar todas as partidas existentes\n` +
+        `• Recriar as partidas com novos horários e confrontos\n` +
+        `• Aplicar as regras de otimização melhoradas\n\n` +
+        `📋 REGRAS APLICADAS:\n` +
+        `⚽ Regra 1: Sempre um jogo masculino e um feminino simultâneos\n` +
+        `🔄 Regra 2: Priorizar modalidades diferentes no mesmo slot\n` +
+        `🔀 Regra 3: Cada modalidade faz 5 consecutivas de um gênero, depois 5 do outro\n` +
+        `🏟️ Regra 4: Um jogo em cada quadra conforme configuração\n` +
+        `⏱️ Regra 5: Maximizar tempo de descanso dos times\n\n` +
+        `Continuar?`
+      );
+      if (!confirmar) return;
+    }
+
+    setGenerating(true);
+    try {
+      // Primeiro, deletar todas as partidas existentes
+      const deleteResponse = await fetch(`/api/partidas?torneioId=${selectedTournament.id}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' }
+      });
+
+      if (!deleteResponse.ok) {
+        throw new Error('Erro ao deletar partidas existentes');
+      }
+
+      // Aguardar um momento para garantir que a deleção foi processada
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // Depois, gerar novas partidas com as mesmas regras
+      console.log('🚀 Refazendo sorteio com configuração de locais:', configuracaoLocais);
+      const response = await fetch('/api/partidas/gerar-otimizadas', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          torneioId: selectedTournament.id,
+          configuracaoLocais
+        })
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        const diversidade = result.diversidadeModalidades;
+        const alternancia = result.alternanciaPorModalidade;
+        
+        // Criar resumo das alternâncias por modalidade
+        const resumoModalidades = Object.entries(alternancia.estatisticasModalidades)
+          .map(([modalidade, stats]) => `${modalidade}: ${stats.ciclosCompletos} ciclos`)
+          .join(', ');
+        
+        alert(
+          `✅ Sorteio refeito com sucesso!\n\n` +
+          `🎲 ${result.partidasGeradas} novas partidas geradas em ${result.slots} slots de tempo!\n` +
+          `⚽ Cada slot contém 1 jogo masculino + 1 feminino simultâneos\n` +
+          `🔄 Diversidade de modalidades: ${diversidade.slotsComModalidadesDiferentes}/${diversidade.totalSlots} slots (${diversidade.percentual}%)\n` +
+          `🔀 Alternância por modalidade: ${resumoModalidades}\n` +
+          `🏟️ ${result.modalidades} modalidades distribuídas entre as quadras\n` +
+          `⏱️ Novos horários e confrontos otimizados com máximo descanso`
+        );
+        await carregarPartidas();
+      } else {
+        const error = await response.json();
+        alert('❌ ' + (error.error || 'Erro ao gerar novas partidas'));
+      }
+    } catch (error) {
+      console.error('Erro ao refazer sorteio:', error);
+      alert('❌ Erro ao refazer sorteio das partidas');
+    } finally {
+      setGenerating(false);
+    }
+  };
+
   // gerar pontuações aleatórias para partidas agendadas
   const gerarPontuacoesAleatorias = async () => {
     const partidasAgendadas = partidas.filter(p => p.status === 'Agendada');
@@ -385,7 +484,16 @@ export const MatchesPage = () => {
   const gerarPartidasDeGrupos = async () => {
     if (!selectedTournament) return;
     
-    const confirmar = window.confirm('Deseja gerar todas as partidas de grupos para todas as modalidades e gêneros do torneio?\n\n📋 Regra aplicada: Sempre um jogo masculino e um feminino simultaneamente, um em cada quadra.\n🏟️ As partidas serão distribuídas entre as quadras conforme a configuração de locais.');
+    const confirmar = window.confirm(
+      '🏆 Deseja gerar todas as partidas de grupos para todas as modalidades e gêneros do torneio?\n\n' +
+      '📋 REGRAS APLICADAS:\n' +
+      '⚽ Regra 1: Sempre um jogo masculino e um feminino simultâneos\n' +
+      '🔄 Regra 2: Priorizar modalidades diferentes no mesmo slot (ex: Vôlei Feminino + Handebol Masculino)\n' +
+      '🔀 Regra 3: Cada modalidade faz 5 consecutivas de um gênero, depois 5 do outro (Handebol: 1-5 F, 6-10 M; Vôlei: 1-5 M, 6-10 F)\n' +
+      '🏟️ Regra 4: Um jogo em cada quadra conforme configuração de locais\n' +
+      '⏱️ Regra 5: Maximizar tempo de descanso entre jogos dos times\n\n' +
+      'As partidas serão distribuídas de forma otimizada entre as quadras!'
+    );
     if (!confirmar) return;
 
     setGenerating(true);
@@ -402,7 +510,22 @@ export const MatchesPage = () => {
 
       if (response.ok) {
         const result = await response.json();
-        alert(`✅ ${result.partidasGeradas} partidas geradas em ${result.slots} slots de tempo!\n⚽ Cada slot contém 1 jogo masculino + 1 feminino simultâneos.\n🏟️ ${result.modalidades} modalidades distribuídas entre as quadras.`);
+        const diversidade = result.diversidadeModalidades;
+        const alternancia = result.alternanciaPorModalidade;
+        
+        // Criar resumo das alternâncias por modalidade
+        const resumoModalidades = Object.entries(alternancia.estatisticasModalidades)
+          .map(([modalidade, stats]) => `${modalidade}: ${stats.ciclosCompletos} ciclos`)
+          .join(', ');
+        
+        alert(
+          `✅ ${result.partidasGeradas} partidas geradas em ${result.slots} slots de tempo!\n\n` +
+          `⚽ Cada slot contém 1 jogo masculino + 1 feminino simultâneos\n` +
+          `🔄 Diversidade de modalidades: ${diversidade.slotsComModalidadesDiferentes}/${diversidade.totalSlots} slots (${diversidade.percentual}%)\n` +
+          `🔀 Alternância por modalidade: ${resumoModalidades}\n` +
+          `🏟️ ${result.modalidades} modalidades distribuídas entre as quadras\n` +
+          `⏱️ Horários otimizados para máximo descanso dos times`
+        );
         await carregarPartidas();
       } else {
         const error = await response.json();
@@ -447,6 +570,14 @@ export const MatchesPage = () => {
               {generating ? 'Gerando...' : getBotaoGerarPartidasTexto()}
             </Button>
           )}
+          <Button 
+            onClick={refazerSorteioPartidas}
+            disabled={!selectedTournament || generating || partidas.length === 0}
+            className="bg-purple-600 hover:bg-purple-700"
+          >
+            <RefreshCcw size={16} className="mr-2" />
+            Refazer Sorteio
+          </Button>
           <Button 
             onClick={gerarPontuacoesAleatorias} 
             disabled={partidas.filter(p => p.status === 'Agendada').length === 0}
@@ -521,12 +652,14 @@ export const MatchesPage = () => {
           ) : (
             <div className="space-y-4">
               <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-                <h3 className="font-semibold text-blue-900 dark:text-blue-100 mb-2">📋 Organização Otimizada de Partidas</h3>
-                <p className="text-sm text-blue-700 dark:text-blue-300">
-                  ⚽ <strong>Regra aplicada:</strong> Sempre um jogo masculino e um feminino simultâneos, um em cada quadra.<br/>
-                  🏟️ <strong>Distribuição:</strong> Locais definidos pela configuração de modalidades.<br/>
-                  ⏱️ <strong>Otimização:</strong> Maximiza o tempo de descanso entre jogos dos times.
-                </p>
+                <h3 className="font-semibold text-blue-900 dark:text-blue-100 mb-2">📋 Regras de Organização Otimizada</h3>
+                <div className="text-sm text-blue-700 dark:text-blue-300 space-y-1">
+                  <p>⚽ <strong>Regra 1:</strong> Sempre um jogo masculino e um feminino simultâneos</p>
+                  <p>🔄 <strong>Regra 2:</strong> Priorizar modalidades diferentes no mesmo slot (ex: Vôlei + Handebol)</p>
+                  <p>🔀 <strong>Regra 3:</strong> Cada modalidade faz 5 partidas consecutivas de um gênero, depois 5 do outro</p>
+                  <p>🏟️ <strong>Regra 4:</strong> Um jogo em cada quadra conforme configuração de modalidades</p>
+                  <p>⏱️ <strong>Regra 5:</strong> Maximizar tempo de descanso entre jogos dos times</p>
+                </div>
               </div>
 
               {partidasFiltradas.map(p => (
