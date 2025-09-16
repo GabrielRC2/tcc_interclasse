@@ -180,58 +180,97 @@ export const Dashboard = () => {
                 ) : Object.keys(jogadoresDestaque).length === 0 ? (
                   <div className="text-center py-8 text-gray-500">Nenhum jogador encontrado para este torneio.</div>
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                    {jogadoresDestaque.futsal && jogadoresDestaque.futsal.length > 0 && (
-                      <div>
-                        <h3 className="font-bold text-lg mb-2 text-gray-900 dark:text-gray-100">FUTSAL</h3>
-                        {jogadoresDestaque.futsal.map((player, i) => (
-                          <p key={i} className="text-gray-600 dark:text-gray-300 text-sm mb-1">
-                            <span className="font-medium">{player.name}</span>
-                            <br />
-                            <span className="text-xs text-gray-500">{player.team} - {player.points} pts</span>
-                          </p>
-                        ))}
-                      </div>
-                    )}
-                    {jogadoresDestaque.volei && jogadoresDestaque.volei.length > 0 && (
-                      <div>
-                        <h3 className="font-bold text-lg mb-2 text-gray-900 dark:text-gray-100">VÔLEI</h3>
-                        {jogadoresDestaque.volei.map((player, i) => (
-                          <p key={i} className="text-gray-600 dark:text-gray-300 text-sm mb-1">
-                            <span className="font-medium">{player.name}</span>
-                            <br />
-                            <span className="text-xs text-gray-500">{player.team} - {player.points} pts</span>
-                          </p>
-                        ))}
-                      </div>
-                    )}
-                    {jogadoresDestaque.basquete && jogadoresDestaque.basquete.length > 0 && (
-                      <div>
-                        <h3 className="font-bold text-lg mb-2 text-gray-900 dark:text-gray-100">BASQUETE</h3>
-                        {jogadoresDestaque.basquete.map((player, i) => (
-                          <p key={i} className="text-gray-600 dark:text-gray-300 text-sm mb-1">
-                            <span className="font-medium">{player.name}</span>
-                            <br />
-                            <span className="text-xs text-gray-500">{player.team} - {player.points} pts</span>
-                          </p>
-                        ))}
-                      </div>
-                    )}
-                    {jogadoresDestaque.handebol && jogadoresDestaque.handebol.length > 0 && (
-                      <div>
-                        <h3 className="font-bold text-lg mb-2 text-gray-900 dark:text-gray-100">HANDEBOL</h3>
-                        {jogadoresDestaque.handebol.map((player, i) => (
-                          <p key={i} className="text-gray-600 dark:text-gray-300 text-sm mb-1">
-                            <span className="font-medium">{player.name}</span>
-                            <br />
-                            <span className="text-xs text-gray-500">{player.team} - {player.points} pts</span>
-                          </p>
-                        ))}
-                      </div>
-                    )}
-                    {/* Mostrar mensagem se não há modalidades */}
-                    {!jogadoresDestaque.futsal && !jogadoresDestaque.volei && !jogadoresDestaque.basquete && !jogadoresDestaque.handebol && (
-                      <div className="col-span-4 text-center text-gray-500">
+                  <div className="space-y-6">
+                    {/* Renderizar cada modalidade */}
+                    {Object.entries(jogadoresDestaque).map(([modalidade, jogadores]) => {
+                      if (!jogadores || jogadores.length === 0) return null;
+                      
+                      // Separar jogadores por gênero
+                      const masculinos = jogadores.filter(player => player.gender === 'Masculino');
+                      const femininos = jogadores.filter(player => player.gender === 'Feminino');
+                      
+                      return (
+                        <div key={modalidade} className="border-b border-gray-200 dark:border-gray-700 pb-6 last:border-b-0">
+                          <h3 className="font-bold text-lg mb-4 text-gray-900 dark:text-gray-100 uppercase tracking-wide">
+                            {modalidade === 'volei' ? 'VÔLEI' : modalidade.toUpperCase()}
+                          </h3>
+                          
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            {/* Masculino */}
+                            {masculinos.length > 0 && (
+                              <div>
+                                <h4 className="font-medium text-sm mb-3 text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                                  Masculino
+                                </h4>
+                                <div className="space-y-1">
+                                  {masculinos.slice(0, 3).map((player, i) => (
+                                    <div key={i} className="flex items-center justify-between py-2 px-3 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-md transition-colors">
+                                      <div className="flex items-center gap-3">
+                                        <span className="text-xs font-medium text-gray-400 w-4">
+                                          {i + 1}º
+                                        </span>
+                                        <div>
+                                          <p className="font-medium text-gray-900 dark:text-gray-100 text-sm">
+                                            {player.name.replace(' (M)', '')}
+                                          </p>
+                                          <p className="text-xs text-gray-500 dark:text-gray-400">
+                                            {player.team}
+                                          </p>
+                                        </div>
+                                      </div>
+                                      <div className="text-right">
+                                        <span className="font-semibold text-gray-800 dark:text-gray-200">
+                                          {player.points}
+                                        </span>
+                                        <span className="text-xs text-gray-500 ml-1">pts</span>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                            
+                            {/* Feminino */}
+                            {femininos.length > 0 && (
+                              <div>
+                                <h4 className="font-medium text-sm mb-3 text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                                  Feminino
+                                </h4>
+                                <div className="space-y-1">
+                                  {femininos.slice(0, 3).map((player, i) => (
+                                    <div key={i} className="flex items-center justify-between py-2 px-3 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-md transition-colors">
+                                      <div className="flex items-center gap-3">
+                                        <span className="text-xs font-medium text-gray-400 w-4">
+                                          {i + 1}º
+                                        </span>
+                                        <div>
+                                          <p className="font-medium text-gray-900 dark:text-gray-100 text-sm">
+                                            {player.name.replace(' (F)', '')}
+                                          </p>
+                                          <p className="text-xs text-gray-500 dark:text-gray-400">
+                                            {player.team}
+                                          </p>
+                                        </div>
+                                      </div>
+                                      <div className="text-right">
+                                        <span className="font-semibold text-gray-800 dark:text-gray-200">
+                                          {player.points}
+                                        </span>
+                                        <span className="text-xs text-gray-500 ml-1">pts</span>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                    
+                    {/* Mensagem se não há dados */}
+                    {Object.keys(jogadoresDestaque).length === 0 && (
+                      <div className="text-center text-gray-500">
                         Nenhuma modalidade encontrada para este torneio.
                       </div>
                     )}
