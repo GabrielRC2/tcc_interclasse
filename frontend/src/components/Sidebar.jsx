@@ -1,6 +1,6 @@
 'use client';
 
-import { Home, Users, Plus, Shield, Calendar, FileText, LogOut, Moon, Sun, ChevronsLeft } from 'lucide-react';
+import { Home, Users, Plus, Shield, Calendar, FileText, LogOut, Moon, Sun, ChevronsLeft, Trophy, ChevronDown } from 'lucide-react';
 
 const NavLink = ({ icon, label, pageName, isSidebarOpen, currentPage, setCurrentPage, toggleSidebar }) => (
     <li>
@@ -34,7 +34,17 @@ const NavLink = ({ icon, label, pageName, isSidebarOpen, currentPage, setCurrent
     </li>
 );
 
-export const Sidebar = ({ isSidebarOpen, toggleSidebar, currentPage, setCurrentPage, isDarkMode, toggleDarkMode, logout }) => {
+export const Sidebar = ({ 
+  isSidebarOpen, 
+  toggleSidebar, 
+  currentPage, 
+  setCurrentPage, 
+  isDarkMode, 
+  toggleDarkMode, 
+  logout,
+  selectedTournament,
+  onTournamentSelectorClick 
+}) => {
     // Lógica para escolher a logo baseada no tema e estado da sidebar
     const getLogoUrl = () => {
         if (isDarkMode) {
@@ -79,6 +89,33 @@ export const Sidebar = ({ isSidebarOpen, toggleSidebar, currentPage, setCurrentP
                     </div>
                 )}
                 <nav className="flex-1 p-2 space-y-1 overflow-y-auto overflow-x-hidden">
+                    {/* Tournament Selector */}
+                    <div className="mb-4">
+                        <button
+                            onClick={onTournamentSelectorClick}
+                            className={`w-full flex items-center rounded-md transition-colors border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-red-500 dark:hover:border-red-400 ${
+                                isSidebarOpen ? 'px-3 py-3' : 'p-2 justify-center'
+                            } ${selectedTournament ? 'bg-red-50 dark:bg-red-900/20 border-red-500 dark:border-red-400' : 'hover:bg-gray-50 dark:hover:bg-gray-800'}`}
+                        >
+                            <div className={`flex items-center ${isSidebarOpen ? 'w-full' : 'justify-center'}`}>
+                                <Trophy size={20} className={selectedTournament ? 'text-red-600 dark:text-red-400' : 'text-gray-500 dark:text-gray-400'} />
+                                {isSidebarOpen && (
+                                    <>
+                                        <div className="flex-1 ml-3 text-left">
+                                            <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                                                Torneio Ativo
+                                            </div>
+                                            <div className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">
+                                                {selectedTournament ? selectedTournament.name : 'Selecionar Torneio'}
+                                            </div>
+                                        </div>
+                                        <ChevronDown size={16} className="text-gray-400 ml-2" />
+                                    </>
+                                )}
+                            </div>
+                        </button>
+                    </div>
+
                     <p className={`px-2 text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase transition-opacity duration-300 ${isSidebarOpen ? 'opacity-100' : 'opacity-0'}`}>GERAL</p>
                     <ul>
                         <NavLink icon={<Home size={20} />} label="Home" pageName="dashboard" isSidebarOpen={isSidebarOpen} currentPage={currentPage} setCurrentPage={setCurrentPage} toggleSidebar={toggleSidebar} />
