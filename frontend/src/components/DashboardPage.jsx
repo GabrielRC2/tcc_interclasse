@@ -1,8 +1,9 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { Trophy, Users, Calendar, Target, Filter, X } from 'lucide-react';
+import { Trophy, Users, Calendar, Target, Filter, X, Settings } from 'lucide-react';
 import { useTournament } from '@/contexts/TournamentContext';
 import { SumulaModal } from '@/components/SumulaModal';
+import { TournamentSelector } from '@/components/TournamentSelector';
 import { Button, CardSplat, Select } from '@/components/common';
 import { mockData } from '@/data';
 
@@ -11,6 +12,7 @@ export const Dashboard = () => {
 
   const [filters, setFilters] = useState(['Masculino', 'Feminino', 'Jogos Anteriores']);
   const [partidaSelecionada, setPartidaSelecionada] = useState(null);
+  const [showTournamentSelector, setShowTournamentSelector] = useState(false);
 
   // Estados para próximas partidas
   const [proximasPartidas, setProximasPartidas] = useState([]);
@@ -110,24 +112,23 @@ export const Dashboard = () => {
               Torneio Ativo
             </h2>
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              Selecione o torneio para visualizar dados específicos
+              {selectedTournament ? `${selectedTournament.name} • ${selectedTournament.status}` : 'Selecione um torneio para visualizar dados específicos'}
             </p>
           </div>
-          <div className="w-80">
-            <Select
-              value={selectedTournament?.id || ''}
-              onChange={(e) => {
-                const tournament = tournaments.find(t => t.id === parseInt(e.target.value));
-                selectTournament(tournament);
-              }}
+          <div className="flex items-center gap-3">
+            <Button
+              onClick={() => setShowTournamentSelector(true)}
+              variant="outline"
+              className="flex items-center gap-2"
             >
-              <option value="">Selecione um torneio</option>
-              {tournaments.map(t => (
-                <option key={t.id} value={t.id}>
-                  {t.name} ({t.status})
-                </option>
-              ))}
-            </Select>
+              <Settings size={16} />
+              {selectedTournament ? 'Alterar Torneio' : 'Selecionar Torneio'}
+            </Button>
+            {selectedTournament && (
+              <div className="px-3 py-1 bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200 rounded-full text-sm font-medium">
+                {selectedTournament.name}
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -148,14 +149,14 @@ export const Dashboard = () => {
                 ) : proximasPartidas.length === 0 ? (
                   <div className="col-span-2 text-center py-8 text-gray-500">Nenhuma partida agendada encontrada.</div>
                 ) : (
-                  proximasPartidas.slice(0, 2).map(match => (
+                  proximasPartidas.slice(0, 2).map((match) => (
                     <div key={match.id} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm p-4 relative overflow-hidden">
                       <div className="relative z-10">
                         <div className="flex items-center justify-between mb-2">
-                          <p className="text-sm text-blue-600 dark:text-blue-400 font-semibold uppercase">� PRÓXIMA</p>
+                          <p className="text-sm text-red-600 dark:text-red-400 font-semibold uppercase">PRÓXIMA</p>
                         </div>
                         <p className="text-2xl font-bold my-2 text-gray-900 dark:text-gray-100">{match.team1} VS {match.team2}</p>
-                        <p className="text-xl font-bold text-blue-600 dark:text-blue-400 mb-2">{match.result}</p>
+                        <p className="text-xl font-bold text-red-600 dark:text-red-400 mb-2">{match.result}</p>
                         <div className="space-y-1">
                           <p className="text-sm text-gray-600 dark:text-gray-300">Esporte: {match.modality}</p>
                           <p className="text-sm text-gray-600 dark:text-gray-300">Modalidade: {match.category}</p>
@@ -164,9 +165,6 @@ export const Dashboard = () => {
                         </div>
                       </div>
                       <CardSplat />
-                      <div className="absolute bottom-4 right-4 z-10">
-                        <p className="text-sm text-gray-500 dark:text-gray-400">{match.time}</p>
-                      </div>
                     </div>
                   ))
                 )}
@@ -251,7 +249,7 @@ export const Dashboard = () => {
                   <thead className="bg-gray-50 dark:bg-gray-700">
                     <tr>
                       <th className="p-4 text-left font-semibold text-gray-900 dark:text-gray-100">Partida</th>
-                      <th className="p-4 text-left font-semibold text-gray-900 dark:text-gray-100">Horário</th>
+                      <th className="p-4 text-center font-semibold text-gray-900 dark:text-gray-100">#</th>
                       <th className="p-4 text-left font-semibold text-gray-900 dark:text-gray-100">Esporte</th>
                       <th className="p-4 text-left font-semibold text-gray-900 dark:text-gray-100">Categoria</th>
                       <th className="p-4 text-left font-semibold text-gray-900 dark:text-gray-100">Local</th>
@@ -270,10 +268,10 @@ export const Dashboard = () => {
                         <td colSpan="7" className="p-6 text-center text-gray-500">Nenhuma súmula encontrada.</td>
                       </tr>
                     ) : (
-                      partidasFinalizadas.map(match => (
+                      partidasFinalizadas.map((match, index) => (
                         <tr key={match.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                           <td className="p-4 text-gray-800 dark:text-gray-200 font-semibold">{match.team1} VS {match.team2}</td>
-                          <td className="p-4 text-gray-600 dark:text-gray-300">{match.time}</td>
+                          <td className="p-4 text-center text-gray-600 dark:text-gray-300 font-medium">#{match.ordem || index + 1}</td>
                           <td className="p-4 text-gray-600 dark:text-gray-300">{match.modality}</td>
                           <td className="p-4 text-gray-600 dark:text-gray-300">{match.category}</td>
                           <td className="p-4 text-gray-600 dark:text-gray-300">{match.location}</td>
@@ -306,6 +304,14 @@ export const Dashboard = () => {
             match={partidaSelecionada}
             mode="final"
             onSumulaEnviada={(id) => tratarSumulaEnviada(id)}
+          />
+
+          <TournamentSelector
+            isOpen={showTournamentSelector}
+            onClose={() => setShowTournamentSelector(false)}
+            tournaments={tournaments}
+            selectedTournament={selectedTournament}
+            onSelectTournament={selectTournament}
           />
         </>
       )}

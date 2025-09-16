@@ -122,3 +122,57 @@ function getStatusPortugues(status) {
   };
   return statusMap[status] || status;
 }
+
+export async function DELETE(request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const torneioId = searchParams.get('torneioId');
+
+    if (!torneioId) {
+      return Response.json({ error: 'ID do torneio é obrigatório' }, { status: 400 });
+    }
+
+    console.log(`🗑️ Deletando todas as partidas do torneio ${torneioId}`);
+
+    // Primeiro, deletar todos os eventos das partidas
+    const eventosDeleted = await prisma.eventoPartida.deleteMany({
+      where: {
+        partida: {
+          torneioId: parseInt(torneioId)
+        }
+      }
+    });
+
+    // Depois, deletar as relações partida-time
+    const partidaTimeDeleted = await prisma.partidaTime.deleteMany({
+      where: {
+        partida: {
+          torneioId: parseInt(torneioId)
+        }
+      }
+    });
+
+    // Por fim, deletar as partidas
+    const partidasDeleted = await prisma.partida.deleteMany({
+      where: {
+        torneioId: parseInt(torneioId)
+      }
+    });
+
+    console.log(`✅ Deletadas: ${partidasDeleted.count} partidas, ${partidaTimeDeleted.count} relações time-partida, ${eventosDeleted.count} eventos`);
+
+    return Response.json({
+      message: 'Partidas deletadas com sucesso',
+      partidasDeleted: partidasDeleted.count,
+      partidaTimeDeleted: partidaTimeDeleted.count,
+      eventosDeleted: eventosDeleted.count
+    });
+
+  } catch (error) {
+    console.error('Erro ao deletar partidas:', error);
+    return Response.json({ 
+      error: 'Erro interno do servidor',
+      details: error.message 
+    }, { status: 500 });
+  }
+}
