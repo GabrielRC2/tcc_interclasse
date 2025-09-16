@@ -7,13 +7,18 @@ export async function GET() {
     const torneios = await prisma.torneio.findMany({
       orderBy: { inicio: 'desc' },
       include: {
-        times: true, // INCLUIR TIMES PARA CONTAGEM
+        times: true,
         grupos: {
           include: {
             times: true
           }
         },
-        partidas: true
+        partidas: true,
+        torneioModalidades: {
+          include: {
+            modalidade: true
+          }
+        }
       }
     });
 
@@ -24,7 +29,7 @@ export async function GET() {
       startDate: t.inicio.toISOString().split('T')[0],
       endDate: t.fim.toISOString().split('T')[0],
       location: 'ETEC João Belarmino',
-      modalities: getModalitiesByName(t.nome), // FUNÇÃO HELPER
+      modalities: t.torneioModalidades.map(tm => tm.modalidade.nome).join(', '),
       teamsCount: t.times?.length || 0, // CONTAGEM REAL DE TIMES
       matchesTotal: t.partidas?.length || 0,
       matchesPlayed: t.partidas?.filter(p => p.statusPartida === 'FINALIZADA').length || 0
@@ -37,42 +42,78 @@ export async function GET() {
   }
 }
 
-// ADICIONAR FUNÇÃO HELPER:
-function getModalitiesByName(nome) {
-  if (nome === 'Meio do Ano') return 'Vôlei, Handebol';
-  if (nome === 'Fim de Ano') return 'Futsal, Basquete';
-  return 'Futsal, Vôlei, Basquete, Handebol'; // Fallback
-}
+// Função removida pois agora usamos dados reais do banco
 
 export async function POST(request) {
   try {
     const { name, location, startDate, endDate, modalities } = await request.json();
+    
+    // Converter string de modalidades em array
+    const modalidadesArray = modalities.split(',').map(m => m.trim());
 
-    // Extrair o ano da data de início para adicionar ao nome
-    const startYear = new Date(startDate).getFullYear();
-    const nomeComAno = `${name} ${startYear}`;
+    // Criar o torneio e as modalidades em uma transação
+    const resultado = await prisma.$transaction(async (tx) => {
+      // 1. Criar o torneio
+      const novoTorneio = await tx.torneio.create({
+        data: {
+          nome: name,
+          status: 'PLANEJAMENTO',
+          inicio: new Date(startDate),
+          fim: new Date(endDate),
+        },
+      });
 
-    const torneio = await prisma.torneio.create({
-      data: {
-        nome: nomeComAno,
-        status: 'PLANEJAMENTO',
-        inicio: new Date(startDate),
-        fim: new Date(endDate)
+      // 2. Para cada modalidade
+      for (const modalidadeNome of modalidadesArray) {
+        // Verificar se a modalidade já existe
+        let modalidade = await tx.modalidade.findFirst({
+          where: { nome: modalidadeNome }
+        });
+
+        // Se não existe, criar
+        if (!modalidade) {
+          modalidade = await tx.modalidade.create({
+            data: { nome: modalidadeNome }
+          });
+        }
+
+        // Criar a ligação na tabela TorneioModalidade
+        await tx.torneioModalidade.create({
+          data: {
+            torneioId: novoTorneio.id,
+            modalidadeId: modalidade.id
+          }
+        });
       }
+
+      // Retornar o torneio com suas modalidades
+      const torneioCompleto = await tx.torneio.findUnique({
+        where: { id: novoTorneio.id },
+        include: {
+          torneioModalidades: {
+            include: {
+              modalidade: true
+            }
+          }
+        }
+      });
+
+      return torneioCompleto;
     });
 
+    // Formatar resposta
     return Response.json({
-      id: torneio.id,
-      name: torneio.nome,
-      status: torneio.status,
-      startDate: torneio.inicio.toISOString().split('T')[0],
-      endDate: torneio.fim.toISOString().split('T')[0],
+      id: resultado.id,
+      name: resultado.nome,
+      status: resultado.status,
+      startDate: resultado.inicio.toISOString().split('T')[0],
+      endDate: resultado.fim.toISOString().split('T')[0],
       location: location,
-      modalities: modalities,
+      modalities: resultado.torneioModalidades.map(tm => tm.modalidade.nome).join(', '),
       teamsCount: 0,
       matchesTotal: 0,
       matchesPlayed: 0
-    }, { status: 201 });
+    });
   } catch (error) {
     console.error('Erro ao criar torneio:', error);
     return Response.json({ error: 'Erro ao criar torneio' }, { status: 500 });
