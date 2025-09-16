@@ -293,18 +293,21 @@ export const Dashboard = () => {
 
           </div>
 
-          <SumulaModal
-            isOpen={!!partidaSelecionada}
-            onClose={() => { 
-              setPartidaSelecionada(null); 
-              carregarPartidasFinalizadas();
-              carregarProximasPartidas();
-              carregarJogadoresDestaque();
-            }}
-            match={partidaSelecionada}
-            mode="final"
-            onSumulaEnviada={(id) => tratarSumulaEnviada(id)}
-          />
+          {partidaSelecionada && (
+            <SumulaModal
+              key={`sumula-dashboard-${partidaSelecionada.id}`}
+              isOpen={true}
+              onClose={() => { 
+                setPartidaSelecionada(null); 
+                carregarPartidasFinalizadas();
+                carregarProximasPartidas();
+                carregarJogadoresDestaque();
+              }}
+              match={partidaSelecionada}
+              mode="final"
+              onSumulaEnviada={(id) => tratarSumulaEnviada(id)}
+            />
+          )}
 
           <TournamentSelector
             isOpen={showTournamentSelector}

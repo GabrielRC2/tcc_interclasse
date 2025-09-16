@@ -736,13 +736,16 @@ export const MatchesPage = () => {
             </div>
           )}
 
-          <SumulaModal
-            isOpen={!!partidaSelecionada}
-            onClose={() => setPartidaSelecionada(null)}
-            match={partidaSelecionada}
-            mode={partidaSelecionada?.status === 'Em andamento' ? 'live' : 'final'}
-            onSumulaEnviada={(id) => tratarSumulaEnviada(id)}
-          />
+          {partidaSelecionada && (
+            <SumulaModal
+              key={`sumula-${partidaSelecionada.id}`}
+              isOpen={true}
+              onClose={() => setPartidaSelecionada(null)}
+              match={partidaSelecionada}
+              mode={partidaSelecionada?.status === 'Em andamento' ? 'live' : 'final'}
+              onSumulaEnviada={(id) => tratarSumulaEnviada(id)}
+            />
+          )}
 
           {showConfigModal && (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
