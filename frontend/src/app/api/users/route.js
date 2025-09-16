@@ -31,16 +31,16 @@ export async function POST(request) {
 
     const novoUsuario = await prisma.usuario.create({
       data: {
-        nome_usuario,
-        email_usuario,
-        senha_hash,
-        tipo_usuario: tipoUsuarioMapeado,
+        nome: nome_usuario,
+        email: email_usuario,
+        senhaHash: senha_hash,
+        tipo: tipoUsuarioMapeado,
       },
       select: {
-        id_usuario: true,
-        nome_usuario: true,
-        email_usuario: true,
-        tipo_usuario: true,
+        id: true,
+        nome: true,
+        email: true,
+        tipo: true,
       },
     });
 
@@ -65,13 +65,13 @@ export async function GET() {
   try {
     const users = await prisma.usuario.findMany({
       select: {
-        id_usuario: true,
-        nome_usuario: true,
-        email_usuario: true,
-        tipo_usuario: true,
+        id: true,
+        nome: true,
+        email: true,
+        tipo: true,
       },
       orderBy: {
-        nome_usuario: "asc",
+        nome: "asc",
       },
     });
 

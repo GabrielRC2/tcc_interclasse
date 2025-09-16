@@ -101,22 +101,22 @@ export const RegistrationsPage = () => {
 
             // Separar usuários por tipo (importante para controle de acesso)
             setUsers({
-                administradores: usersData.filter(u => u.tipo_usuario?.toLowerCase() === 'admin'),
-                staff: usersData.filter(u => u.tipo_usuario?.toLowerCase() === 'staff'),
-                representantes: usersData.filter(u => u.tipo_usuario?.toLowerCase() === 'representante')
+                administradores: usersData.filter(u => u.tipo?.toLowerCase() === 'admin'),
+                staff: usersData.filter(u => u.tipo?.toLowerCase() === 'staff'),
+                representantes: usersData.filter(u => u.tipo?.toLowerCase() === 'representante')
             });
         } catch (error) {
             console.error('Erro ao carregar usuários:', error);
             // Se a API não existe ainda, usar dados mock
             setUsers({
                 administradores: [
-                    { id: 1, nome_usuario: 'Admin Principal', email_usuario: 'admin@icm.com', tipo_usuario: 'admin' }
+                    { id: 1, nome: 'Admin Principal', email: 'admin@icm.com', tipo: 'admin' }
                 ],
                 staff: [
-                    { id: 1, nome_usuario: 'Staff Principal', email_usuario: 'staff@icm.com', tipo_usuario: 'staff' }
+                    { id: 1, nome: 'Staff Principal', email: 'staff@icm.com', tipo: 'staff' }
                 ],
                 representantes: [
-                    { id: 1, nome_usuario: 'Representante Principal', email_usuario: 'representante@icm.com', tipo_usuario: 'representante' }
+                    { id: 1, nome: 'Representante Principal', email: 'representante@icm.com', tipo: 'representante' }
                 ]
             });
         }
@@ -130,11 +130,11 @@ export const RegistrationsPage = () => {
             // Para usuários (importante para login)
 
             setFormData({
-                name: item.nome_usuario || '',
+                name: item.nome || '',
                 sigla: '',
-                email: item.email_usuario || '',
+                email: item.email || '',
                 senha: '',
-                tipo_usuario: item.tipo_usuario || ''
+                tipo_usuario: item.tipo || ''
             });
         } else {
             // Para outros cadastros
@@ -179,7 +179,7 @@ export const RegistrationsPage = () => {
                     break;
                 case 'Usuários':
                     // IMPORTANTE PARA LOGIN: Gerenciamento de usuários
-                    endpoint = editingItem ? `/api/users/${editingItem.id_usuario}` : '/api/users';
+                    endpoint = editingItem ? `/api/users/${editingItem.id}` : '/api/users';
                     body = {
                         nome_usuario: formData.name,
                         email_usuario: formData.email,
@@ -217,7 +217,7 @@ export const RegistrationsPage = () => {
     };
 
     const handleDelete = async (item, type) => {
-        if (!confirm(`Tem certeza que deseja excluir "${item.nome || item.name || item.nome_usuario}"?`)) {
+        if (!confirm(`Tem certeza que deseja excluir "${item.nome || item.name}"?`)) {
             return;
         }
 
@@ -235,7 +235,7 @@ export const RegistrationsPage = () => {
                     break;
                 case 'Usuários':
                     // IMPORTANTE PARA LOGIN: Exclusão de usuários
-                    endpoint = `/api/users/${item.id_usuario}`;
+                    endpoint = `/api/users/${item.id}`;
                     break;
                 default:
                     return;
@@ -408,19 +408,19 @@ export const RegistrationsPage = () => {
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 {users[selectedUserCategory.toLowerCase()]?.map((user) => (
                                     <div
-                                        key={user.id_usuario || user.id}
+                                        key={user.id || user.id}
                                         className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg"
                                     >
                                         <div className="flex justify-between items-start">
                                             <div>
                                                 <h4 className="font-semibold text-gray-900 dark:text-gray-100">
-                                                    {user.nome_usuario}
+                                                    {user.nome}
                                                 </h4>
                                                 <p className="text-sm text-gray-600 dark:text-gray-400">
-                                                    {user.email_usuario}
+                                                    {user.email}
                                                 </p>
                                                 <span className="inline-block mt-1 px-2 py-1 text-xs bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 rounded">
-                                                    {user.tipo_usuario}
+                                                    {user.tipo}
                                                 </span>
                                             </div>
                                             <div className="flex gap-2">

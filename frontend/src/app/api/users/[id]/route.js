@@ -16,12 +16,12 @@ export async function GET(request, { params }) {
     }
 
     const usuario = await prisma.usuario.findUnique({
-      where: { id_usuario: idUsuario },
+      where: { id: idUsuario },
       select: {
-        id_usuario: true,
-        nome_usuario: true,
-        email_usuario: true,
-        tipo_usuario: true,
+        id: true,
+        nome: true,
+        email: true,
+        tipo: true,
       },
     });
 
@@ -69,24 +69,24 @@ export async function PUT(request, { params }) {
     }
 
     const data = {
-      ...(nome_usuario && { nome_usuario }),
-      ...(email_usuario && { email_usuario }),
-      ...(tipoUsuarioMapeado && { tipo_usuario: tipoUsuarioMapeado }),
+      ...(nome_usuario && { nome: nome_usuario }),
+      ...(email_usuario && { email: email_usuario }),
+      ...(tipoUsuarioMapeado && { tipo: tipoUsuarioMapeado }),
     };
 
     if (senha) {
       const salt = await bcrypt.genSalt(10);
-      data.senha_hash = await bcrypt.hash(senha, salt);
+      data.senhaHash = await bcrypt.hash(senha, salt);
     }
 
     const usuarioAtualizado = await prisma.usuario.update({
-      where: { id_usuario: idUsuario },
+      where: { id: idUsuario },
       data,
       select: {
-        id_usuario: true,
-        nome_usuario: true,
-        email_usuario: true,
-        tipo_usuario: true,
+        id: true,
+        nome: true,
+        email: true,
+        tipo: true,
       },
     });
 
@@ -120,7 +120,7 @@ export async function DELETE(request, { params }) {
     }
 
     await prisma.usuario.delete({
-      where: { id_usuario: idUsuario },
+      where: { id: idUsuario },
     });
 
     return NextResponse.json(
