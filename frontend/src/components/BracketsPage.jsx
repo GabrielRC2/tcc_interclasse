@@ -9,11 +9,13 @@ export const BracketsPage = () => {
     const [modalidades, setModalidades] = useState([]);
     const [gruposData, setGruposData] = useState([]);
     const [classificacao, setClassificacao] = useState([]);
+    const [classificacoesPorGrupo, setClassificacoesPorGrupo] = useState({}); // Novo estado
     const [eliminatorias, setEliminatorias] = useState([]);
     const [selectedModalidade, setSelectedModalidade] = useState('');
     const [selectedGenero, setSelectedGenero] = useState('');
     const [generos] = useState(['Masculino', 'Feminino']);
     const [loading, setLoading] = useState(true);
+    const [classificacaoGeralExpandida, setClassificacaoGeralExpandida] = useState(false);
 
     useEffect(() => {
         loadModalidades();
@@ -39,6 +41,7 @@ export const BracketsPage = () => {
         if (!selectedTournament || !selectedModalidade || !selectedGenero) {
             setGruposData([]);
             setClassificacao([]);
+            setClassificacoesPorGrupo({});
             setEliminatorias([]);
             return;
         }
@@ -55,9 +58,38 @@ export const BracketsPage = () => {
             const response = await fetch(`/api/grupos?torneioId=${selectedTournament.id}&modalidadeId=${selectedModalidade}&genero=${selectedGenero}`);
             const data = await response.json();
             setGruposData(data);
+
+            // Carregar classificações individuais para cada grupo
+            if (data.length > 0) {
+                await loadClassificacoesPorGrupo(data);
+            }
         } catch (error) {
             console.error('Erro ao carregar grupos:', error);
             setGruposData([]);
+            setClassificacoesPorGrupo({});
+        }
+    };
+
+    const loadClassificacoesPorGrupo = async (grupos) => {
+        try {
+            const classificacoesPorGrupo = {};
+            
+            // Carregar classificação para cada grupo individualmente
+            await Promise.all(grupos.map(async (grupo) => {
+                try {
+                    const response = await fetch(`/api/classificacao?torneioId=${selectedTournament.id}&grupoId=${grupo.id}`);
+                    const data = await response.json();
+                    classificacoesPorGrupo[grupo.nome] = data.classificacao || [];
+                } catch (error) {
+                    console.error(`Erro ao carregar classificação do grupo ${grupo.nome}:`, error);
+                    classificacoesPorGrupo[grupo.nome] = [];
+                }
+            }));
+
+            setClassificacoesPorGrupo(classificacoesPorGrupo);
+        } catch (error) {
+            console.error('Erro ao carregar classificações por grupo:', error);
+            setClassificacoesPorGrupo({});
         }
     };
 
@@ -236,6 +268,54 @@ export const BracketsPage = () => {
         return 'Final';
     };
 
+    // Componente reutilizável para tabela de classificação
+    const TabelaClassificacao = ({ dados, titulo, grupoEspecifico = false }) => (
+        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm p-6 relative overflow-hidden">
+            <div className="relative z-10">
+                <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
+                    <Award size={20} className={grupoEspecifico ? "text-blue-500" : "text-green-500"} />
+                    {titulo}
+                </h2>
+
+                <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                        <thead>
+                            <tr className="border-b border-gray-200 dark:border-gray-600">
+                                <th className="text-left py-2 px-2 font-semibold">Pos</th>
+                                <th className="text-left py-2 px-2 font-semibold">Time</th>
+                                <th className="text-center py-2 px-2 font-semibold">PTS</th>
+                                <th className="text-center py-2 px-2 font-semibold">J</th>
+                                <th className="text-center py-2 px-2 font-semibold">V</th>
+                                <th className="text-center py-2 px-2 font-semibold">E</th>
+                                <th className="text-center py-2 px-2 font-semibold">D</th>
+                                <th className="text-center py-2 px-2 font-semibold">GP</th>
+                                <th className="text-center py-2 px-2 font-semibold">GC</th>
+                                <th className="text-center py-2 px-2 font-semibold">SG</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {dados.map((time, index) => (
+                                <tr key={time.timeId} className="border-b border-gray-100 dark:border-gray-700">
+                                    <td className="py-2 px-2 font-bold">{index + 1}°</td>
+                                    <td className="py-2 px-2 font-medium">{time.nome}</td>
+                                    <td className="py-2 px-2 text-center font-bold text-blue-600 dark:text-blue-400">{time.pontos}</td>
+                                    <td className="py-2 px-2 text-center">{time.jogos}</td>
+                                    <td className="py-2 px-2 text-center text-green-600 dark:text-green-400">{time.vitorias}</td>
+                                    <td className="py-2 px-2 text-center text-yellow-600 dark:text-yellow-400">{time.empates}</td>
+                                    <td className="py-2 px-2 text-center text-red-600 dark:text-red-400">{time.derrotas}</td>
+                                    <td className="py-2 px-2 text-center">{time.golsPro}</td>
+                                    <td className="py-2 px-2 text-center">{time.golsContra}</td>
+                                    <td className="py-2 px-2 text-center font-semibold">{time.saldoGols > 0 ? '+' : ''}{time.saldoGols}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <CardSplat />
+        </div>
+    );
+
     if (loading) {
         return <div className="flex justify-center items-center h-64">Carregando...</div>;
     }
@@ -311,22 +391,17 @@ export const BracketsPage = () => {
                                     FASE DE GRUPOS
                                 </h2>
 
-                                <div className="grid gap-4">
+                                <div className="grid gap-6">
                                     {gruposData.map(grupo => (
-                                        <div key={grupo.nome} className="border border-gray-200 dark:border-gray-600 rounded-lg p-4">
-                                            <h3 className="text-lg font-bold text-gray-800 dark:text-gray-200 mb-3">
-                                                Grupo {grupo.nome}
-                                            </h3>
-                                            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                                                {grupo.times.map(time => (
-                                                    <div key={time.id} className="flex items-center gap-2 p-2 bg-gray-50 dark:bg-gray-700 rounded">
-                                                        <Trophy size={14} className="text-yellow-500" />
-                                                        <span className="font-medium text-gray-900 dark:text-gray-100 text-sm">
-                                                            {time.nome}
-                                                        </span>
-                                                    </div>
-                                                ))}
-                                            </div>
+                                        <div key={grupo.nome} className="space-y-4">
+                                            {/* Classificação do grupo */}
+                                            {classificacoesPorGrupo[grupo.nome] && classificacoesPorGrupo[grupo.nome].length > 0 && (
+                                                <TabelaClassificacao
+                                                    dados={classificacoesPorGrupo[grupo.nome]}
+                                                    titulo={`CLASSIFICAÇÃO - GRUPO ${grupo.nome}`}
+                                                    grupoEspecifico={true}
+                                                />
+                                            )}
                                         </div>
                                     ))}
                                 </div>
@@ -339,52 +414,32 @@ export const BracketsPage = () => {
                     {classificacao.length > 0 && (
                         <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm p-6 relative overflow-hidden">
                             <div className="relative z-10">
-                                <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-6 flex items-center gap-2">
-                                    <Award size={24} className="text-green-500" />
-                                    CLASSIFICAÇÃO GERAL
-                                </h2>
-
-                                <div className="overflow-x-auto">
-                                    <table className="w-full text-sm">
-                                        <thead>
-                                            <tr className="border-b border-gray-200 dark:border-gray-600">
-                                                <th className="text-left py-2 px-2 font-semibold">Pos</th>
-                                                <th className="text-left py-2 px-2 font-semibold">Time</th>
-                                                <th className="text-center py-2 px-2 font-semibold">PTS</th>
-                                                <th className="text-center py-2 px-2 font-semibold">J</th>
-                                                <th className="text-center py-2 px-2 font-semibold">V</th>
-                                                <th className="text-center py-2 px-2 font-semibold">E</th>
-                                                <th className="text-center py-2 px-2 font-semibold">D</th>
-                                                <th className="text-center py-2 px-2 font-semibold">GP</th>
-                                                <th className="text-center py-2 px-2 font-semibold">GC</th>
-                                                <th className="text-center py-2 px-2 font-semibold">SG</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {classificacao.map((time, index) => (
-                                                <tr key={time.timeId} className={`${index < 8 ? 'bg-green-50 dark:bg-green-900/20' : ''} border-b border-gray-100 dark:border-gray-700`}>
-                                                    <td className="py-2 px-2 font-bold">{index + 1}°</td>
-                                                    <td className="py-2 px-2 font-medium">{time.nome}</td>
-                                                    <td className="py-2 px-2 text-center font-bold text-blue-600 dark:text-blue-400">{time.pontos}</td>
-                                                    <td className="py-2 px-2 text-center">{time.jogos}</td>
-                                                    <td className="py-2 px-2 text-center text-green-600 dark:text-green-400">{time.vitorias}</td>
-                                                    <td className="py-2 px-2 text-center text-yellow-600 dark:text-yellow-400">{time.empates}</td>
-                                                    <td className="py-2 px-2 text-center text-red-600 dark:text-red-400">{time.derrotas}</td>
-                                                    <td className="py-2 px-2 text-center">{time.golsPro}</td>
-                                                    <td className="py-2 px-2 text-center">{time.golsContra}</td>
-                                                    <td className="py-2 px-2 text-center font-semibold">{time.saldoGols > 0 ? '+' : ''}{time.saldoGols}</td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
+                                <div 
+                                    className="flex items-center justify-between cursor-pointer mb-4"
+                                    onClick={() => setClassificacaoGeralExpandida(!classificacaoGeralExpandida)}
+                                >
+                                    <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                                        <Award size={24} className="text-green-500" />
+                                        CLASSIFICAÇÃO GERAL
+                                    </h2>
+                                    <Button
+                                        variant="ghost"
+                                        className="p-2"
+                                    >
+                                        {classificacaoGeralExpandida ? (
+                                            <span className="text-sm">Recolher ▲</span>
+                                        ) : (
+                                            <span className="text-sm">Expandir ▼</span>
+                                        )}
+                                    </Button>
                                 </div>
 
-                                {classificacao.length > 8 && (
-                                    <div className="mt-4 p-3 bg-green-50 dark:bg-green-900/30 rounded-lg">
-                                        <p className="text-sm text-green-700 dark:text-green-300">
-                                            <strong>Classificados para {determinarFase(Math.min(classificacao.length, 16))}:</strong> Primeiros {Math.min(classificacao.length, 16)} colocados (destacados em verde)
-                                        </p>
-                                    </div>
+                                {classificacaoGeralExpandida && (
+                                    <TabelaClassificacao
+                                        dados={classificacao}
+                                        titulo=""
+                                        grupoEspecifico={false}
+                                    />
                                 )}
                             </div>
                             <CardSplat />
