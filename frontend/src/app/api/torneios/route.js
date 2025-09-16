@@ -46,7 +46,7 @@ function getModalitiesByName(nome) {
 
 export async function POST(request) {
   try {
-    const { name, location, startDate, endDate, modalities } = await request.json();
+    const { name, location, startDate, endDate, modalities, status } = await request.json();
 
     // Extrair o ano da data de início para adicionar ao nome
     const startYear = new Date(startDate).getFullYear();
@@ -55,7 +55,7 @@ export async function POST(request) {
     const torneio = await prisma.torneio.create({
       data: {
         nome: nomeComAno,
-        status: 'PLANEJAMENTO',
+        status: status || 'PLANEJAMENTO', // Usar o status enviado ou PLANEJAMENTO como padrão
         inicio: new Date(startDate),
         fim: new Date(endDate)
       }
@@ -67,7 +67,7 @@ export async function POST(request) {
       status: torneio.status,
       startDate: torneio.inicio.toISOString().split('T')[0],
       endDate: torneio.fim.toISOString().split('T')[0],
-      location: location,
+      location: 'ETEC João Belarmino', // Sempre fixo
       modalities: modalities,
       teamsCount: 0,
       matchesTotal: 0,

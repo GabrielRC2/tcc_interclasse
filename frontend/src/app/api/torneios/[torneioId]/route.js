@@ -5,16 +5,24 @@ const prisma = new PrismaClient();
 
 export async function PUT(request, { params }) {
   try {
-    const { name, location, startDate, endDate, modalities } = await request.json();
+    const { name, location, startDate, endDate, modalities, status } = await request.json();
     const id = parseInt(params.torneioId);
+
+    // Criar objeto de dados para atualização
+    const updateData = {
+      nome: name,
+      inicio: new Date(startDate),
+      fim: new Date(endDate)
+    };
+
+    // Incluir status se foi fornecido
+    if (status) {
+      updateData.status = status;
+    }
 
     const torneio = await prisma.torneio.update({
       where: { id },
-      data: {
-        nome: name,
-        inicio: new Date(startDate),
-        fim: new Date(endDate)
-      }
+      data: updateData
     });
 
     return NextResponse.json({
@@ -23,7 +31,7 @@ export async function PUT(request, { params }) {
       status: torneio.status,
       startDate: torneio.inicio.toISOString().split('T')[0],
       endDate: torneio.fim.toISOString().split('T')[0],
-      location: location,
+      location: 'ETEC João Belarmino', // Sempre fixo
       modalities: modalities
     });
   } catch (error) {

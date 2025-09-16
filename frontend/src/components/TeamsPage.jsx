@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { Plus, Edit, Trash2, UserCircle, Filter, X } from 'lucide-react';
+import { Plus, Edit, Trash2, UserCircle, Filter, X, MoreVertical } from 'lucide-react';
 import { Modal } from '@/components/Modal';
 import { Button, Input, Select, CardSplat } from '@/components/common';
 import { useTournament } from '@/contexts/TournamentContext';
@@ -15,6 +15,12 @@ function TeamsPage() {
   const [showAddPlayer, setShowAddPlayer] = useState(false);
   const [newPlayer, setNewPlayer] = useState({ name: '', numeroCamisa: '' });
   const [availablePlayers, setAvailablePlayers] = useState([]);
+
+  // Estados para menu de jogadores
+  const [playerMenuOpen, setPlayerMenuOpen] = useState(null);
+  const [editingPlayer, setEditingPlayer] = useState(null);
+  const [showEditPlayer, setShowEditPlayer] = useState(false);
+  const [editPlayerData, setEditPlayerData] = useState({ numeroCamisa: '' });
 
   // Estados dos filtros
   const [filters, setFilters] = useState({
@@ -33,6 +39,14 @@ function TeamsPage() {
     loadTeams();
     loadCursos();
     loadModalidades();
+    
+    // Adicionar event listener para fechar menu quando clicar fora
+    const handleClickOutside = () => {
+      setPlayerMenuOpen(null);
+    };
+    
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
   }, []);
 
   const loadTeams = async () => {
@@ -239,8 +253,28 @@ function TeamsPage() {
         return;
       }
 
-      // Recarregar dados do time
-      await loadTeams();
+      const novoJogadorAdicionado = await response.json();
+
+      // Atualização otimista - atualizar o time selecionado imediatamente
+      const timeAtualizado = {
+        ...selectedTeam,
+        players: [...(selectedTeam.players || []), novoJogadorAdicionado]
+      };
+
+      // Atualizar na lista de times
+      setTeams(prevTeams => 
+        prevTeams.map(team => 
+          team.id === selectedTeam.id ? timeAtualizado : team
+        )
+      );
+
+      // Atualizar o time selecionado para refletir na interface
+      setSelectedTeam(timeAtualizado);
+
+      // Remover jogador da lista de disponíveis imediatamente
+      setAvailablePlayers(prevPlayers => 
+        prevPlayers.filter(player => player.id !== newPlayer.jogadorId)
+      );
 
       // Limpar formulário e fechar modal
       setNewPlayer({ name: '', numeroCamisa: '', jogadorId: null });
@@ -291,8 +325,10 @@ function TeamsPage() {
         return;
       }
 
-      // Recarregar jogadores disponíveis
-      await loadAvailablePlayers();
+      const novoJogador = await response.json();
+
+      // Atualização otimista - adicionar o novo jogador à lista de disponíveis
+      setAvailablePlayers(prevPlayers => [...prevPlayers, novoJogador]);
 
       // Limpar formulário e fechar modal
       setNewPlayerData({ name: '', sala: '', genero: 'Masculino', cursoId: null });
@@ -302,6 +338,103 @@ function TeamsPage() {
     } catch (error) {
       console.error('Erro ao criar jogador:', error);
       alert('Erro ao criar jogador');
+    }
+  };
+
+  // Função para editar número da camisa de um jogador
+  const editPlayerNumber = async (e) => {
+    e.preventDefault();
+    if (!editingPlayer || !selectedTeam) return;
+
+    try {
+      const response = await fetch(`/api/teams/${selectedTeam.id}/jogadores`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          jogadorId: editingPlayer.id,
+          numeroCamisa: editPlayerData.numeroCamisa
+        })
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        alert(error.error || 'Erro ao editar jogador');
+        return;
+      }
+
+      const jogadorAtualizado = await response.json();
+
+      // Atualização otimista
+      const timeAtualizado = {
+        ...selectedTeam,
+        players: selectedTeam.players.map(player =>
+          player.id === editingPlayer.id ? { ...player, numero: parseInt(editPlayerData.numeroCamisa) } : player
+        )
+      };
+
+      setTeams(prevTeams =>
+        prevTeams.map(team =>
+          team.id === selectedTeam.id ? timeAtualizado : team
+        )
+      );
+
+      setSelectedTeam(timeAtualizado);
+
+      // Fechar modal
+      setShowEditPlayer(false);
+      setEditingPlayer(null);
+      setEditPlayerData({ numeroCamisa: '' });
+
+      alert('Número da camisa atualizado com sucesso!');
+    } catch (error) {
+      console.error('Erro ao editar jogador:', error);
+      alert('Erro ao editar jogador');
+    }
+  };
+
+  // Função para remover jogador do time
+  const removePlayerFromTeam = async (player) => {
+    if (!selectedTeam || !confirm(`Tem certeza que deseja remover ${player.name} do time?`)) return;
+
+    try {
+      const response = await fetch(`/api/teams/${selectedTeam.id}/jogadores?jogadorId=${player.id}`, {
+        method: 'DELETE'
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        alert(error.error || 'Erro ao remover jogador');
+        return;
+      }
+
+      // Atualização otimista
+      const timeAtualizado = {
+        ...selectedTeam,
+        players: selectedTeam.players.filter(p => p.id !== player.id)
+      };
+
+      setTeams(prevTeams =>
+        prevTeams.map(team =>
+          team.id === selectedTeam.id ? timeAtualizado : team
+        )
+      );
+
+      setSelectedTeam(timeAtualizado);
+
+      // Adicionar jogador de volta à lista de disponíveis
+      setAvailablePlayers(prevPlayers => [...prevPlayers, {
+        id: player.id,
+        name: player.name,
+        sala: player.sala,
+        genero: player.genero,
+        course: player.course || selectedTeam.course
+      }]);
+
+      setPlayerMenuOpen(null);
+      alert('Jogador removido do time com sucesso!');
+    } catch (error) {
+      console.error('Erro ao remover jogador:', error);
+      alert('Erro ao remover jogador');
     }
   };
 
@@ -584,6 +717,7 @@ function TeamsPage() {
                     e.stopPropagation();
                     toggleTeamSelection(team.id);
                   }}
+                  onClick={(e) => e.stopPropagation()}
                   className="absolute top-2 right-2 z-20 form-checkbox h-4 w-4 text-red-600 rounded border-gray-300 dark:border-gray-600 focus:ring-red-500 bg-white dark:bg-gray-900"
                 />
                 <div className="relative z-10 text-center">
@@ -655,7 +789,7 @@ function TeamsPage() {
                 {selectedTeam.players && selectedTeam.players.length > 0 ? (
                   <div className="space-y-2 max-h-60 overflow-y-auto">
                     {selectedTeam.players.map((player, index) => (
-                      <div key={player.id} className="flex items-center gap-3 p-2 bg-gray-50 dark:bg-gray-700 rounded">
+                      <div key={player.id} className="flex items-center gap-3 p-2 bg-gray-50 dark:bg-gray-700 rounded relative">
                         <div className="w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold">
                           {player.numero || index + 1}
                         </div>
@@ -664,6 +798,48 @@ function TeamsPage() {
                           <p className="text-xs text-gray-500 dark:text-gray-400">
                             {player.sala} • {player.genero}
                           </p>
+                        </div>
+                        
+                        {/* Menu de 3 pontinhos */}
+                        <div className="relative">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setPlayerMenuOpen(playerMenuOpen === player.id ? null : player.id);
+                            }}
+                            className="p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded"
+                          >
+                            <MoreVertical size={16} className="text-gray-500 dark:text-gray-400" />
+                          </button>
+                          
+                          {playerMenuOpen === player.id && (
+                            <div 
+                              className={`absolute right-0 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg py-1 z-50 min-w-[120px] ${
+                                index >= selectedTeam.players.length - 2 ? 'bottom-8' : 'top-8'
+                              }`}
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <button
+                                onClick={() => {
+                                  setEditingPlayer(player);
+                                  setEditPlayerData({ numeroCamisa: player.numero || '' });
+                                  setShowEditPlayer(true);
+                                  setPlayerMenuOpen(null);
+                                }}
+                                className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                              >
+                                <Edit size={14} />
+                                Editar Nº
+                              </button>
+                              <button
+                                onClick={() => removePlayerFromTeam(player)}
+                                className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 text-red-600 dark:text-red-400"
+                              >
+                                <Trash2 size={14} />
+                                Remover
+                              </button>
+                            </div>
+                          )}
                         </div>
                       </div>
                     ))}
@@ -960,6 +1136,53 @@ function TeamsPage() {
                 Cancelar
               </Button>
               <Button type="submit">Criar Jogador</Button>
+            </div>
+          </form>
+        </Modal>
+      )}
+      
+      {/* Modal para Editar Número da Camisa */}
+      {showEditPlayer && editingPlayer && (
+        <Modal
+          isOpen={showEditPlayer}
+          onClose={() => {
+            setShowEditPlayer(false);
+            setEditingPlayer(null);
+            setEditPlayerData({ numeroCamisa: '' });
+          }}
+          title={`Editar Camisa - ${editingPlayer.name}`}
+        >
+          <form onSubmit={editPlayerNumber} className="space-y-4">
+            <div className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+              Atual: Camisa #{editingPlayer.numero || 'Sem número'}
+            </div>
+            
+            <Input
+              label="Novo Número da Camisa"
+              type="number"
+              min="1"
+              max="99"
+              value={editPlayerData.numeroCamisa}
+              onChange={(e) => setEditPlayerData({ ...editPlayerData, numeroCamisa: e.target.value })}
+              required
+              placeholder="Digite o novo número"
+            />
+
+            <div className="flex justify-end gap-2">
+              <Button
+                type="button"
+                onClick={() => {
+                  setShowEditPlayer(false);
+                  setEditingPlayer(null);
+                  setEditPlayerData({ numeroCamisa: '' });
+                }}
+                className="bg-gray-500"
+              >
+                Cancelar
+              </Button>
+              <Button type="submit">
+                Salvar
+              </Button>
             </div>
           </form>
         </Modal>

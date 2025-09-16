@@ -67,6 +67,12 @@ export const SeasonsPage = () => {
                 method = 'PUT';
             }
 
+            console.log('📝 Enviando dados para o servidor:', {
+                formData,
+                endpoint,
+                method
+            });
+
             const response = await fetch(endpoint, {
                 method: method,
                 headers: { 'Content-Type': 'application/json' },
@@ -74,6 +80,9 @@ export const SeasonsPage = () => {
             });
 
             if (response.ok) {
+                const resultado = await response.json();
+                console.log('✅ Resposta do servidor:', resultado);
+                
                 await loadSeasons();
                 // Atualizar também o contexto de torneios
                 await refreshTournaments();
@@ -81,19 +90,24 @@ export const SeasonsPage = () => {
                 alert(`Torneio ${editingSeason ? 'editado' : 'criado'} com sucesso!`);
             } else {
                 const error = await response.json();
+                console.error('❌ Erro do servidor:', error);
                 alert(error.error || 'Erro ao salvar torneio');
             }
         } catch (error) {
-            console.error('Erro ao salvar torneio:', error);
+            console.error('❌ Erro ao salvar torneio:', error);
             alert('Erro ao salvar torneio');
         }
     };
 
     const handleEdit = (season) => {
         setEditingSeason(season);
+        
+        // Extrair o nome base do torneio (remover o ano)
+        const nomeBase = season.name.replace(/\s+\d{4}$/, ''); // Remove ano do final
+        
         setFormData({
-            name: season.name,
-            location: season.location,
+            name: nomeBase,
+            location: 'ETEC João Belarmino', // Sempre fixo
             startDate: season.startDate,
             endDate: season.endDate,
             modalities: season.modalities,
@@ -303,13 +317,14 @@ export const SeasonsPage = () => {
                         <option value="Fim de Ano">Fim de Ano</option>
                     </Select>
                     
-                    <Input 
-                        label="Local" 
-                        placeholder="Digite o local" 
-                        value={formData.location}
-                        onChange={(e) => setFormData({...formData, location: e.target.value})}
-                        required
-                    />
+                    <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Local (Fixo)
+                        </label>
+                        <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                            ETEC João Belarmino
+                        </div>
+                    </div>
 
                     <div className="grid grid-cols-2 gap-4">
                         <Input 
