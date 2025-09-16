@@ -23,16 +23,24 @@ export const TournamentProvider = ({ children }) => {
   const loadTournaments = async () => {
     try {
       const response = await fetch('/api/torneios');
-      const data = await response.json();
-      setTournaments(data);
-      
-      // Selecionar o torneio ativo automaticamente
-      const activeTournament = data.find(t => t.status === 'ATIVO') || data[0];
-      if (activeTournament && !selectedTournament) {
-        setSelectedTournament(activeTournament);
+      if (response.ok) {
+        const data = await response.json();
+        // Garantir que data seja um array
+        const tournamentsData = Array.isArray(data) ? data : [];
+        setTournaments(tournamentsData);
+        
+        // Selecionar o torneio ativo automaticamente
+        const activeTournament = tournamentsData.find(t => t.status === 'ATIVO') || tournamentsData[0];
+        if (activeTournament && !selectedTournament) {
+          setSelectedTournament(activeTournament);
+        }
+      } else {
+        console.error('Erro na resposta da API:', response.status);
+        setTournaments([]);
       }
     } catch (error) {
       console.error('Erro ao carregar torneios:', error);
+      setTournaments([]); // Garantir que seja sempre um array
     } finally {
       setLoading(false);
     }

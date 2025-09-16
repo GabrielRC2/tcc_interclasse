@@ -3,8 +3,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Modal } from '@/components/Modal';
 import { Button } from '@/components/common';
 import { useTournament } from '@/contexts/TournamentContext';
-import { PDFDownloadLink } from '@react-pdf/renderer';
-import { SumulaPDF } from './SumulaPDF';
+// import { PDFDownloadLink } from '@react-pdf/renderer';
+// import { SumulaPDF } from './SumulaPDF';
 
 export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEnviada = () => {} }) => {
   if (!match) return null;
@@ -463,13 +463,12 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEn
           {/* Left area */}
           <div className="flex items-center space-x-2">
             {exportEsquerdaBase && mostrarExport && (
-              <PDFDownloadLink
-                document={<SumulaPDF match={match} tournament={selectedTournament} showPenalties={false} team1Data={{ name: match.team1, players: jogadoresTimeA }} team2Data={{ name: match.team2, players: jogadoresTimeB }} />}
-                fileName={gerarNomeArquivo()}
+              <button
                 className="inline-flex items-center px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white font-medium rounded-md transition-colors"
+                onClick={() => alert('Exportação PDF temporariamente desabilitada')}
               >
-                {({ loading }) => (loading ? 'Gerando PDF...' : 'Exportar PDF')}
-              </PDFDownloadLink>
+                Exportar PDF
+              </button>
             )}
           </div>
 
@@ -477,13 +476,12 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEn
           <div className="flex items-center gap-2">
             {/* If export should not be left, show it here */}
             {!exportEsquerdaBase && mostrarExport && (
-              <PDFDownloadLink
-                document={<SumulaPDF match={match} tournament={selectedTournament} showPenalties={false} team1Data={{ name: match.team1, players: jogadoresTimeA }} team2Data={{ name: match.team2, players: jogadoresTimeB }} />}
-                fileName={gerarNomeArquivo()}
+              <button
                 className="inline-flex items-center px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white font-medium rounded-md transition-colors"
+                onClick={() => alert('Exportação PDF temporariamente desabilitada')}
               >
-                {({ loading }) => (loading ? 'Gerando PDF...' : 'Exportar PDF')}
-              </PDFDownloadLink>
+                Exportar PDF
+              </button>
             )}
 
             {estaAoVivo && !carregando && (

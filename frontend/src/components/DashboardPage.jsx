@@ -117,12 +117,13 @@ export const Dashboard = () => {
             <Select
               value={selectedTournament?.id || ''}
               onChange={(e) => {
-                const tournament = tournaments.find(t => t.id === parseInt(e.target.value));
+                const tournament = Array.isArray(tournaments) ? 
+                  tournaments.find(t => t.id === parseInt(e.target.value)) : null;
                 selectTournament(tournament);
               }}
             >
               <option value="">Selecione um torneio</option>
-              {tournaments.map(t => (
+              {Array.isArray(tournaments) && tournaments.map(t => (
                 <option key={t.id} value={t.id}>
                   {t.name} ({t.status})
                 </option>

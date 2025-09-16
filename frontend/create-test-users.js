@@ -11,34 +11,34 @@ async function createTestUsers() {
     const hashedPassword = await bcrypt.hash('123456', 12);
 
     // Deletar usuários existentes para evitar duplicatas
-    await prisma.usuario.deleteMany({
+    await prisma.Usuario.deleteMany({
       where: {
-        email_usuario: {
+        email: {
           in: ['a@test.com', 's@test.com', 'r@test.com']
         }
       }
     });
 
     // Criar usuários de teste
-    const usuarios = await prisma.usuario.createMany({
+    const usuarios = await prisma.Usuario.createMany({
       data: [
         {
-          nome_usuario: 'Admin Teste',
-          email_usuario: 'a@test.com',
-          senha_hash: hashedPassword,
-          tipo_usuario: 'ADMIN'
+          nome: 'Admin Teste',
+          email: 'a@test.com',
+          senhaHash: hashedPassword,
+          tipo: 'ADMIN'
         },
         {
-          nome_usuario: 'Staff Teste',
-          email_usuario: 's@test.com',
-          senha_hash: hashedPassword,
-          tipo_usuario: 'STAFF'
+          nome: 'Staff Teste',
+          email: 's@test.com',
+          senhaHash: hashedPassword,
+          tipo: 'STAFF'
         },
         {
-          nome_usuario: 'Representante Teste',
-          email_usuario: 'r@test.com',
-          senha_hash: hashedPassword,
-          tipo_usuario: 'REPRESENTANTE'
+          nome: 'Representante Teste',
+          email: 'r@test.com',
+          senhaHash: hashedPassword,
+          tipo: 'REPRESENTANTE'
         }
       ]
     });

@@ -25,36 +25,33 @@ const authOptions: NextAuthOptions = {
                         return null;
                     }
 
-                    const user = await prisma.usuario.findUnique({
+                    const user = await prisma.Usuario.findUnique({
                         where: {
-                            email_usuario: credentials.email,
+                            email: credentials.email,
                         },
                     });
 
                     if (!user) {
-                        console.log("Usuário não encontrado");
                         return null;
                     }
 
                     // Compara a senha usando bcrypt.compare
                     const isValid = await bcrypt.compare(
                         credentials.password,
-                        user.senha_hash
+                        user.senhaHash
                     );
 
                     if (!isValid) {
-                        console.log("Senha inválida");
                         return null;
                     }
-
                     return {
-                        id: user.id_usuario.toString(),
-                        email: user.email_usuario,
-                        name: user.nome_usuario,
-                        tipo_usuario: user.tipo_usuario
+                        id: user.id.toString(),
+                        email: user.email,
+                        name: user.nome,
+                        tipo_usuario: user.tipo
                     } satisfies ExtendedUser;
                 } catch (error) {
-                    console.error("Erro na autenticação:", error);
+                    console.error("❌ Erro na autenticação:", error);
                     return null;
                 }
             }
