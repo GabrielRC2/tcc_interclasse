@@ -415,31 +415,26 @@ export const BracketsPage = () => {
                         <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm p-6 relative overflow-hidden">
                             <div className="relative z-10">
                                 <div 
-                                    className="flex items-center justify-between cursor-pointer mb-4"
+                                    className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 p-3 -m-3 rounded-lg transition-colors"
                                     onClick={() => setClassificacaoGeralExpandida(!classificacaoGeralExpandida)}
                                 >
                                     <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
                                         <Award size={24} className="text-green-500" />
                                         CLASSIFICAÇÃO GERAL
                                     </h2>
-                                    <Button
-                                        variant="ghost"
-                                        className="p-2"
-                                    >
-                                        {classificacaoGeralExpandida ? (
-                                            <span className="text-sm">Recolher ▲</span>
-                                        ) : (
-                                            <span className="text-sm">Expandir ▼</span>
-                                        )}
-                                    </Button>
+                                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                                        Clique para {classificacaoGeralExpandida ? "minimizar" : "expandir"} a tabela de classificação
+                                    </p>
                                 </div>
 
                                 {classificacaoGeralExpandida && (
-                                    <TabelaClassificacao
-                                        dados={classificacao}
-                                        titulo=""
-                                        grupoEspecifico={false}
-                                    />
+                                    <div className="mt-4">
+                                        <TabelaClassificacao
+                                            dados={classificacao}
+                                            titulo=""
+                                            grupoEspecifico={false}
+                                        />
+                                    </div>
                                 )}
                             </div>
                             <CardSplat />

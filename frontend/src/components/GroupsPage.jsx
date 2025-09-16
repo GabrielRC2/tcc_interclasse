@@ -19,6 +19,7 @@ export const GroupsPage = () => {
     const [generos] = useState(['Masculino', 'Feminino']);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+    const [isTimesExpanded, setIsTimesExpanded] = useState(true);
 
     // Função para atualizar estado e salvar no contexto
     const updateFilterState = (field, value) => {
@@ -328,51 +329,54 @@ export const GroupsPage = () => {
                         {/* Preview dos Times que Participarão do Sorteio */}
                         {timesDisponiveis.length > 0 && (
                             <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm p-4">
-                                <div className="flex justify-between items-center mb-4">
+                                <div 
+                                    className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 p-3 -m-3 rounded-lg transition-colors"
+                                    onClick={() => setIsTimesExpanded(!isTimesExpanded)}
+                                >
                                     <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">
                                         Times que Participarão do Sorteio ({timesDisponiveis.length})
                                     </h3>
-                                    <div className="text-sm text-gray-500 dark:text-gray-400">
-                                        {quantidadeGrupos && (
-                                            <span>
-                                                {quantidadeGrupos} grupos • ~{Math.ceil(timesDisponiveis.length / parseInt(quantidadeGrupos))} times por grupo
-                                            </span>
-                                        )}
-                                    </div>
+                                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                                        Clique para {isTimesExpanded ? "minimizar" : "expandir"} a lista de times
+                                    </p>
                                 </div>
+                                
+                                {isTimesExpanded && (
+                                    <div className="mt-4">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                                            {timesDisponiveis.map(time => (
+                                                <div key={time.id} className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                                                    <Trophy size={16} className="text-blue-500" />
+                                                    <div className="flex-1">
+                                                        <p className="font-semibold text-gray-900 dark:text-gray-100">{time.nome}</p>
+                                                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                                                            {time.curso} • {time.jogadoresCount} jogadores
+                                                        </p>
+                                                    </div>
+                                                    <div className="text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 px-2 py-1 rounded">
+                                                        #{time.id}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
 
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                                    {timesDisponiveis.map(time => (
-                                        <div key={time.id} className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                                            <Trophy size={16} className="text-blue-500" />
-                                            <div className="flex-1">
-                                                <p className="font-semibold text-gray-900 dark:text-gray-100">{time.nome}</p>
-                                                <p className="text-sm text-gray-500 dark:text-gray-400">
-                                                    {time.curso} • {time.jogadoresCount} jogadores
+                                        {quantidadeGrupos && (
+                                            <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/30 rounded-lg">
+                                                <p className="text-sm text-blue-700 dark:text-blue-300">
+                                                    <strong>Preview do Sorteio:</strong> {timesDisponiveis.length} times serão distribuídos em {quantidadeGrupos} grupos,
+                                                    com aproximadamente {Math.ceil(timesDisponiveis.length / parseInt(quantidadeGrupos))} times por grupo.
                                                 </p>
                                             </div>
-                                            <div className="text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 px-2 py-1 rounded">
-                                                #{time.id}
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-
-                                {quantidadeGrupos && (
-                                    <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/30 rounded-lg">
-                                        <p className="text-sm text-blue-700 dark:text-blue-300">
-                                            <strong>Preview do Sorteio:</strong> {timesDisponiveis.length} times serão distribuídos em {quantidadeGrupos} grupos,
-                                            com aproximadamente {Math.ceil(timesDisponiveis.length / parseInt(quantidadeGrupos))} times por grupo.
-                                        </p>
+                                        )}
                                     </div>
                                 )}
                             </div>
                         )}
 
                         {/* Exibir Grupos */}
-                        <div className="grid gap-6">
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                             {grupos.length === 0 ? (
-                                <div className="text-center py-12">
+                                <div className="col-span-full text-center py-12">
                                     <Users size={48} className="mx-auto text-gray-400 mb-4" />
                                     <p className="text-gray-500 dark:text-gray-400 text-lg">
                                         {selectedTournament && selectedModalidade && selectedGenero
