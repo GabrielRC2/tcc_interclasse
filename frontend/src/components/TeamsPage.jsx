@@ -17,11 +17,19 @@ function TeamsPage() {
   const [availablePlayers, setAvailablePlayers] = useState([]);
 
   // Estados dos filtros
-  const [filters, setFilters] = useState({
-    gender: 'Todos',
-    sport: 'Todos',
-    course: 'Todos',
-    year: 'Todos'
+  const [filters, setFilters] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const savedFilters = localStorage.getItem('teamsPage_filters');
+      if (savedFilters) {
+        return JSON.parse(savedFilters);
+      }
+    }
+    return {
+      gender: 'Todos',
+      sport: 'Todos',
+      course: 'Todos',
+      year: 'Todos'
+    };
   });
 
   const [courseOptions, setCourseOptions] = useState(['Todos']);
@@ -35,6 +43,13 @@ function TeamsPage() {
     loadModalidades();
   }, []);
 
+  // Persistir filtros no localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('teamsPage_filters', JSON.stringify(filters));
+    }
+  }, [filters]);
+
   const loadTeams = async () => {
     if (!selectedTournament) {
       setTeams([]);
@@ -45,7 +60,7 @@ function TeamsPage() {
       setLoading(true);
       const response = await fetch(`/api/teams?torneioId=${selectedTournament.id}`);
       if (!response.ok) throw new Error('Erro ao carregar times');
-      
+
       const data = await response.json();
       setTeams(data);
     } catch (error) {
@@ -164,7 +179,7 @@ function TeamsPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!selectedTournament) {
       alert('Selecione um torneio no Dashboard primeiro');
       return;
@@ -256,11 +271,11 @@ function TeamsPage() {
   // Adicionar função para gerar nome automaticamente
   const generateTeamName = (year, course) => {
     if (!year || !course) return '';
-    
+
     // Buscar sigla do curso no estado cursos
     const cursoObj = cursos.find(c => c.nome === course);
     const sigla = cursoObj ? cursoObj.sigla : course.substring(0, 4).toUpperCase();
-    
+
     return `${year}${sigla}`;
   };
 
@@ -462,7 +477,7 @@ function TeamsPage() {
                 </button>
               </>
             )}
-            <Button onClick={() => openDetails(null)}>Criar Novo Time</Button>
+            <Button variant="primary" onClick={() => openDetails(null)}>Criar Novo Time</Button>
           </div>
         </div>
 
@@ -640,7 +655,8 @@ function TeamsPage() {
                   <h4 className="text-md font-semibold text-gray-900 dark:text-gray-100">
                     Jogadores ({selectedTeam.players?.length || 0})
                   </h4>
-                  <Button 
+                  <Button
+                    variant="secondary"
                     onClick={() => {
                       loadAvailablePlayers();
                       setShowAddPlayer(true);
@@ -651,7 +667,7 @@ function TeamsPage() {
                     Adicionar Jogador
                   </Button>
                 </div>
-                
+
                 {selectedTeam.players && selectedTeam.players.length > 0 ? (
                   <div className="space-y-2 max-h-60 overflow-y-auto">
                     {selectedTeam.players.map((player, index) => (
@@ -672,7 +688,8 @@ function TeamsPage() {
                   <div className="text-center py-8 text-gray-500 dark:text-gray-400">
                     <UserCircle size={48} className="mx-auto mb-2" />
                     <p>Nenhum jogador cadastrado</p>
-                    <Button 
+                    <Button
+                      variant="tertiary"
                       onClick={() => {
                         loadAvailablePlayers();
                         setShowAddPlayer(true);
@@ -752,13 +769,13 @@ function TeamsPage() {
               </div>
               <div className="flex justify-end gap-2 pt-4">
                 <Button
+                  variant="secondary"
                   type="button"
                   onClick={() => setIsEditing(false)}
-                  className="bg-gray-500"
                 >
                   Cancelar
                 </Button>
-                <Button type="submit">Salvar Alterações</Button>
+                <Button variant="primary" type="submit">Salvar Alterações</Button>
               </div>
             </form>
           ) : (

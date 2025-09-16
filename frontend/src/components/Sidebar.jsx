@@ -4,33 +4,30 @@ import { Home, Users, Plus, Shield, Calendar, FileText, LogOut, Moon, Sun, Chevr
 
 const NavLink = ({ icon, label, pageName, isSidebarOpen, currentPage, setCurrentPage, toggleSidebar }) => (
     <li>
-      <button
-        onClick={() => {
-            setCurrentPage(pageName);
-            // Fecha a sidebar automaticamente no mobile APENAS se estiver aberta
-            if (window.innerWidth < 768 && isSidebarOpen) {
-                toggleSidebar();
-            }
-        }}
-        className={`flex items-center w-full rounded-md transition-colors ${
-          isSidebarOpen ? 'px-4 py-2' : 'p-2 justify-center'
-        } ${
-          currentPage === pageName
-            ? 'bg-red-600 text-white'
-            : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-        }`}
-      >
-        <div className={`flex items-center ${isSidebarOpen ? '' : 'justify-center w-full'}`}>
-          {icon}
-          <span
-            className={`ml-3 font-medium transition-all duration-200 whitespace-nowrap ${
-              isSidebarOpen ? 'opacity-100 w-auto' : 'opacity-0 w-0 absolute'
-            }`}
-          >
-            {label}
-          </span>
-        </div>
-      </button>
+        <button
+            onClick={() => {
+                setCurrentPage(pageName);
+                // Fecha a sidebar automaticamente no mobile APENAS se estiver aberta
+                if (window.innerWidth < 768 && isSidebarOpen) {
+                    toggleSidebar();
+                }
+            }}
+            className={`flex items-center w-11/12 mx-auto rounded-lg transition-colors ${isSidebarOpen ? 'px-5 py-3' : 'p-3 justify-center'
+                } ${currentPage === pageName
+                    ? 'bg-red-600 text-white'
+                    : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                }`}
+        >
+            <div className={`flex items-center ${isSidebarOpen ? '' : 'justify-center w-full'}`}>
+                {icon}
+                <span
+                    className={`ml-3 font-medium transition-all duration-200 whitespace-nowrap ${isSidebarOpen ? 'opacity-100 w-auto' : 'opacity-0 w-0 absolute'
+                        }`}
+                >
+                    {label}
+                </span>
+            </div>
+        </button>
     </li>
 );
 
@@ -48,19 +45,19 @@ export const Sidebar = ({ isSidebarOpen, toggleSidebar, currentPage, setCurrentP
         <>
             {/* Overlay para mobile quando sidebar está aberta */}
             {isSidebarOpen && (
-                <div 
+                <div
                     className="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden"
                     onClick={toggleSidebar}
                 />
             )}
-            
+
             {/* Sidebar */}
             <aside className={`
                 bg-white dark:bg-gray-900 text-gray-800 dark:text-white 
                 flex-shrink-0 flex flex-col transition-all duration-300 z-50
-                ${isSidebarOpen 
-                    ? 'w-full md:w-64 fixed md:relative inset-0 md:inset-auto' 
-                    : 'w-20'
+                ${isSidebarOpen
+                    ? 'w-full md:w-72 fixed md:relative inset-0 md:inset-auto'
+                    : 'w-24'
                 }
             `}>
                 {isSidebarOpen ? (
@@ -91,13 +88,13 @@ export const Sidebar = ({ isSidebarOpen, toggleSidebar, currentPage, setCurrentP
                     </ul>
                 </nav>
                 <div className="p-2 border-t border-gray-200 dark:border-gray-700 flex-shrink-0">
-                    <button onClick={toggleDarkMode} className={`flex items-center w-full p-2 rounded-md text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 ${!isSidebarOpen && 'justify-center'}`}>
+                    <button onClick={toggleDarkMode} className={`flex items-center w-11/12 mx-auto px-3 py-3 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 ${!isSidebarOpen && 'justify-center'}`}>
                         <div className={`flex items-center ${isSidebarOpen ? '' : 'justify-center w-full'}`}>
                             {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
                             <span className={`ml-3 font-medium transition-all duration-200 whitespace-nowrap ${isSidebarOpen ? 'opacity-100 w-auto' : 'opacity-0 w-0 absolute'}`}>Tema</span>
                         </div>
                     </button>
-                    <button onClick={logout} className={`flex items-center w-full p-2 mt-1 rounded-md text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 ${!isSidebarOpen && 'justify-center'}`}>
+                    <button onClick={logout} className={`flex items-center w-11/12 mx-auto px-3 py-3 mt-1 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 ${!isSidebarOpen && 'justify-center'}`}>
                         <div className={`flex items-center ${isSidebarOpen ? '' : 'justify-center w-full'}`}>
                             <LogOut size={20} />
                             <span className={`ml-3 font-medium transition-all duration-200 whitespace-nowrap ${isSidebarOpen ? 'opacity-100 w-auto' : 'opacity-0 w-0 absolute'}`}>Sair</span>

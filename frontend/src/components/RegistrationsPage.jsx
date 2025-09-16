@@ -8,7 +8,7 @@ export const RegistrationsPage = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingItem, setEditingItem] = useState(null);
     const [category, setCategory] = useState('');
-    
+
     const [sports, setSports] = useState([]);
     const [locations, setLocations] = useState([]);
     const [courses, setCourses] = useState([]);
@@ -69,7 +69,7 @@ export const RegistrationsPage = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        
+
         try {
             let endpoint = '';
             let body = {};
@@ -176,10 +176,10 @@ export const RegistrationsPage = () => {
                                 <div className="relative z-10">
                                     <h3 className="font-bold text-lg mb-4 text-gray-900 dark:text-gray-100">{item.nome}</h3>
                                     <div className="flex gap-2">
-                                        <Button onClick={() => handleEdit(item, 'Esportes')}>Editar</Button>
-                                        <Button 
+                                        <Button variant="primary" onClick={() => handleEdit(item, 'Esportes')}>Editar</Button>
+                                        <Button
+                                            variant="tertiary"
                                             onClick={() => handleDelete(item, 'Esportes')}
-                                            className="bg-red-600 hover:bg-red-700"
                                         >
                                             Excluir
                                         </Button>
@@ -199,10 +199,10 @@ export const RegistrationsPage = () => {
                                 <div className="relative z-10">
                                     <h3 className="font-bold text-lg mb-4 text-gray-900 dark:text-gray-100">{item.nome}</h3>
                                     <div className="flex gap-2">
-                                        <Button onClick={() => handleEdit(item, 'Locais')}>Editar</Button>
-                                        <Button 
+                                        <Button variant="primary" onClick={() => handleEdit(item, 'Locais')}>Editar</Button>
+                                        <Button
+                                            variant="tertiary"
                                             onClick={() => handleDelete(item, 'Locais')}
-                                            className="bg-red-600 hover:bg-red-700"
                                         >
                                             Excluir
                                         </Button>
@@ -223,10 +223,10 @@ export const RegistrationsPage = () => {
                                     <h3 className="font-bold text-lg mb-2 text-gray-900 dark:text-gray-100">{item.nome}</h3>
                                     <p className="text-gray-600 dark:text-gray-300 text-sm mb-4">Sigla: {item.sigla}</p>
                                     <div className="flex gap-2">
-                                        <Button onClick={() => handleEdit(item, 'Cursos')}>Editar</Button>
-                                        <Button 
+                                        <Button variant="primary" onClick={() => handleEdit(item, 'Cursos')}>Editar</Button>
+                                        <Button
+                                            variant="tertiary"
                                             onClick={() => handleDelete(item, 'Cursos')}
-                                            className="bg-red-600 hover:bg-red-700"
                                         >
                                             Excluir
                                         </Button>
@@ -248,8 +248,8 @@ export const RegistrationsPage = () => {
                                     <p className="text-gray-600 dark:text-gray-300 text-sm mb-1">{admin.email}</p>
                                     <p className="text-gray-500 dark:text-gray-400 text-xs mb-4">{admin.role}</p>
                                     <div className="flex gap-2">
-                                        <Button>Editar</Button>
-                                        <Button className="bg-red-600 hover:bg-red-700">Excluir</Button>
+                                        <Button variant="primary">Editar</Button>
+                                        <Button variant="tertiary">Excluir</Button>
                                     </div>
                                 </div>
                                 <CardSplat />
@@ -272,30 +272,30 @@ export const RegistrationsPage = () => {
                         <option value="Locais">Locais</option>
                         <option value="Cursos">Cursos</option>
                     </Select>
-                    
-                    <Input 
-                        label="Nome" 
-                        placeholder="Digite o nome" 
+
+                    <Input
+                        label="Nome"
+                        placeholder="Digite o nome"
                         value={formData.name}
-                        onChange={(e) => setFormData({...formData, name: e.target.value})}
+                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                         required
                     />
-                    
+
                     {category === 'Cursos' && (
-                        <Input 
-                            label="Sigla" 
-                            placeholder="Digite a sigla" 
+                        <Input
+                            label="Sigla"
+                            placeholder="Digite a sigla"
                             value={formData.sigla}
-                            onChange={(e) => setFormData({...formData, sigla: e.target.value})}
+                            onChange={(e) => setFormData({ ...formData, sigla: e.target.value })}
                             required
                         />
                     )}
-                    
+
                     <div className="flex justify-end gap-2 pt-4">
-                        <Button type="button" onClick={closeModal} className="bg-gray-500">
+                        <Button variant="secondary" type="button" onClick={closeModal}>
                             Cancelar
                         </Button>
-                        <Button type="submit">{editingItem ? 'Salvar' : 'Criar'}</Button>
+                        <Button variant="primary" type="submit">{editingItem ? 'Salvar' : 'Criar'}</Button>
                     </div>
                 </form>
             </Modal>

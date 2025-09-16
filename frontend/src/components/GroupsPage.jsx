@@ -11,16 +11,40 @@ export const GroupsPage = () => {
     const [grupos, setGrupos] = useState([]);
     const [timesDisponiveis, setTimesDisponiveis] = useState([]);
 
-    // Estados dos filtros - inicializar com valores do contexto
-    const [selectedModalidade, setSelectedModalidade] = useState(pageStates?.groups?.selectedModalidade || '');
-    const [selectedGenero, setSelectedGenero] = useState(pageStates?.groups?.selectedGenero || '');
-    const [quantidadeGrupos, setQuantidadeGrupos] = useState(pageStates?.groups?.quantidadeGrupos || '');
+    // Estados dos filtros - inicializar com valores do contexto ou localStorage
+    const [selectedModalidade, setSelectedModalidade] = useState(() => {
+        if (pageStates?.groups?.selectedModalidade) {
+            return pageStates.groups.selectedModalidade;
+        }
+        if (typeof window !== 'undefined') {
+            return localStorage.getItem('groupsPage_selectedModalidade') || '';
+        }
+        return '';
+    });
+    const [selectedGenero, setSelectedGenero] = useState(() => {
+        if (pageStates?.groups?.selectedGenero) {
+            return pageStates.groups.selectedGenero;
+        }
+        if (typeof window !== 'undefined') {
+            return localStorage.getItem('groupsPage_selectedGenero') || '';
+        }
+        return '';
+    });
+    const [quantidadeGrupos, setQuantidadeGrupos] = useState(() => {
+        if (pageStates?.groups?.quantidadeGrupos) {
+            return pageStates.groups.quantidadeGrupos;
+        }
+        if (typeof window !== 'undefined') {
+            return localStorage.getItem('groupsPage_quantidadeGrupos') || '';
+        }
+        return '';
+    });
 
     const [generos] = useState(['Masculino', 'Feminino']);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
 
-    // Função para atualizar estado e salvar no contexto
+    // Função para atualizar estado e salvar no contexto e localStorage
     const updateFilterState = (field, value) => {
         const newState = { [field]: value };
 
@@ -33,12 +57,30 @@ export const GroupsPage = () => {
             newState.quantidadeGrupos = '';
             setGrupos([]);
             setTimesDisponiveis([]);
+
+            // Salvar no localStorage
+            if (typeof window !== 'undefined') {
+                localStorage.setItem('groupsPage_selectedModalidade', value);
+                localStorage.setItem('groupsPage_selectedGenero', '');
+                localStorage.setItem('groupsPage_quantidadeGrupos', '');
+            }
         } else if (field === 'selectedGenero') {
             setSelectedGenero(value);
             setQuantidadeGrupos('');
             newState.quantidadeGrupos = '';
+
+            // Salvar no localStorage
+            if (typeof window !== 'undefined') {
+                localStorage.setItem('groupsPage_selectedGenero', value);
+                localStorage.setItem('groupsPage_quantidadeGrupos', '');
+            }
         } else if (field === 'quantidadeGrupos') {
             setQuantidadeGrupos(value);
+
+            // Salvar no localStorage
+            if (typeof window !== 'undefined') {
+                localStorage.setItem('groupsPage_quantidadeGrupos', value);
+            }
         }
 
         if (updatePageState) {
@@ -182,9 +224,9 @@ export const GroupsPage = () => {
         }
     };
 
-    
 
-    
+
+
 
     const limparGrupos = async () => {
         if (!selectedTournament || !selectedModalidade || !selectedGenero) {
@@ -253,26 +295,6 @@ export const GroupsPage = () => {
                             </p>
                         )}
                     </div>
-                    <div className="flex gap-2">
-                        <Button onClick={handleSorteio} disabled={!selectedTournament || !selectedModalidade || !selectedGenero || !quantidadeGrupos}>
-                            <Shuffle size={20} className="mr-2" />
-                            Realizar Sorteio
-                        </Button>
-
-                        {/* Botão Limpar Grupos - aparece apenas quando há grupos */}
-                        {grupos.length > 0 && (
-                            <Button
-                                onClick={limparGrupos}
-                                variant="outline"
-                                className="border-red-500 text-red-600 hover:bg-red-50 dark:border-red-400 dark:text-red-400 dark:hover:bg-red-900/20"
-                            >
-                                <Trash2 size={20} className="mr-2" />
-                                Limpar Grupos
-                            </Button>
-                        )}
-
-                        
-                    </div>
                 </div>
 
                 {!selectedTournament ? (
@@ -285,43 +307,86 @@ export const GroupsPage = () => {
                 ) : (
                     <>
                         {/* Filtros - modalidade, gênero e quantidade de grupos */}
-                        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm p-4">
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <Select
-                                    label="Modalidade"
-                                    value={selectedModalidade}
-                                    onChange={(e) => updateFilterState('selectedModalidade', e.target.value)}
-                                >
-                                    <option value="">Selecione a modalidade</option>
-                                    {modalidades.map(m => (
-                                        <option key={m.id} value={m.id}>{m.nome}</option>
-                                    ))}
-                                </Select>
+                        <div className="flex flex-wrap justify-between items-center gap-4">
+                            <div className="w-full lg:w-2/3 xl:w-1/2">
+                                <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm p-4">
+                                    <div className="flex flex-wrap justify-between items-center gap-4">
+                                        {/* Filtros */}
+                                        <div className="flex-1 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                                            <Select
+                                                label="Modalidade"
+                                                value={selectedModalidade}
+                                                onChange={(e) => updateFilterState('selectedModalidade', e.target.value)}
+                                            >
+                                                <option value="">Selecione a modalidade</option>
+                                                {modalidades.map(m => (
+                                                    <option key={m.id} value={m.id}>{m.nome}</option>
+                                                ))}
+                                            </Select>
 
-                                <Select
-                                    label="Gênero"
-                                    value={selectedGenero}
-                                    onChange={(e) => updateFilterState('selectedGenero', e.target.value)}
-                                >
-                                    <option value="">Selecione o gênero</option>
-                                    {generos.map(g => (
-                                        <option key={g} value={g}>{g}</option>
-                                    ))}
-                                </Select>
+                                            <Select
+                                                label="Gênero"
+                                                value={selectedGenero}
+                                                onChange={(e) => updateFilterState('selectedGenero', e.target.value)}
+                                            >
+                                                <option value="">Selecione o gênero</option>
+                                                {generos.map(g => (
+                                                    <option key={g} value={g}>{g}</option>
+                                                ))}
+                                            </Select>
 
-                                <Select
-                                    label="Quantidade de Grupos"
-                                    value={quantidadeGrupos}
-                                    onChange={(e) => updateFilterState('quantidadeGrupos', e.target.value)}
-                                    disabled={timesDisponiveis.length === 0}
-                                >
-                                    <option value="">{timesDisponiveis.length > 0 ? 'Selecione a quantidade' : 'Sem times disponíveis'}</option>
-                                    {timesDisponiveis.length > 0 && Array.from({ length: Math.max(1, Math.ceil(timesDisponiveis.length / 2)) }, (_, i) => i + 1).map(num => (
-                                        <option key={num} value={num}>
-                                            {num} grupo{num > 1 ? 's' : ''} (~{Math.ceil(timesDisponiveis.length / num)} times/grupo)
-                                        </option>
-                                    ))}
-                                </Select>
+                                            <Select
+                                                label="Quantidade de Grupos"
+                                                value={quantidadeGrupos}
+                                                onChange={(e) => updateFilterState('quantidadeGrupos', e.target.value)}
+                                                disabled={timesDisponiveis.length === 0}
+                                            >
+                                                <option value="">{timesDisponiveis.length > 0 ? 'Selecione a quantidade' : 'Sem times disponíveis'}</option>
+                                                {timesDisponiveis.length > 0 && Array.from({ length: Math.max(1, Math.ceil(timesDisponiveis.length / 2)) }, (_, i) => i + 1).map(num => (
+                                                    <option key={num} value={num}>
+                                                        {num} grupo{num > 1 ? 's' : ''} (~{Math.ceil(timesDisponiveis.length / num)} times/grupo)
+                                                    </option>
+                                                ))}
+                                            </Select>
+                                        </div>
+
+                                        {/* Botão X para limpar filtros - dentro da caixa */}
+                                        {(selectedModalidade || selectedGenero || quantidadeGrupos) && (
+                                            <button
+                                                onClick={() => {
+                                                    updateFilterState('selectedModalidade', '');
+                                                    updateFilterState('selectedGenero', '');
+                                                    updateFilterState('quantidadeGrupos', '');
+                                                }}
+                                                className="p-2 text-gray-400 hover:text-gray-600 rounded-lg transition-colors"
+                                                title="Limpar Filtros"
+                                            >
+                                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                                </svg>
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Botões fora da caixa, alinhados à direita */}
+                            <div className="flex gap-2">
+                                <Button variant="primary" onClick={handleSorteio} disabled={!selectedTournament || !selectedModalidade || !selectedGenero || !quantidadeGrupos}>
+                                    <Shuffle size={20} className="mr-2" />
+                                    Realizar Sorteio
+                                </Button>
+
+                                {/* Botão Limpar Grupos - aparece apenas quando há grupos */}
+                                {grupos.length > 0 && (
+                                    <Button
+                                        variant="tertiary"
+                                        onClick={limparGrupos}
+                                    >
+                                        <Trash2 size={20} className="mr-2" />
+                                        Limpar Grupos
+                                    </Button>
+                                )}
                             </div>
                         </div>
 

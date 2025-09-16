@@ -103,33 +103,36 @@ export const Dashboard = () => {
   return (
     <div className="space-y-6">
       {/* Seletor de Torneio Global */}
-      <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm p-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
-              Torneio Ativo
-            </h2>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              Selecione o torneio para visualizar dados específicos
-            </p>
-          </div>
-          <div className="w-80">
-            <Select
-              value={selectedTournament?.id || ''}
-              onChange={(e) => {
-                const tournament = tournaments.find(t => t.id === parseInt(e.target.value));
-                selectTournament(tournament);
-              }}
-            >
-              <option value="">Selecione um torneio</option>
-              {tournaments.map(t => (
-                <option key={t.id} value={t.id}>
-                  {t.name} ({t.status})
-                </option>
-              ))}
-            </Select>
+      <div className="bg-gradient-to-br from-slate-50 to-blue-50/30 dark:from-slate-800 dark:to-slate-700 border border-slate-200 dark:border-slate-600 rounded-2xl p-8 relative overflow-hidden">
+        <div className="relative z-10">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100">
+                Torneio Ativo
+              </h2>
+              <p className="text-sm text-slate-500 dark:text-slate-400">
+                Selecione o torneio para visualizar dados específicos
+              </p>
+            </div>
+            <div className="w-80">
+              <Select
+                value={selectedTournament?.id || ''}
+                onChange={(e) => {
+                  const tournament = tournaments.find(t => t.id === parseInt(e.target.value));
+                  selectTournament(tournament);
+                }}
+              >
+                <option value="">Selecione um torneio</option>
+                {tournaments.map(t => (
+                  <option key={t.id} value={t.id}>
+                    {t.name} ({t.status})
+                  </option>
+                ))}
+              </Select>
+            </div>
           </div>
         </div>
+        <CardSplat />
       </div>
 
       {selectedTournament && (
@@ -297,8 +300,8 @@ export const Dashboard = () => {
 
           <SumulaModal
             isOpen={!!partidaSelecionada}
-            onClose={() => { 
-              setPartidaSelecionada(null); 
+            onClose={() => {
+              setPartidaSelecionada(null);
               carregarPartidasFinalizadas();
               carregarProximasPartidas();
               carregarJogadoresDestaque();
