@@ -242,52 +242,96 @@ export const Dashboard = () => {
 
             {/* NOVA SEÇÃO: PARTIDAS / SÚMULAS FINALIZADAS */}
             <div>
-              <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">SÚMULAS (PARTIDAS FINALIZADAS)</h2>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">SÚMULAS (PARTIDAS FINALIZADAS)</h2>
+                <div className="md:hidden text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
+                  <span>←</span>
+                  <span>Deslize para ver mais</span>
+                  <span>→</span>
+                </div>
+              </div>
 
-              <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm overflow-hidden">
-                <table className="w-full">
-                  <thead className="bg-gray-50 dark:bg-gray-700">
-                    <tr>
-                      <th className="p-4 text-left font-semibold text-gray-900 dark:text-gray-100">Partida</th>
-                      <th className="p-4 text-center font-semibold text-gray-900 dark:text-gray-100">#</th>
-                      <th className="p-4 text-left font-semibold text-gray-900 dark:text-gray-100">Esporte</th>
-                      <th className="p-4 text-left font-semibold text-gray-900 dark:text-gray-100">Categoria</th>
-                      <th className="p-4 text-left font-semibold text-gray-900 dark:text-gray-100">Local</th>
-                      <th className="p-4 text-left font-semibold text-gray-900 dark:text-gray-100">Status</th>
-                      <th className="p-4 text-right font-semibold text-gray-900 dark:text-gray-100">Ação</th>
-                    </tr>
-                  </thead>
-
-                  <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                    {carregandoFinalizadas ? (
-                      <tr>
-                        <td colSpan="7" className="p-6 text-center">Carregando súmulas...</td>
-                      </tr>
-                    ) : partidasFinalizadas.length === 0 ? (
-                      <tr>
-                        <td colSpan="7" className="p-6 text-center text-gray-500">Nenhuma súmula encontrada.</td>
-                      </tr>
-                    ) : (
-                      partidasFinalizadas.map((match, index) => (
-                        <tr key={match.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                          <td className="p-4 text-gray-800 dark:text-gray-200 font-semibold">{match.team1} VS {match.team2}</td>
-                          <td className="p-4 text-center text-gray-600 dark:text-gray-300 font-medium">#{match.ordem || index + 1}</td>
-                          <td className="p-4 text-gray-600 dark:text-gray-300">{match.modality}</td>
-                          <td className="p-4 text-gray-600 dark:text-gray-300">{match.category}</td>
-                          <td className="p-4 text-gray-600 dark:text-gray-300">{match.location}</td>
-                          <td className="p-4">
-                            <span className="px-2 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
-                              {match.status}
-                            </span>
-                          </td>
-                          <td className="p-4 text-right">
-                            <Button onClick={() => setPartidaSelecionada(match)}>Ver Súmula</Button>
-                          </td>
+              <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm">
+                {/* Container com scroll horizontal otimizado */}
+                <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-gray-100 dark:scrollbar-track-gray-800">
+                  <div className="min-w-full">
+                    <table className="w-full min-w-[640px]">
+                      <thead className="bg-gray-50 dark:bg-gray-700 sticky top-0">
+                        <tr>
+                          <th className="p-3 md:p-4 text-left font-semibold text-gray-900 dark:text-gray-100 whitespace-nowrap">Partida</th>
+                          <th className="p-3 md:p-4 text-center font-semibold text-gray-900 dark:text-gray-100 whitespace-nowrap">#</th>
+                          <th className="p-3 md:p-4 text-left font-semibold text-gray-900 dark:text-gray-100 whitespace-nowrap">Esporte</th>
+                          <th className="p-3 md:p-4 text-left font-semibold text-gray-900 dark:text-gray-100 whitespace-nowrap">Categoria</th>
+                          <th className="p-3 md:p-4 text-left font-semibold text-gray-900 dark:text-gray-100 whitespace-nowrap">Local</th>
+                          <th className="p-3 md:p-4 text-left font-semibold text-gray-900 dark:text-gray-100 whitespace-nowrap">Status</th>
+                          <th className="p-3 md:p-4 text-right font-semibold text-gray-900 dark:text-gray-100 whitespace-nowrap">Ação</th>
                         </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
+                      </thead>
+
+                      <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                        {carregandoFinalizadas ? (
+                          <tr>
+                            <td colSpan="7" className="p-6 text-center">Carregando súmulas...</td>
+                          </tr>
+                        ) : partidasFinalizadas.length === 0 ? (
+                          <tr>
+                            <td colSpan="7" className="p-6 text-center text-gray-500">Nenhuma súmula encontrada.</td>
+                          </tr>
+                        ) : (
+                          partidasFinalizadas.map((match, index) => (
+                            <tr key={match.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                              <td className="p-3 md:p-4 text-gray-800 dark:text-gray-200 font-semibold whitespace-nowrap">
+                                <div className="min-w-[120px]">{match.team1} VS {match.team2}</div>
+                              </td>
+                              <td className="p-3 md:p-4 text-center text-gray-600 dark:text-gray-300 font-medium whitespace-nowrap">
+                                #{match.ordem || index + 1}
+                              </td>
+                              <td className="p-3 md:p-4 text-gray-600 dark:text-gray-300 whitespace-nowrap">
+                                <div className="min-w-[80px]">{match.modality}</div>
+                              </td>
+                              <td className="p-3 md:p-4 text-gray-600 dark:text-gray-300 whitespace-nowrap">
+                                <div className="min-w-[80px]">{match.category}</div>
+                              </td>
+                              <td className="p-3 md:p-4 text-gray-600 dark:text-gray-300 whitespace-nowrap">
+                                <div className="min-w-[100px]">{match.location}</div>
+                              </td>
+                              <td className="p-3 md:p-4 whitespace-nowrap">
+                                <span className="px-2 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 whitespace-nowrap">
+                                  {match.status}
+                                </span>
+                              </td>
+                              <td className="p-3 md:p-4 text-right whitespace-nowrap">
+                                <div className="min-w-[100px]">
+                                  <Button 
+                                    onClick={() => setPartidaSelecionada(match)}
+                                    size="sm"
+                                    className="whitespace-nowrap"
+                                  >
+                                    Ver Súmula
+                                  </Button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* Indicador de scroll para mobile */}
+                <div className="md:hidden bg-gray-50 dark:bg-gray-700 px-4 py-2 text-center">
+                  <div className="flex justify-center items-center space-x-2">
+                    <div className="w-2 h-2 bg-gray-400 dark:bg-gray-500 rounded-full"></div>
+                    <div className="w-2 h-2 bg-gray-400 dark:bg-gray-500 rounded-full"></div>
+                    <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                    <div className="w-2 h-2 bg-gray-400 dark:bg-gray-500 rounded-full"></div>
+                    <div className="w-2 h-2 bg-gray-400 dark:bg-gray-500 rounded-full"></div>
+                  </div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    Arraste horizontalmente para navegar
+                  </p>
+                </div>
               </div>
             </div>
 
