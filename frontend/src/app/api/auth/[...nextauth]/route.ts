@@ -25,9 +25,9 @@ const authOptions: NextAuthOptions = {
                         return null;
                     }
 
-                    const user = await prisma.Usuario.findUnique({
+                    const user = await prisma.usuario.findUnique({
                         where: {
-                            email: credentials.email,
+                            email_usuario: credentials.email,
                         },
                     });
 
@@ -38,17 +38,17 @@ const authOptions: NextAuthOptions = {
                     // Compara a senha usando bcrypt.compare
                     const isValid = await bcrypt.compare(
                         credentials.password,
-                        user.senhaHash
+                        user.senha_hash
                     );
 
                     if (!isValid) {
                         return null;
                     }
                     return {
-                        id: user.id.toString(),
-                        email: user.email,
-                        name: user.nome,
-                        tipo_usuario: user.tipo
+                        id: user.id_usuario.toString(),
+                        email: user.email_usuario,
+                        name: user.nome_usuario,
+                        tipo_usuario: user.tipo_usuario
                     } satisfies ExtendedUser;
                 } catch (error) {
                     console.error("❌ Erro na autenticação:", error);
