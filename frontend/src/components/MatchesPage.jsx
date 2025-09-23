@@ -185,10 +185,10 @@ export const MatchesPage = () => {
       
       setModalidadesDisponiveis(data.modalidades);
       
-      // Configuração padrão
+      // Configuração padrão baseada nos locais padrão do banco
       const configPadrao = {};
       data.modalidades.forEach(modalidade => {
-          configPadrao[modalidade.nome] = modalidade.localPadrao;
+          configPadrao[modalidade.nome] = modalidade.localAtual || '';
       });
       setConfiguracaoLocais(configPadrao);
       console.log('📍 Configuração de locais carregada:', configPadrao);
@@ -797,21 +797,34 @@ export const MatchesPage = () => {
                 
                 <div className="space-y-4">
                   {modalidadesDisponiveis.map(modalidade => (
-                    <div key={modalidade.id}>
-                      <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">
+                    <div key={modalidade.id} className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
+                      <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
                         {modalidade.nome}
+                        <span className="text-xs text-gray-500 dark:text-gray-400 ml-2">
+                          ({modalidade.categorias?.length || 0} categorias)
+                        </span>
                       </label>
                       <select 
-                        className="w-full p-2 border rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600"
-                        value={configuracaoLocais[modalidade.nome] || modalidade.localPadrao}
+                        className="w-full p-2 border rounded bg-white dark:bg-gray-600 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-500"
+                        value={configuracaoLocais[modalidade.nome] || ''}
                         onChange={(e) => setConfiguracaoLocais(prev => ({
                             ...prev,
                             [modalidade.nome]: e.target.value
                         }))}
                       >
-                        <option value="Quadra de Baixo">Quadra de Baixo</option>
-                        <option value="Quadra de Cima">Quadra de Cima</option>
+                        <option value="">Selecione um local</option>
+                        {modalidade.locaisDisponiveis?.map(local => (
+                          <option key={local} value={local}>
+                            {local} {local === modalidade.localAtual ? '(Local atual)' : ''}
+                          </option>
+                        ))}
                       </select>
+                      {configuracaoLocais[modalidade.nome] && modalidade.localAtual && 
+                        configuracaoLocais[modalidade.nome] !== modalidade.localAtual && (
+                        <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                          Alterando de {modalidade.localAtual} para {configuracaoLocais[modalidade.nome]}
+                        </p>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -825,9 +838,30 @@ export const MatchesPage = () => {
                     Cancelar
                   </Button>
                   <Button 
-                    onClick={() => {
-                      setShowConfigModal(false);
-                      // Salvar configurações se necessário
+                    onClick={async () => {
+                      try {
+                        const configuracoes = Object.entries(configuracaoLocais).map(([modalidade, local]) => ({
+                          modalidade,
+                          local
+                        })).filter(config => config.local); // Remove empty selections
+                        
+                        const response = await fetch('/api/modalidades-locais', {
+                          method: 'POST',
+                          headers: {
+                            'Content-Type': 'application/json',
+                          },
+                          body: JSON.stringify({ configuracoes }),
+                        });
+
+                        if (!response.ok) throw new Error('Falha ao salvar configurações');
+                        
+                        // Recarregar configurações após salvar
+                        await loadConfiguracaoLocais();
+                        setShowConfigModal(false);
+                      } catch (error) {
+                        console.error('Erro ao salvar configurações:', error);
+                        alert('Erro ao salvar configurações. Tente novamente.');
+                      }
                     }}
                     className="flex-1"
                   >

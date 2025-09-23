@@ -42,6 +42,7 @@ model Modalidade {
   grupos             Grupo[]
   partidas           Partida[]             // Para partidas eliminatórias
   torneioModalidades TorneioModalidade[]
+  locais            LocalModalidade[]      // Relation to locais
 
   @@map("Modalidade")
 }
@@ -123,9 +124,10 @@ model Grupo {
 // Tabela: Local
 // Descrição: Armazena os locais onde as partidas podem acontecer.
 model Local {
-  id        Int       @id @default(autoincrement()) @map("id_local")
-  nome      String    @map("nome_local") @db.VarChar(100)
-  partidas  Partida[]
+  id          Int                @id @default(autoincrement()) @map("id_local")
+  nome        String             @map("nome_local") @db.VarChar(100)
+  partidas    Partida[]
+  modalidades LocalModalidade[]   // Relation to modalidades (pode estar vazio)
 
   @@map("Local")
 }
@@ -240,4 +242,16 @@ model PartidaTime {
 
   @@id([partidaId, timeId])
   @@map("PartidaTime")
+}
+
+// Tabela: Local_Modalidades
+// Descrição: Define quais modalidades podem ser jogadas em quais locais
+model LocalModalidade {
+  localId       Int       @map("fk_id_local")
+  modalidadeId  Int       @map("fk_id_modalidade")
+  local         Local     @relation(fields: [localId], references: [id])
+  modalidade    Modalidade @relation(fields: [modalidadeId], references: [id])
+
+  @@unique([localId, modalidadeId])
+  @@map("Local_Modalidade")
 }

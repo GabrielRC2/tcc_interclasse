@@ -4,28 +4,40 @@ const prisma = new PrismaClient();
 
 export async function GET() {
   try {
+    // Buscar modalidades com suas relações com locais
     const modalidades = await prisma.modalidade.findMany({
       include: {
-        _count: {
-          select: { categorias: true }
+        categorias: true,
+        locais: {
+          include: {
+            local: true
+          }
         }
       }
     });
 
-    const locais = await prisma.local.findMany();
+    // Buscar todos os locais disponíveis
+    const locais = await prisma.local.findMany({
+      include: {
+        modalidades: {
+          include: {
+            modalidade: true
+          }
+        }
+      }
+    });
 
-    // Configuração padrão de locais por modalidade
-    const configuracaoPadrao = {
-      'Vôlei': 'Quadra de Baixo',
-      'Handebol': 'Quadra de Cima', 
-      'Basquete': 'Quadra de Baixo',
-      'Futsal': 'Quadra de Cima'
-    };
-
-    const modalidadesComLocal = modalidades.map(modalidade => ({
-      ...modalidade,
-      localPadrao: configuracaoPadrao[modalidade.nome] || 'Quadra de Baixo'
-    }));
+    // Mapear modalidades com seus locais
+    const modalidadesComLocal = modalidades.map(modalidade => {
+      const locaisDisponiveis = locais.map(local => local.nome);
+      const localAtual = modalidade.locais[0]?.local?.nome || '';
+      
+      return {
+        ...modalidade,
+        localAtual,
+        locaisDisponiveis
+      };
+    });
 
     return Response.json({
       modalidades: modalidadesComLocal,
@@ -41,9 +53,38 @@ export async function POST(request) {
   try {
     const { configuracoes } = await request.json();
     
-    // Salvar configurações no localStorage ou banco
-    // Por simplicidade, vamos retornar sucesso
-    console.log('Configurações de locais salvas:', configuracoes);
+    // Iniciar uma transação para garantir consistência
+    await prisma.$transaction(async (tx) => {
+      for (const config of configuracoes) {
+        const modalidade = await tx.modalidade.findFirst({
+          where: { nome: config.modalidade },
+          include: {
+            locais: true
+          }
+        });
+
+        const local = await tx.local.findFirst({
+          where: { nome: config.local }
+        });
+
+        if (!modalidade || !local) continue;
+
+        // Remover quaisquer relações existentes para esta modalidade
+        await tx.localModalidade.deleteMany({
+          where: { 
+            modalidadeId: modalidade.id
+          }
+        });
+
+        // Criar nova relação
+        await tx.localModalidade.create({
+          data: {
+            localId: local.id,
+            modalidadeId: modalidade.id
+          }
+        });
+      }
+    });
     
     return Response.json({ message: 'Configurações salvas com sucesso!' });
   } catch (error) {
