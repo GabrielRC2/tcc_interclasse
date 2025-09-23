@@ -470,17 +470,18 @@ export const MatchesPage = () => {
   const proximaAcao = (() => {
     if (!selectedTournament) return '';
     
-    // Se não há partidas, pode gerar grupos ou eliminatórias
+    // Se não há partidas em todo o torneio, pode gerar grupos
     if (!partidas.length) {
       return 'GERAR_GRUPOS';
     }
     
-    // Verificar se há partidas de grupos pendentes
+    // Verificar se há partidas de grupos
     const partidasGrupos = partidas.filter(p => p.fase === 'Grupos' || p.fase === 'Fase de Grupos' || !p.fase);
-    const partidasGruposPendentes = partidasGrupos.filter(p => p.status !== 'FINALIZADA');
     
-    if (partidasGruposPendentes.length > 0) {
-      return 'AGUARDAR_GRUPOS';
+    // Se já existem partidas de grupos, verificar se todas estão finalizadas para possivelmente gerar eliminatórias
+    if (partidasGrupos.length > 0) {
+      const todasPartidasGruposFinalizadas = partidasGrupos.every(p => p.status === 'FINALIZADA');
+      return todasPartidasGruposFinalizadas ? 'GERAR_ELIMINATORIAS' : '';
     }
     
     // Verificar se já existem eliminatórias
