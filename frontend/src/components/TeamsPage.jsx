@@ -468,13 +468,14 @@ function TeamsPage() {
                 <span className="text-sm text-gray-600 dark:text-gray-400">
                   {selectedTeamsIds.length} selecionado(s)
                 </span>
-                <button
+                <Button
                   onClick={deleteSelectedTeams}
-                  className="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300"
+                  variant="tertiary"
                   title={`Excluir ${selectedTeamsIds.length} time(s) selecionado(s)`}
+                  className="!p-2"
                 >
                   <Trash2 size={24} />
-                </button>
+                </Button>
               </>
             )}
             <Button variant="primary" onClick={() => openDetails(null)}>Criar Novo Time</Button>
@@ -487,12 +488,14 @@ function TeamsPage() {
             <Filter size={20} className="text-gray-500 dark:text-gray-400" />
             <h3 className="font-semibold text-gray-800 dark:text-gray-200">FILTROS</h3>
             {getActiveFilters().length > 0 && (
-              <button
+              <Button
                 onClick={clearAllFilters}
-                className="text-sm text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 ml-auto"
+                variant="tertiary"
+                size="sm"
+                className="ml-auto"
               >
                 Limpar todos
-              </button>
+              </Button>
             )}
           </div>
 
@@ -549,12 +552,14 @@ function TeamsPage() {
                   className="bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-200 text-sm font-semibold px-3 py-1 rounded-full flex items-center gap-2"
                 >
                   <span>{value}</span>
-                  <button
+                  <Button
                     onClick={() => updateFilter(key, 'Todos')}
-                    className="hover:text-red-900 dark:hover:text-red-100"
+                    variant="tertiary"
+                    size="sm"
+                    className="!p-0 !text-red-700 dark:!text-red-200 hover:!text-red-900 dark:hover:!text-red-100"
                   >
                     <X size={14} />
-                  </button>
+                  </Button>
                 </div>
               ))}
             </div>
@@ -578,12 +583,13 @@ function TeamsPage() {
               <p className="text-gray-500 dark:text-gray-400 text-lg">
                 Nenhum time encontrado com os filtros selecionados
               </p>
-              <button
+              <Button
                 onClick={clearAllFilters}
-                className="mt-2 text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+                variant="tertiary"
+                className="mt-2"
               >
                 Limpar filtros
-              </button>
+              </Button>
             </div>
           ) : (
             filteredTeams.map(team => (
@@ -633,20 +639,22 @@ function TeamsPage() {
                   </div>
                 </div>
                 <div className="flex gap-2">
-                  <button
+                  <Button
                     onClick={() => setIsEditing(true)}
-                    className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+                    variant="primary"
                     title="Editar time"
+                    className="!p-2"
                   >
                     <Edit size={20} />
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     onClick={() => deleteTeam(selectedTeam.id)}
-                    className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+                    variant="tertiary"
                     title="Excluir time"
+                    className="!p-2"
                   >
                     <Trash2 size={20} />
-                  </button>
+                  </Button>
                 </div>
               </div>
 
@@ -866,7 +874,7 @@ function TeamsPage() {
               <span className="text-sm text-gray-600 dark:text-gray-400">
                 Jogadores disponíveis da sala {selectedTeam?.year}
               </span>
-              <button
+              <Button
                 type="button"
                 onClick={() => {
                   const cursoId = cursos.find(c => c.nome === selectedTeam?.course)?.id || 1;
@@ -878,10 +886,11 @@ function TeamsPage() {
                   });
                   setShowCreatePlayer(true);
                 }}
-                className="text-sm bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700"
+                variant="primary"
+                size="sm"
               >
                 + Criar Novo Jogador
-              </button>
+              </Button>
             </div>
 
             <Select
@@ -912,11 +921,11 @@ function TeamsPage() {
               <Button
                 type="button"
                 onClick={() => setShowAddPlayer(false)}
-                className="bg-gray-500"
+                variant="secondary"
               >
                 Cancelar
               </Button>
-              <Button type="submit">Adicionar ao Time</Button>
+              <Button type="submit" variant="primary">Adicionar ao Time</Button>
             </div>
           </form>
         </Modal>
@@ -972,11 +981,11 @@ function TeamsPage() {
               <Button
                 type="button"
                 onClick={() => setShowCreatePlayer(false)}
-                className="bg-gray-500"
+                variant="secondary"
               >
                 Cancelar
               </Button>
-              <Button type="submit">Criar Jogador</Button>
+              <Button type="submit" variant="primary">Criar Jogador</Button>
             </div>
           </form>
         </Modal>

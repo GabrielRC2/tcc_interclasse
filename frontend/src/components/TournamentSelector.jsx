@@ -99,20 +99,24 @@ export const TournamentSelector = ({
             </h2>
           </div>
           <div className="flex items-center gap-2">
-            <button
+            <Button
               onClick={handleRefreshTournaments}
               disabled={isRefreshing}
+              variant="outline"
+              size="sm"
               className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors disabled:opacity-50"
               title="Atualizar lista de torneios"
             >
               <RefreshCw size={20} className={`text-gray-500 dark:text-gray-400 ${isRefreshing ? 'animate-spin' : ''}`} />
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={onClose}
+              variant="outline"
+              size="sm"
               className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"
             >
               <X size={20} className="text-gray-500 dark:text-gray-400" />
-            </button>
+            </Button>
           </div>
         </div>
 

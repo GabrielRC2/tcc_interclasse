@@ -1,5 +1,6 @@
 'use client';
 import { X } from 'lucide-react';
+import { Button } from '@/components/common';
 
 export const Modal = ({ isOpen, onClose, title, children, size = 'max-w-xl' }) => {
   if (!isOpen) return null;
@@ -12,9 +13,14 @@ export const Modal = ({ isOpen, onClose, title, children, size = 'max-w-xl' }) =
       <div className={`bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full ${size} transform transition-all p-6 space-y-4`} onClick={(e) => e.stopPropagation()}>
         <div className="flex justify-between items-center">
           <h3 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{title}</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors">
+          <Button 
+            onClick={onClose} 
+            variant="outline"
+            size="sm"
+            className="text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors"
+          >
             <X size={24} />
-          </button>
+          </Button>
         </div>
         <div>{children}</div>
       </div>

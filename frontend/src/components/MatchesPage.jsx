@@ -583,7 +583,7 @@ export const MatchesPage = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap justify-between items-center gap-4">
+      <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">PARTIDAS</h1>
           {selectedTournament && (
@@ -592,11 +592,12 @@ export const MatchesPage = () => {
             </p>
           )}
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-col sm:flex-row gap-2">
           <Button 
             onClick={() => setShowConfigModal(true)}
-            variant="outline"
+            variant="secondary"
             disabled={!selectedTournament}
+            className="w-full sm:w-auto"
           >
             <Settings size={16} className="mr-2" />
             Configurar Locais
@@ -605,6 +606,8 @@ export const MatchesPage = () => {
             <Button 
               onClick={handleGerarPartidas}
               disabled={!selectedTournament || generating}
+              variant="primary"
+              className="w-full sm:w-auto"
             >
               <Play size={16} className="mr-2" />
               {generating ? 'Gerando...' : getBotaoGerarPartidasTexto()}
@@ -613,7 +616,8 @@ export const MatchesPage = () => {
           <Button 
             onClick={refazerSorteioPartidas}
             disabled={!selectedTournament || generating || partidas.length === 0}
-            className="bg-purple-600 hover:bg-purple-700"
+            variant="secondary"
+            className="w-full sm:w-auto"
           >
             <RefreshCcw size={16} className="mr-2" />
             Refazer Sorteio
@@ -621,7 +625,8 @@ export const MatchesPage = () => {
           <Button 
             onClick={gerarPontuacoesAleatorias} 
             disabled={partidas.filter(p => p.status === 'Agendada').length === 0}
-            className="bg-orange-600 hover:bg-orange-700"
+            variant="tertiary"
+            className="w-full sm:w-auto"
           >
             <Shuffle size={16} className="mr-2" />
             Gerar Pontuações Aleatórias
@@ -671,7 +676,7 @@ export const MatchesPage = () => {
               <div className="flex items-end">
                 <Button
                   onClick={() => { setModalidadeSelecionada(''); setGeneroSelecionado(''); setStatusSelecionado(''); }}
-                  variant="outline"
+                  variant="secondary"
                   className="w-full"
                 >
                   <Filter size={16} className="mr-2" />
@@ -719,41 +724,48 @@ export const MatchesPage = () => {
                         </span>
                       </div>
 
-                      <div className="flex items-center justify-center gap-4 mb-4">
-                        <div className="text-center">
-                          <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">{p.team1}</h3>
-                          <p className="text-sm text-gray-500 dark:text-gray-400">{p.team1Course}</p>
+                      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
+                        <div className="md:flex-1 flex items-center justify-center gap-4">
+                          <div className="text-center">
+                            <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">{p.team1}</h3>
+                            <p className="text-sm text-gray-500 dark:text-gray-400">{p.team1Course}</p>
+                          </div>
+
+                          <div className="text-center px-4">
+                            {p.result ? (
+                              <div className="text-center mb-1">
+                                {formatarResultado(p.result)}
+                                {(() => {
+                                  const resultado = obterVencedor(p);
+                                  if (resultado?.tipo === 'empate') {
+                                    return <div className="text-sm font-semibold text-yellow-600 dark:text-yellow-400 mt-2">EMPATE</div>;
+                                  } else if (resultado?.vencedor) {
+                                    return <div className="text-sm font-semibold text-green-600 dark:text-green-400 mt-2">🏆 {resultado.vencedor}</div>;
+                                  }
+                                  return null;
+                                })()}
+                              </div>
+                            ) : (
+                              <div className="text-xl font-bold text-gray-400">VS</div>
+                            )}
+                          </div>
+
+                          <div className="text-center">
+                            <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">{p.team2}</h3>
+                            <p className="text-sm text-gray-500 dark:text-gray-400">{p.team2Course}</p>
+                          </div>
                         </div>
 
-                        <div className="text-center px-4">
-                          {p.result ? (
-                            <div className="text-center mb-1">
-                              {formatarResultado(p.result)}
-                              {(() => {
-                                const resultado = obterVencedor(p);
-                                if (resultado?.tipo === 'empate') {
-                                  return <div className="text-sm font-semibold text-yellow-600 dark:text-yellow-400 mt-2">EMPATE</div>;
-                                } else if (resultado?.vencedor) {
-                                  return <div className="text-sm font-semibold text-green-600 dark:text-green-400 mt-2">🏆 {resultado.vencedor}</div>;
-                                }
-                                return null;
-                              })()}
-                            </div>
-                          ) : (
-                            <div className="text-xl font-bold text-gray-400">VS</div>
-                          )}
-                        </div>
-
-                        <div className="text-center">
-                          <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">{p.team2}</h3>
-                          <p className="text-sm text-gray-500 dark:text-gray-400">{p.team2Course}</p>
-                        </div>
-
-                        {/* botão acessar eventos/súmula */}
+                        {/* botão acessar eventos/súmula - responsivo */}
                         {(p.status === 'Em andamento' || p.status === 'Finalizada') && (
-                          <Button onClick={() => setPartidaSelecionada(p)}>
-                            {p.status === 'Em andamento' ? 'Acessar Eventos' : 'Ver Súmula'}
-                          </Button>
+                          <div className="md:flex-shrink-0">
+                            <Button 
+                              onClick={() => setPartidaSelecionada(p)}
+                              className="w-full md:w-auto"
+                            >
+                              {p.status === 'Em andamento' ? 'Acessar Eventos' : 'Ver Súmula'}
+                            </Button>
+                          </div>
                         )}
                       </div>
 
@@ -818,7 +830,7 @@ export const MatchesPage = () => {
                 <div className="flex gap-2 mt-6">
                   <Button 
                     onClick={() => setShowConfigModal(false)}
-                    variant="outline"
+                    variant="secondary"
                     className="flex-1"
                   >
                     Cancelar
@@ -828,6 +840,7 @@ export const MatchesPage = () => {
                       setShowConfigModal(false);
                       // Salvar configurações se necessário
                     }}
+                    variant="primary"
                     className="flex-1"
                   >
                     Salvar

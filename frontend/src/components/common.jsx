@@ -25,14 +25,33 @@ export const SoccerBallIcon = () => (
     </svg>
 );
 
-export const Button = ({ children, onClick, variant = 'primary', className = '', type = 'button' }) => {
-    const baseClasses = 'px-4 py-3 rounded-lg font-semibold transition-colors disabled:opacity-50 flex items-center justify-center';
+export const Button = ({ children, onClick, variant = 'primary', className = '', type = 'button', disabled = false, size = 'default', ...props }) => {
+    const baseClasses = 'rounded-lg font-semibold transition-colors disabled:opacity-50 flex items-center justify-center';
+    
+    const sizeClasses = {
+        sm: 'px-3 py-2 text-sm',
+        default: 'px-4 py-3',
+        lg: 'px-6 py-4 text-lg'
+    };
+    
     const variants = {
         primary: 'bg-red-600 text-white hover:bg-red-700 dark:hover:bg-red-500',
         secondary: 'bg-gray-500 text-white hover:bg-gray-600 dark:bg-gray-600 dark:hover:bg-gray-500',
         tertiary: 'bg-transparent text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20',
+        outline: 'bg-transparent border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700',
     };
-    return <button type={type} onClick={onClick} className={`${baseClasses} ${variants[variant]} ${className}`}>{children}</button>;
+    
+    return (
+        <button 
+            type={type} 
+            onClick={onClick} 
+            disabled={disabled}
+            className={`${baseClasses} ${sizeClasses[size]} ${variants[variant]} ${className}`}
+            {...props}
+        >
+            {children}
+        </button>
+    );
 };
 
 export const Input = ({ label, ...props }) => (

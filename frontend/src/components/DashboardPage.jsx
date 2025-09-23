@@ -106,7 +106,7 @@ export const Dashboard = () => {
     <div className="space-y-6">
       {/* Seletor de Torneio Global */}
       <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm p-6">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
             <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
               Torneio Ativo
@@ -115,17 +115,17 @@ export const Dashboard = () => {
               {selectedTournament ? `${selectedTournament.name} • ${selectedTournament.status}` : 'Selecione um torneio para visualizar dados específicos'}
             </p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
             <Button
               onClick={() => setShowTournamentSelector(true)}
-              variant="outline"
-              className="flex items-center gap-2"
+              variant="secondary"
+              className="flex items-center gap-2 w-full sm:w-auto"
             >
               <Settings size={16} />
               {selectedTournament ? 'Alterar Torneio' : 'Selecionar Torneio'}
             </Button>
             {selectedTournament && (
-              <div className="px-3 py-1 bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200 rounded-full text-sm font-medium">
+              <div className="px-3 py-1 bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200 rounded-full text-sm font-medium w-full sm:w-auto text-center">
                 {selectedTournament.name}
               </div>
             )}
@@ -281,7 +281,7 @@ export const Dashboard = () => {
 
             {/* NOVA SEÇÃO: PARTIDAS / SÚMULAS FINALIZADAS */}
             <div>
-              <div className="flex items-center justify-between mb-4">
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
                 <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">SÚMULAS (PARTIDAS FINALIZADAS)</h2>
                 <div className="md:hidden text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
                   <span>←</span>

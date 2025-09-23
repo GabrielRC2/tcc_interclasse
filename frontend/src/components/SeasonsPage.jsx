@@ -188,9 +188,9 @@ export const SeasonsPage = () => {
     return (
         <>
             <div className="space-y-6">
-                <div className="flex flex-wrap justify-between items-center gap-4">
+                <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
                     <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">TORNEIOS</h1>
-                    <Button onClick={() => setIsModalOpen(true)}>
+                    <Button onClick={() => setIsModalOpen(true)} className="w-full md:w-auto">
                         <Plus size={20} className="mr-2" />
                         Novo Torneio
                     </Button>
@@ -209,8 +209,9 @@ export const SeasonsPage = () => {
                         Object.entries(groupedSeasons).map(([year, yearSeasons]) => (
                             <div key={year} className="border border-gray-200 dark:border-gray-700 rounded-lg">
                                 {/* Cabeçalho do Ano */}
-                                <button
+                                <Button
                                     onClick={() => toggleYear(year)}
+                                    variant="outline"
                                     className="w-full flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-t-lg transition-colors"
                                 >
                                     <div className="flex items-center gap-3">
@@ -226,7 +227,7 @@ export const SeasonsPage = () => {
                                             {yearSeasons.length} torneio{yearSeasons.length !== 1 ? 's' : ''}
                                         </span>
                                     </div>
-                                </button>
+                                </Button>
 
                                 {/* Lista de Torneios do Ano */}
                                 {expandedYears.has(year) && (
@@ -234,25 +235,32 @@ export const SeasonsPage = () => {
                                         {yearSeasons.map(season => (
                                             <div key={season.id} className="bg-white dark:bg-gray-800 p-6 relative overflow-hidden">
                                                 <div className="relative z-10">
-                                                    <div className="flex justify-between items-start mb-4">
-                                                        <div>
-                                                            <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-2">
-                                                                {season.name}
-                                                            </h3>
-                                                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(season.status)}`}>
-                                                                {season.status}
-                                                            </span>
-                                                        </div>
-                                                        <div className="flex gap-2">
-                                                            <Button onClick={() => handleEdit(season)} className="text-sm">
-                                                                Editar
-                                                            </Button>
-                                                            <Button 
-                                                                onClick={() => handleDelete(season)}
-                                                                className="bg-red-600 hover:bg-red-700 text-sm"
-                                                            >
-                                                                Excluir
-                                                            </Button>
+                                                    <div className="flex flex-col gap-4 mb-4">
+                                                        <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4">
+                                                            <div className="flex-1">
+                                                                <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-2">
+                                                                    {season.name}
+                                                                </h3>
+                                                                <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(season.status)}`}>
+                                                                    {season.status}
+                                                                </span>
+                                                            </div>
+                                                            <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
+                                                                <Button 
+                                                                    onClick={() => handleEdit(season)} 
+                                                                    className="text-sm w-full sm:w-auto"
+                                                                    variant="primary"
+                                                                >
+                                                                    Editar
+                                                                </Button>
+                                                                <Button 
+                                                                    onClick={() => handleDelete(season)}
+                                                                    className="text-sm w-full sm:w-auto"
+                                                                    variant="tertiary"
+                                                                >
+                                                                    Excluir
+                                                                </Button>
+                                                            </div>
                                                         </div>
                                                     </div>
 
@@ -349,10 +357,10 @@ export const SeasonsPage = () => {
                     </Select>
                     
                     <div className="flex justify-end gap-2 pt-4">
-                        <Button type="button" onClick={closeModal} className="bg-gray-500">
+                        <Button type="button" onClick={closeModal} variant="secondary">
                             Cancelar
                         </Button>
-                        <Button type="submit">
+                        <Button type="submit" variant="primary">
                             {editingSeason ? 'Salvar' : 'Criar'}
                         </Button>
                     </div>

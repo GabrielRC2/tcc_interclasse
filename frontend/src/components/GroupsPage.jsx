@@ -242,7 +242,7 @@ export const GroupsPage = () => {
                             </p>
                         )}
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex flex-col gap-2">
                         <Button onClick={handleSorteio} disabled={!selectedTournament || !modalidadeSelecionada || !quantidadeGrupos}>
                             <Shuffle size={20} className="mr-2" />
                             Realizar Sorteio
@@ -252,8 +252,7 @@ export const GroupsPage = () => {
                         {grupos.length > 0 && (
                             <Button
                                 onClick={limparGrupos}
-                                variant="outline"
-                                className="border-red-500 text-red-600 hover:bg-red-50 dark:border-red-400 dark:text-red-400 dark:hover:bg-red-900/20"
+                                variant="tertiary"
                             >
                                 <Trash2 size={20} className="mr-2" />
                                 Limpar Grupos
@@ -304,7 +303,7 @@ export const GroupsPage = () => {
                                             }`}
                                         >
                                             <div className="flex items-center gap-3 mb-3">
-                                                <Trophy size={20} className="text-blue-500" />
+                                                <Users size={20} className="text-blue-500" />
                                                 <span className="font-semibold text-gray-900 dark:text-gray-100 text-lg">
                                                     {modalidade.modalidadeNome}
                                                 </span>
