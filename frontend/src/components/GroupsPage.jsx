@@ -7,84 +7,73 @@ import { useTournament } from '@/contexts/TournamentContext';
 
 export const GroupsPage = () => {
     const { selectedTournament, pageStates, updatePageState } = useTournament();
-    const [modalidades, setModalidades] = useState([]);
+    const [modalidadesDisponiveis, setModalidadesDisponiveis] = useState([]);
     const [grupos, setGrupos] = useState([]);
     const [timesDisponiveis, setTimesDisponiveis] = useState([]);
 
-    // Estados dos filtros - inicializar com valores do contexto
-    const [selectedModalidade, setSelectedModalidade] = useState(pageStates?.groups?.selectedModalidade || '');
-    const [selectedGenero, setSelectedGenero] = useState(pageStates?.groups?.selectedGenero || '');
+    // Estados dos filtros - agora usando modalidade+gênero combinados
+    const [modalidadeSelecionada, setModalidadeSelecionada] = useState(null);
     const [quantidadeGrupos, setQuantidadeGrupos] = useState(pageStates?.groups?.quantidadeGrupos || '');
 
-    const [generos] = useState(['Masculino', 'Feminino']);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [isTimesExpanded, setIsTimesExpanded] = useState(true);
 
-    // Função para atualizar estado e salvar no contexto
-    const updateFilterState = (field, value) => {
-        const newState = { [field]: value };
-
-        if (field === 'selectedModalidade') {
-            setSelectedModalidade(value);
-            // Limpar dependências quando modalidade muda
-            setSelectedGenero('');
-            setQuantidadeGrupos('');
-            newState.selectedGenero = '';
-            newState.quantidadeGrupos = '';
-            setGrupos([]);
-            setTimesDisponiveis([]);
-        } else if (field === 'selectedGenero') {
-            setSelectedGenero(value);
-            setQuantidadeGrupos('');
-            newState.quantidadeGrupos = '';
-        } else if (field === 'quantidadeGrupos') {
-            setQuantidadeGrupos(value);
-        }
-
+    // Função para selecionar modalidade+gênero combinados
+    const selecionarModalidade = (modalidade) => {
+        setModalidadeSelecionada(modalidade);
+        setQuantidadeGrupos('');
+        setGrupos([]);
+        setTimesDisponiveis([]);
+        
         if (updatePageState) {
-            updatePageState('groups', newState);
+            updatePageState('groups', {
+                modalidadeSelecionada: modalidade,
+                quantidadeGrupos: ''
+            });
         }
     };
 
     useEffect(() => {
-        loadInitialData();
-    }, []);
-
-    useEffect(() => {
-        if (selectedModalidade && selectedGenero && selectedTournament) {
-            loadTimesDisponiveis();
+        if (selectedTournament) {
+            carregarModalidadesDisponiveis();
+        } else {
+            setModalidadesDisponiveis([]);
         }
-    }, [selectedModalidade, selectedGenero, selectedTournament]);
+    }, [selectedTournament]);
 
     useEffect(() => {
-        if (selectedModalidade && selectedGenero && selectedTournament) {
+        if (modalidadeSelecionada && selectedTournament) {
+            loadTimesDisponiveis();
             loadGrupos();
         }
-    }, [selectedModalidade, selectedGenero, selectedTournament]);
+    }, [modalidadeSelecionada, selectedTournament]);
 
-    const loadInitialData = async () => {
+    const carregarModalidadesDisponiveis = async () => {
+        setLoading(true);
         try {
-            const modalidadesRes = await fetch('/api/modalidades');
-            const modalidadesData = await modalidadesRes.json();
-            setModalidades(modalidadesData || []);
+            const response = await fetch(`/api/modalidades-disponiveis?torneioId=${selectedTournament.id}`);
+            if (response.ok) {
+                const data = await response.json();
+                setModalidadesDisponiveis(data);
+            } else {
+                setError('Erro ao carregar modalidades disponíveis');
+            }
         } catch (error) {
-            console.error('Erro ao carregar dados:', error);
-            setModalidades([]);
-        } finally {
-            setLoading(false);
+            setError('Erro ao carregar modalidades disponíveis');
         }
+        setLoading(false);
     };
 
     const loadGrupos = async () => {
-        if (!selectedTournament || !selectedModalidade || !selectedGenero) {
+        if (!selectedTournament || !modalidadeSelecionada) {
             setGrupos([]);
             return;
         }
 
         try {
-            console.log('Carregando grupos...', { selectedTournament: selectedTournament.id, selectedModalidade, selectedGenero });
-            const response = await fetch(`/api/grupos?torneioId=${selectedTournament.id}&modalidadeId=${selectedModalidade}&genero=${selectedGenero}`);
+            console.log('Carregando grupos...', { selectedTournament: selectedTournament.id, modalidadeSelecionada });
+            const response = await fetch(`/api/grupos?torneioId=${selectedTournament.id}&modalidadeId=${modalidadeSelecionada.modalidadeId}&genero=${modalidadeSelecionada.genero}`);
 
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}`);
@@ -101,21 +90,21 @@ export const GroupsPage = () => {
     };
 
     const loadTimesDisponiveis = async () => {
-        if (!selectedModalidade || !selectedGenero || !selectedTournament) {
+        if (!modalidadeSelecionada || !selectedTournament) {
             setTimesDisponiveis([]);
             return;
         }
 
         try {
-            console.log('Carregando times disponíveis...', { selectedModalidade, selectedGenero, torneio: selectedTournament.id });
-            const response = await fetch(`/api/times-disponiveis?modalidadeId=${selectedModalidade}&genero=${selectedGenero}&torneioId=${selectedTournament.id}`);
+            console.log('Carregando times disponíveis...', { modalidadeSelecionada, torneio: selectedTournament.id });
+            const response = await fetch(`/api/times-disponiveis?modalidadeId=${modalidadeSelecionada.modalidadeId}&genero=${modalidadeSelecionada.genero}&torneioId=${selectedTournament.id}`);
 
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}`);
             }
 
             const data = await response.json();
-            console.log(`Times disponíveis para ${selectedGenero}:`, data);
+            console.log(`Times disponíveis para ${modalidadeSelecionada.genero}:`, data);
             setTimesDisponiveis(Array.isArray(data) ? data : []);
 
             // Sugerir quantidade de grupos baseado no número de times
@@ -133,8 +122,8 @@ export const GroupsPage = () => {
     };
 
     const handleSorteio = async () => {
-        if (!selectedTournament || !selectedModalidade || !selectedGenero) {
-            alert('Selecione Modalidade e Gênero (Torneio já selecionado no Dashboard)');
+        if (!selectedTournament || !modalidadeSelecionada) {
+            alert('Selecione uma modalidade e gênero primeiro');
             return;
         }
 
@@ -164,8 +153,8 @@ export const GroupsPage = () => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     torneioId: selectedTournament.id,
-                    modalidadeId: selectedModalidade,
-                    genero: selectedGenero,
+                    modalidadeId: modalidadeSelecionada.modalidadeId,
+                    genero: modalidadeSelecionada.genero,
                     quantidadeGrupos: parseInt(quantidadeGrupos)
                 })
             });
@@ -188,8 +177,8 @@ export const GroupsPage = () => {
     
 
     const limparGrupos = async () => {
-        if (!selectedTournament || !selectedModalidade || !selectedGenero) {
-            alert('Selecione Modalidade e Gênero primeiro');
+        if (!selectedTournament || !modalidadeSelecionada) {
+            alert('Selecione uma modalidade e gênero primeiro');
             return;
         }
 
@@ -198,12 +187,11 @@ export const GroupsPage = () => {
             return;
         }
 
-        const modalidadeNome = modalidades.find(m => m.id == selectedModalidade)?.nome;
-        const partidasResponse = await fetch(`/api/partidas?torneioId=${selectedTournament.id}&modalidadeId=${selectedModalidade}&genero=${selectedGenero}`);
+        const partidasResponse = await fetch(`/api/partidas?torneioId=${selectedTournament.id}&modalidadeId=${modalidadeSelecionada.modalidadeId}&genero=${modalidadeSelecionada.genero}`);
         const partidas = await partidasResponse.json();
 
         const confirmacao = window.confirm(
-            `⚠️ ATENÇÃO: Limpar TODOS os grupos de ${modalidadeNome} ${selectedGenero}?\n\n` +
+            `⚠️ ATENÇÃO: Limpar TODOS os grupos de ${modalidadeSelecionada.modalidadeNome} ${modalidadeSelecionada.genero}?\n\n` +
             `Isso irá deletar:\n` +
             `• ${grupos.length} grupo(s)\n` +
             `• ${partidas.length} partida(s) relacionada(s)\n` +
@@ -219,8 +207,8 @@ export const GroupsPage = () => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     torneioId: selectedTournament.id,
-                    modalidadeId: selectedModalidade,
-                    genero: selectedGenero
+                    modalidadeId: modalidadeSelecionada.modalidadeId,
+                    genero: modalidadeSelecionada.genero
                 })
             });
 
@@ -255,7 +243,7 @@ export const GroupsPage = () => {
                         )}
                     </div>
                     <div className="flex gap-2">
-                        <Button onClick={handleSorteio} disabled={!selectedTournament || !selectedModalidade || !selectedGenero || !quantidadeGrupos}>
+                        <Button onClick={handleSorteio} disabled={!selectedTournament || !modalidadeSelecionada || !quantidadeGrupos}>
                             <Shuffle size={20} className="mr-2" />
                             Realizar Sorteio
                         </Button>
@@ -285,45 +273,75 @@ export const GroupsPage = () => {
                     </div>
                 ) : (
                     <>
-                        {/* Filtros - modalidade, gênero e quantidade de grupos */}
+                        {/* Seleção de Modalidade + Gênero com detecção automática */}
                         <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm p-4">
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <Select
-                                    label="Modalidade"
-                                    value={selectedModalidade}
-                                    onChange={(e) => updateFilterState('selectedModalidade', e.target.value)}
-                                >
-                                    <option value="">Selecione a modalidade</option>
-                                    {modalidades.map(m => (
-                                        <option key={m.id} value={m.id}>{m.nome}</option>
+                            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
+                                Modalidades Disponíveis
+                            </h3>
+                            
+                            {modalidadesDisponiveis.length === 0 ? (
+                                <div className="text-center py-8">
+                                    <Trophy size={32} className="mx-auto text-gray-400 mb-3" />
+                                    <p className="text-gray-500 dark:text-gray-400">
+                                        Nenhuma modalidade com times cadastrados ainda
+                                    </p>
+                                    <p className="text-sm text-gray-400 dark:text-gray-500 mt-2">
+                                        Cadastre times primeiro na seção "Times"
+                                    </p>
+                                </div>
+                            ) : (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {modalidadesDisponiveis.map(modalidade => (
+                                        <button
+                                            key={`${modalidade.modalidadeId}-${modalidade.genero}`}
+                                            onClick={() => selecionarModalidade(modalidade)}
+                                            className={`p-6 rounded-lg border transition-all text-left ${
+                                                modalidadeSelecionada && 
+                                                modalidadeSelecionada.modalidadeId === modalidade.modalidadeId && 
+                                                modalidadeSelecionada.genero === modalidade.genero
+                                                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 ring-2 ring-blue-200 dark:ring-blue-700'
+                                                    : 'border-gray-200 dark:border-gray-600 hover:border-blue-300 dark:hover:border-blue-600 hover:bg-blue-50/50 dark:hover:bg-blue-900/10'
+                                            }`}
+                                        >
+                                            <div className="flex items-center gap-3 mb-3">
+                                                <Trophy size={20} className="text-blue-500" />
+                                                <span className="font-semibold text-gray-900 dark:text-gray-100 text-lg">
+                                                    {modalidade.modalidadeNome}
+                                                </span>
+                                                <span className={`text-sm px-3 py-1 rounded-full ${
+                                                    modalidade.genero === 'Masculino' 
+                                                        ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300'
+                                                        : 'bg-pink-100 dark:bg-pink-900 text-pink-700 dark:text-pink-300'
+                                                }`}>
+                                                    {modalidade.genero}
+                                                </span>
+                                            </div>
+                                            <p className="text-base text-gray-600 dark:text-gray-400">
+                                                {modalidade.totalTimes} time{modalidade.totalTimes !== 1 ? 's' : ''} cadastrado{modalidade.totalTimes !== 1 ? 's' : ''}
+                                            </p>
+                                        </button>
                                     ))}
-                                </Select>
+                                </div>
+                            )}
 
-                                <Select
-                                    label="Gênero"
-                                    value={selectedGenero}
-                                    onChange={(e) => updateFilterState('selectedGenero', e.target.value)}
-                                >
-                                    <option value="">Selecione o gênero</option>
-                                    {generos.map(g => (
-                                        <option key={g} value={g}>{g}</option>
-                                    ))}
-                                </Select>
-
-                                <Select
-                                    label="Quantidade de Grupos"
-                                    value={quantidadeGrupos}
-                                    onChange={(e) => updateFilterState('quantidadeGrupos', e.target.value)}
-                                    disabled={timesDisponiveis.length === 0}
-                                >
-                                    <option value="">{timesDisponiveis.length > 0 ? 'Selecione a quantidade' : 'Sem times disponíveis'}</option>
-                                    {timesDisponiveis.length > 0 && Array.from({ length: Math.max(1, Math.ceil(timesDisponiveis.length / 2)) }, (_, i) => i + 1).map(num => (
-                                        <option key={num} value={num}>
-                                            {num} grupo{num > 1 ? 's' : ''} (~{Math.ceil(timesDisponiveis.length / num)} times/grupo)
-                                        </option>
-                                    ))}
-                                </Select>
-                            </div>
+                            {/* Quantidade de grupos - só aparece quando modalidade selecionada */}
+                            {modalidadeSelecionada && (
+                                <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-600">
+                                    <Select
+                                        label="Quantidade de Grupos"
+                                        value={quantidadeGrupos}
+                                        onChange={(e) => setQuantidadeGrupos(e.target.value)}
+                                        disabled={timesDisponiveis.length === 0}
+                                    >
+                                        <option value="">{timesDisponiveis.length > 0 ? 'Selecione a quantidade' : 'Sem times disponíveis'}</option>
+                                        {timesDisponiveis.length > 0 && Array.from({ length: Math.max(1, Math.ceil(timesDisponiveis.length / 2)) }, (_, i) => i + 1).map(num => (
+                                            <option key={num} value={num}>
+                                                {num} grupo{num > 1 ? 's' : ''} (~{Math.ceil(timesDisponiveis.length / num)} times/grupo)
+                                            </option>
+                                        ))}
+                                    </Select>
+                                </div>
+                            )}
                         </div>
 
                         {/* Preview dos Times que Participarão do Sorteio */}
@@ -379,9 +397,9 @@ export const GroupsPage = () => {
                                 <div className="col-span-full text-center py-12">
                                     <Users size={48} className="mx-auto text-gray-400 mb-4" />
                                     <p className="text-gray-500 dark:text-gray-400 text-lg">
-                                        {selectedTournament && selectedModalidade && selectedGenero
+                                        {selectedTournament && modalidadeSelecionada
                                             ? 'Nenhum grupo encontrado. Realize o sorteio.'
-                                            : 'Selecione Torneio, Modalidade e Gênero'
+                                            : 'Selecione uma modalidade e gênero'
                                         }
                                     </p>
                                 </div>
