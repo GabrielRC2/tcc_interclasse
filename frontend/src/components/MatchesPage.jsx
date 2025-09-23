@@ -412,9 +412,49 @@ export const MatchesPage = () => {
   };
 
   // Função para determinar o vencedor
+  // Função para formatar resultado com pênaltis
+  const formatarResultado = (result) => {
+    if (!result) return null;
+    
+    if (result.includes(' pen')) {
+      // Separar placar normal dos pênaltis: "0:0 (1:2 pen)"
+      const [placarNormal, placarPenaltis] = result.split(' (');
+      const penaltisLimpo = placarPenaltis.replace(' pen)', '');
+      
+      return (
+        <div className="text-center">
+          <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{placarNormal}</div>
+          <div className="text-sm text-orange-600 dark:text-orange-400 font-medium">
+            Pênaltis: {penaltisLimpo}
+          </div>
+        </div>
+      );
+    } else {
+      return <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{result}</div>;
+    }
+  };
+
   const obterVencedor = (partida) => {
     if (!partida.result) return null;
     
+    // Verificar se há pênaltis no resultado
+    if (partida.result.includes(' pen')) {
+      // Formato: "0:0 (1:2 pen)" - extrair resultado dos pênaltis
+      const penaltyMatch = partida.result.match(/\((\d+):(\d+) pen\)/);
+      if (penaltyMatch) {
+        const [, penaltisCasa, penaltisVisitante] = penaltyMatch;
+        const penCasa = parseInt(penaltisCasa);
+        const penVisitante = parseInt(penaltisVisitante);
+        
+        if (penCasa > penVisitante) {
+          return { vencedor: partida.team1, tipo: 'casa' };
+        } else if (penVisitante > penCasa) {
+          return { vencedor: partida.team2, tipo: 'visitante' };
+        }
+      }
+    }
+    
+    // Resultado normal (sem pênaltis)
     const [golsCasa, golsVisitante] = partida.result.split(':').map(Number);
     
     if (golsCasa > golsVisitante) {
@@ -687,14 +727,14 @@ export const MatchesPage = () => {
 
                         <div className="text-center px-4">
                           {p.result ? (
-                            <div className="text-center">
-                              <div className="text-2xl font-bold text-blue-600 dark:text-blue-400 mb-1">{p.result}</div>
+                            <div className="text-center mb-1">
+                              {formatarResultado(p.result)}
                               {(() => {
                                 const resultado = obterVencedor(p);
                                 if (resultado?.tipo === 'empate') {
-                                  return <div className="text-sm font-semibold text-yellow-600 dark:text-yellow-400">EMPATE</div>;
+                                  return <div className="text-sm font-semibold text-yellow-600 dark:text-yellow-400 mt-2">EMPATE</div>;
                                 } else if (resultado?.vencedor) {
-                                  return <div className="text-sm font-semibold text-green-600 dark:text-green-400">🏆 {resultado.vencedor}</div>;
+                                  return <div className="text-sm font-semibold text-green-600 dark:text-green-400 mt-2">🏆 {resultado.vencedor}</div>;
                                 }
                                 return null;
                               })()}
@@ -709,9 +749,11 @@ export const MatchesPage = () => {
                           <p className="text-sm text-gray-500 dark:text-gray-400">{p.team2Course}</p>
                         </div>
 
-                        {/* botão acessar eventos aparece somente se Em andamento */}
-                        {p.status === 'Em andamento' && (
-                          <Button onClick={() => setPartidaSelecionada(p)}>Acessar Eventos</Button>
+                        {/* botão acessar eventos/súmula */}
+                        {(p.status === 'Em andamento' || p.status === 'Finalizada') && (
+                          <Button onClick={() => setPartidaSelecionada(p)}>
+                            {p.status === 'Em andamento' ? 'Acessar Eventos' : 'Ver Súmula'}
+                          </Button>
                         )}
                       </div>
 
@@ -736,13 +778,16 @@ export const MatchesPage = () => {
             </div>
           )}
 
-          <SumulaModal
-            isOpen={!!partidaSelecionada}
-            onClose={() => setPartidaSelecionada(null)}
-            match={partidaSelecionada}
-            mode={partidaSelecionada?.status === 'Em andamento' ? 'live' : 'final'}
-            onSumulaEnviada={(id) => tratarSumulaEnviada(id)}
-          />
+          {partidaSelecionada && (
+            <SumulaModal
+              key={`sumula-${partidaSelecionada.id}`}
+              isOpen={true}
+              onClose={() => setPartidaSelecionada(null)}
+              match={partidaSelecionada}
+              mode={partidaSelecionada?.status === 'Em andamento' ? 'live' : 'final'}
+              onSumulaEnviada={(id) => tratarSumulaEnviada(id)}
+            />
+          )}
 
           {showConfigModal && (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">

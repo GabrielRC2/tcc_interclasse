@@ -6,27 +6,54 @@ const prisma = new PrismaClient();
 
 export async function POST(request, { params }) {
   try {
-    const { partidaId } = params;
-    const { pontosCasa, pontosVisitante } = await request.json();
+    const { partidaId } = await params;
+    const { 
+      pontosCasa, 
+      pontosVisitante, 
+      penaltisCasa, 
+      penaltisVisitante, 
+      temPenaltis 
+    } = await request.json();
 
     if (pontosCasa === null || pontosVisitante === null) {
       return NextResponse.json({ error: 'Pontuação é obrigatória' }, { status: 400 });
     }
 
-    // 1. Atualizar a pontuação do torneio (v/e/d, pontos)
-    await atualizarPontuacaoTorneio(prisma, parseInt(partidaId), parseInt(pontosCasa), parseInt(pontosVisitante));
+    // Atualizar a pontuação do torneio
+    await atualizarPontuacaoTorneio(
+      prisma, 
+      parseInt(partidaId), 
+      parseInt(pontosCasa), 
+      parseInt(pontosVisitante),
+      parseInt(penaltisCasa || 0),
+      parseInt(penaltisVisitante || 0),
+      Boolean(temPenaltis)
+    );
 
-    // 2. Atualizar o status da partida para Finalizada
+    // Preparar dados para atualização
+    const updateData = {
+      statusPartida: 'FINALIZADA',
+      pontosCasa: parseInt(pontosCasa),
+      pontosVisitante: parseInt(pontosVisitante),
+    };
+
+    // Adicionar dados de pênaltis se fornecidos
+    if (temPenaltis) {
+      updateData.penaltisCasa = parseInt(penaltisCasa || 0);
+      updateData.penaltisVisitante = parseInt(penaltisVisitante || 0);
+      updateData.temPenaltis = true;
+    }
+
+    // Atualizar o status da partida
     const partidaAtualizada = await prisma.partida.update({
       where: { id: parseInt(partidaId) },
-      data: {
-        statusPartida: 'FINALIZADA',
-        pontosCasa: parseInt(pontosCasa),
-        pontosVisitante: parseInt(pontosVisitante),
-      },
+      data: updateData,
     });
 
-    return NextResponse.json(partidaAtualizada);
+    return NextResponse.json({
+      message: 'Partida finalizada com sucesso',
+      partida: partidaAtualizada
+    });
 
   } catch (error) {
     console.error('Erro ao finalizar partida:', error);

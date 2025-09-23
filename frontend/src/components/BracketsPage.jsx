@@ -6,39 +6,56 @@ import { useTournament } from '@/contexts/TournamentContext';
 
 export const BracketsPage = () => {
     const { selectedTournament } = useTournament();
-    const [modalidades, setModalidades] = useState([]);
+    const [modalidadesDisponiveis, setModalidadesDisponiveis] = useState([]);
     const [gruposData, setGruposData] = useState([]);
     const [classificacao, setClassificacao] = useState([]);
+    const [classificacoesPorGrupo, setClassificacoesPorGrupo] = useState({}); // Novo estado
     const [eliminatorias, setEliminatorias] = useState([]);
-    const [selectedModalidade, setSelectedModalidade] = useState('');
-    const [selectedGenero, setSelectedGenero] = useState('');
-    const [generos] = useState(['Masculino', 'Feminino']);
+    
+    // Agora usando modalidade+gênero combinados
+    const [modalidadeSelecionada, setModalidadeSelecionada] = useState(null);
+    
     const [loading, setLoading] = useState(true);
+    const [classificacaoGeralExpandida, setClassificacaoGeralExpandida] = useState(false);
 
     useEffect(() => {
-        loadModalidades();
-    }, []);
+        if (selectedTournament) {
+            carregarGruposDisponiveis();
+        } else {
+            setModalidadesDisponiveis([]);
+        }
+    }, [selectedTournament]);
 
     useEffect(() => {
         loadData();
-    }, [selectedModalidade, selectedGenero, selectedTournament]);
+    }, [modalidadeSelecionada, selectedTournament]);
 
-    const loadModalidades = async () => {
+    const carregarGruposDisponiveis = async () => {
+        setLoading(true);
         try {
-            const response = await fetch('/api/modalidades');
-            const data = await response.json();
-            setModalidades(data);
+            const response = await fetch(`/api/grupos-disponiveis?torneioId=${selectedTournament.id}`);
+            if (response.ok) {
+                const data = await response.json();
+                setModalidadesDisponiveis(data);
+            } else {
+                console.error('Erro ao carregar grupos disponíveis');
+            }
         } catch (error) {
-            console.error('Erro ao carregar modalidades:', error);
-        } finally {
-            setLoading(false);
+            console.error('Erro ao carregar grupos disponíveis:', error);
         }
+        setLoading(false);
+    };
+
+    // Função para selecionar modalidade+gênero combinados
+    const selecionarModalidade = (modalidade) => {
+        setModalidadeSelecionada(modalidade);
     };
 
     const loadData = async () => {
-        if (!selectedTournament || !selectedModalidade || !selectedGenero) {
+        if (!selectedTournament || !modalidadeSelecionada) {
             setGruposData([]);
             setClassificacao([]);
+            setClassificacoesPorGrupo({});
             setEliminatorias([]);
             return;
         }
@@ -52,18 +69,68 @@ export const BracketsPage = () => {
 
     const loadGrupos = async () => {
         try {
-            const response = await fetch(`/api/grupos?torneioId=${selectedTournament.id}&modalidadeId=${selectedModalidade}&genero=${selectedGenero}`);
+            const response = await fetch(`/api/grupos?torneioId=${selectedTournament.id}&modalidadeId=${modalidadeSelecionada.modalidadeId}&genero=${modalidadeSelecionada.genero}`);
             const data = await response.json();
             setGruposData(data);
+
+            // Carregar classificações individuais para cada grupo
+            if (data.length > 0) {
+                await loadClassificacoesPorGrupo(data);
+            } else {
+                setClassificacoesPorGrupo({});
+            }
         } catch (error) {
             console.error('Erro ao carregar grupos:', error);
             setGruposData([]);
+            setClassificacoesPorGrupo({});
+        }
+    };
+
+    const loadClassificacoesPorGrupo = async (grupos) => {
+        try {
+            const classificacoesPorGrupo = {};
+            
+            // Carregar classificação para cada grupo individualmente
+            await Promise.all(grupos.map(async (grupo) => {
+                try {
+                    // CORREÇÃO: Adicionar filtro de gênero para manter consistência
+                    const params = new URLSearchParams({
+                        torneioId: selectedTournament.id.toString(),
+                        grupoId: grupo.id.toString()
+                    });
+                    
+                    // Adicionar filtro de gênero se disponível
+                    if (modalidadeSelecionada?.genero) {
+                        params.append('genero', modalidadeSelecionada.genero);
+                    }
+                    
+                    const url = `/api/classificacao?${params.toString()}`;
+                    const response = await fetch(url);
+                    
+                    if (!response.ok) {
+                        console.error(`Erro ${response.status} ao carregar classificação do grupo ${grupo.nome}`);
+                        classificacoesPorGrupo[grupo.nome] = [];
+                        return;
+                    }
+                    
+                    const data = await response.json();
+                    classificacoesPorGrupo[grupo.nome] = data.classificacao || [];
+                } catch (error) {
+                    console.error(`Erro ao carregar classificação do grupo ${grupo.nome}:`, error);
+                    classificacoesPorGrupo[grupo.nome] = [];
+                }
+            }));
+
+            setClassificacoesPorGrupo(classificacoesPorGrupo);
+        } catch (error) {
+            console.error('Erro ao carregar classificações por grupo:', error);
+            setClassificacoesPorGrupo({});
         }
     };
 
     const loadClassificacao = async () => {
         try {
-            const response = await fetch(`/api/classificacao?torneioId=${selectedTournament.id}&modalidadeId=${selectedModalidade}&genero=${selectedGenero}`);
+            const response = await fetch(`/api/classificacao?torneioId=${selectedTournament.id}&modalidadeId=${modalidadeSelecionada.modalidadeId}&genero=${modalidadeSelecionada.genero}`);
             const data = await response.json();
             setClassificacao(data.classificacao || []);
         } catch (error) {
@@ -74,7 +141,7 @@ export const BracketsPage = () => {
 
     const loadEliminatorias = async () => {
         try {
-            const response = await fetch(`/api/eliminatorias?torneioId=${selectedTournament.id}&modalidadeId=${selectedModalidade}&genero=${selectedGenero}`);
+            const response = await fetch(`/api/eliminatorias?torneioId=${selectedTournament.id}&modalidadeId=${modalidadeSelecionada.modalidadeId}&genero=${modalidadeSelecionada.genero}`);
             const data = await response.json();
             setEliminatorias(data.eliminatorias || []);
         } catch (error) {
@@ -86,8 +153,7 @@ export const BracketsPage = () => {
     const gerarEliminatorias = async (faseEscolhida = null) => {
         console.log('=== DEBUG gerarEliminatorias ===');
         console.log('selectedTournament:', selectedTournament);
-        console.log('selectedModalidade:', selectedModalidade);
-        console.log('selectedGenero:', selectedGenero);
+        console.log('modalidadeSelecionada:', modalidadeSelecionada);
         console.log('classificacao.length:', classificacao.length);
         console.log('faseEscolhida:', faseEscolhida);
 
@@ -104,7 +170,7 @@ export const BracketsPage = () => {
             return;
         }
 
-        if (!selectedModalidade || !selectedGenero) {
+        if (!modalidadeSelecionada) {
             alert('Selecione modalidade e gênero antes de gerar eliminatórias.');
             return;
         }
@@ -127,8 +193,8 @@ export const BracketsPage = () => {
 
             const bodyData = {
                 torneioId: selectedTournament.id,
-                modalidadeId: selectedModalidade,
-                genero: selectedGenero,
+                modalidadeId: modalidadeSelecionada.modalidadeId,
+                genero: modalidadeSelecionada.genero,
                 faseEscolhida: faseEscolhida
             };
 
@@ -167,12 +233,11 @@ export const BracketsPage = () => {
     const mostrarOpcoesEliminatorias = () => {
         console.log('=== DEBUG mostrarOpcoesEliminatorias ===');
         console.log('selectedTournament:', selectedTournament);
-        console.log('selectedModalidade:', selectedModalidade);
-        console.log('selectedGenero:', selectedGenero);
+        console.log('modalidadeSelecionada:', modalidadeSelecionada);
         console.log('classificacao:', classificacao);
 
-        if (!selectedTournament || !selectedModalidade || !selectedGenero) {
-            alert('Selecione torneio, modalidade e gênero antes de gerar eliminatórias.');
+        if (!selectedTournament || !modalidadeSelecionada) {
+            alert('Selecione torneio e modalidade antes de gerar eliminatórias.');
             return;
         }
 
@@ -236,6 +301,54 @@ export const BracketsPage = () => {
         return 'Final';
     };
 
+    // Componente reutilizável para tabela de classificação
+    const TabelaClassificacao = ({ dados, titulo, grupoEspecifico = false }) => (
+        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm p-6 relative overflow-hidden">
+            <div className="relative z-10">
+                <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
+                    <Award size={20} className={grupoEspecifico ? "text-blue-500" : "text-green-500"} />
+                    {titulo}
+                </h2>
+
+                <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                        <thead>
+                            <tr className="border-b border-gray-200 dark:border-gray-600">
+                                <th className="text-left py-2 px-2 font-semibold">Pos</th>
+                                <th className="text-left py-2 px-2 font-semibold">Time</th>
+                                <th className="text-center py-2 px-2 font-semibold">PTS</th>
+                                <th className="text-center py-2 px-2 font-semibold">J</th>
+                                <th className="text-center py-2 px-2 font-semibold">V</th>
+                                <th className="text-center py-2 px-2 font-semibold">E</th>
+                                <th className="text-center py-2 px-2 font-semibold">D</th>
+                                <th className="text-center py-2 px-2 font-semibold">GP</th>
+                                <th className="text-center py-2 px-2 font-semibold">GC</th>
+                                <th className="text-center py-2 px-2 font-semibold">SG</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {dados.map((time, index) => (
+                                <tr key={time.timeId} className="border-b border-gray-100 dark:border-gray-700">
+                                    <td className="py-2 px-2 font-bold">{index + 1}°</td>
+                                    <td className="py-2 px-2 font-medium">{time.nome}</td>
+                                    <td className="py-2 px-2 text-center font-bold text-blue-600 dark:text-blue-400">{time.pontos}</td>
+                                    <td className="py-2 px-2 text-center">{time.jogos}</td>
+                                    <td className="py-2 px-2 text-center text-green-600 dark:text-green-400">{time.vitorias}</td>
+                                    <td className="py-2 px-2 text-center text-yellow-600 dark:text-yellow-400">{time.empates}</td>
+                                    <td className="py-2 px-2 text-center text-red-600 dark:text-red-400">{time.derrotas}</td>
+                                    <td className="py-2 px-2 text-center">{time.golsPro}</td>
+                                    <td className="py-2 px-2 text-center">{time.golsContra}</td>
+                                    <td className="py-2 px-2 text-center font-semibold">{time.saldoGols > 0 ? '+' : ''}{time.saldoGols}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <CardSplat />
+        </div>
+    );
+
     if (loading) {
         return <div className="flex justify-center items-center h-64">Carregando...</div>;
     }
@@ -254,7 +367,7 @@ export const BracketsPage = () => {
                 <div className="flex gap-2">
                     <Button 
                         onClick={mostrarOpcoesEliminatorias} 
-                        disabled={!selectedTournament?.id || !selectedModalidade || !selectedGenero || classificacao.length === 0}
+                        disabled={!selectedTournament?.id || !modalidadeSelecionada || classificacao.length === 0}
                         className="bg-red-600 hover:bg-red-700"
                     >
                         <Target className="mr-2" size={16} />
@@ -272,34 +385,56 @@ export const BracketsPage = () => {
                 </div>
             ) : (
                 <>
-                    {/* Filtros */}
+                    {/* Seleção de Modalidade + Gênero com grupos disponíveis */}
                     <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm p-4">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <Select
-                                label="Modalidade"
-                                value={selectedModalidade}
-                                onChange={(e) => {
-                                    setSelectedModalidade(e.target.value);
-                                    setSelectedGenero('');
-                                }}
-                            >
-                                <option value="">Selecione a modalidade</option>
-                                {modalidades.map(m => (
-                                    <option key={m.id} value={m.id}>{m.nome}</option>
+                        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
+                            Modalidades com Grupos Criados
+                        </h3>
+                        
+                        {modalidadesDisponiveis.length === 0 ? (
+                            <div className="text-center py-8">
+                                <Users size={32} className="mx-auto text-gray-400 mb-3" />
+                                <p className="text-gray-500 dark:text-gray-400">
+                                    Nenhuma modalidade com grupos criados ainda
+                                </p>
+                                <p className="text-sm text-gray-400 dark:text-gray-500 mt-2">
+                                    Crie grupos primeiro na seção "Grupos"
+                                </p>
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {modalidadesDisponiveis.map(modalidade => (
+                                    <button
+                                        key={`${modalidade.modalidadeId}-${modalidade.genero}`}
+                                        onClick={() => selecionarModalidade(modalidade)}
+                                        className={`p-6 rounded-lg border transition-all text-left ${
+                                            modalidadeSelecionada && 
+                                            modalidadeSelecionada.modalidadeId === modalidade.modalidadeId && 
+                                            modalidadeSelecionada.genero === modalidade.genero
+                                                ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 ring-2 ring-blue-200 dark:ring-blue-700'
+                                                : 'border-gray-200 dark:border-gray-600 hover:border-blue-300 dark:hover:border-blue-600 hover:bg-blue-50/50 dark:hover:bg-blue-900/10'
+                                        }`}
+                                    >
+                                        <div className="flex items-center gap-3 mb-3">
+                                            <Users size={20} className="text-blue-500" />
+                                            <span className="font-semibold text-gray-900 dark:text-gray-100 text-lg">
+                                                {modalidade.modalidadeNome}
+                                            </span>
+                                            <span className={`text-sm px-3 py-1 rounded-full ${
+                                                modalidade.genero === 'Masculino' 
+                                                    ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300'
+                                                    : 'bg-pink-100 dark:bg-pink-900 text-pink-700 dark:text-pink-300'
+                                            }`}>
+                                                {modalidade.genero}
+                                            </span>
+                                        </div>
+                                        <p className="text-base text-gray-600 dark:text-gray-400">
+                                            {modalidade.totalGrupos} grupo{modalidade.totalGrupos !== 1 ? 's' : ''} • {modalidade.totalTimes} time{modalidade.totalTimes !== 1 ? 's' : ''}
+                                        </p>
+                                    </button>
                                 ))}
-                            </Select>
-
-                            <Select
-                                label="Gênero"
-                                value={selectedGenero}
-                                onChange={(e) => setSelectedGenero(e.target.value)}
-                            >
-                                <option value="">Selecione o gênero</option>
-                                {generos.map(g => (
-                                    <option key={g} value={g}>{g}</option>
-                                ))}
-                            </Select>
-                        </div>
+                            </div>
+                        )}
                     </div>
 
                     {/* Fase de Grupos */}
@@ -311,22 +446,17 @@ export const BracketsPage = () => {
                                     FASE DE GRUPOS
                                 </h2>
 
-                                <div className="grid gap-4">
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                                     {gruposData.map(grupo => (
-                                        <div key={grupo.nome} className="border border-gray-200 dark:border-gray-600 rounded-lg p-4">
-                                            <h3 className="text-lg font-bold text-gray-800 dark:text-gray-200 mb-3">
-                                                Grupo {grupo.nome}
-                                            </h3>
-                                            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                                                {grupo.times.map(time => (
-                                                    <div key={time.id} className="flex items-center gap-2 p-2 bg-gray-50 dark:bg-gray-700 rounded">
-                                                        <Trophy size={14} className="text-yellow-500" />
-                                                        <span className="font-medium text-gray-900 dark:text-gray-100 text-sm">
-                                                            {time.nome}
-                                                        </span>
-                                                    </div>
-                                                ))}
-                                            </div>
+                                        <div key={grupo.nome} className="space-y-4">
+                                            {/* Classificação do grupo */}
+                                            {classificacoesPorGrupo[grupo.nome] && classificacoesPorGrupo[grupo.nome].length > 0 && (
+                                                <TabelaClassificacao
+                                                    dados={classificacoesPorGrupo[grupo.nome]}
+                                                    titulo={`CLASSIFICAÇÃO - GRUPO ${grupo.nome}`}
+                                                    grupoEspecifico={true}
+                                                />
+                                            )}
                                         </div>
                                     ))}
                                 </div>
@@ -339,51 +469,26 @@ export const BracketsPage = () => {
                     {classificacao.length > 0 && (
                         <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm p-6 relative overflow-hidden">
                             <div className="relative z-10">
-                                <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-6 flex items-center gap-2">
-                                    <Award size={24} className="text-green-500" />
-                                    CLASSIFICAÇÃO GERAL
-                                </h2>
-
-                                <div className="overflow-x-auto">
-                                    <table className="w-full text-sm">
-                                        <thead>
-                                            <tr className="border-b border-gray-200 dark:border-gray-600">
-                                                <th className="text-left py-2 px-2 font-semibold">Pos</th>
-                                                <th className="text-left py-2 px-2 font-semibold">Time</th>
-                                                <th className="text-center py-2 px-2 font-semibold">PTS</th>
-                                                <th className="text-center py-2 px-2 font-semibold">J</th>
-                                                <th className="text-center py-2 px-2 font-semibold">V</th>
-                                                <th className="text-center py-2 px-2 font-semibold">E</th>
-                                                <th className="text-center py-2 px-2 font-semibold">D</th>
-                                                <th className="text-center py-2 px-2 font-semibold">GP</th>
-                                                <th className="text-center py-2 px-2 font-semibold">GC</th>
-                                                <th className="text-center py-2 px-2 font-semibold">SG</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {classificacao.map((time, index) => (
-                                                <tr key={time.timeId} className={`${index < 8 ? 'bg-green-50 dark:bg-green-900/20' : ''} border-b border-gray-100 dark:border-gray-700`}>
-                                                    <td className="py-2 px-2 font-bold">{index + 1}°</td>
-                                                    <td className="py-2 px-2 font-medium">{time.nome}</td>
-                                                    <td className="py-2 px-2 text-center font-bold text-blue-600 dark:text-blue-400">{time.pontos}</td>
-                                                    <td className="py-2 px-2 text-center">{time.jogos}</td>
-                                                    <td className="py-2 px-2 text-center text-green-600 dark:text-green-400">{time.vitorias}</td>
-                                                    <td className="py-2 px-2 text-center text-yellow-600 dark:text-yellow-400">{time.empates}</td>
-                                                    <td className="py-2 px-2 text-center text-red-600 dark:text-red-400">{time.derrotas}</td>
-                                                    <td className="py-2 px-2 text-center">{time.golsPro}</td>
-                                                    <td className="py-2 px-2 text-center">{time.golsContra}</td>
-                                                    <td className="py-2 px-2 text-center font-semibold">{time.saldoGols > 0 ? '+' : ''}{time.saldoGols}</td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
+                                <div 
+                                    className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 p-3 -m-3 rounded-lg transition-colors"
+                                    onClick={() => setClassificacaoGeralExpandida(!classificacaoGeralExpandida)}
+                                >
+                                    <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                                        <Award size={24} className="text-green-500" />
+                                        CLASSIFICAÇÃO GERAL
+                                    </h2>
+                                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                                        Clique para {classificacaoGeralExpandida ? "minimizar" : "expandir"} a tabela de classificação
+                                    </p>
                                 </div>
 
-                                {classificacao.length > 8 && (
-                                    <div className="mt-4 p-3 bg-green-50 dark:bg-green-900/30 rounded-lg">
-                                        <p className="text-sm text-green-700 dark:text-green-300">
-                                            <strong>Classificados para {determinarFase(Math.min(classificacao.length, 16))}:</strong> Primeiros {Math.min(classificacao.length, 16)} colocados (destacados em verde)
-                                        </p>
+                                {classificacaoGeralExpandida && (
+                                    <div className="mt-4">
+                                        <TabelaClassificacao
+                                            dados={classificacao}
+                                            titulo=""
+                                            grupoEspecifico={false}
+                                        />
                                     </div>
                                 )}
                             </div>
@@ -444,9 +549,9 @@ export const BracketsPage = () => {
                         <div className="text-center py-12">
                             <Calendar size={48} className="mx-auto text-gray-400 mb-4" />
                             <p className="text-gray-500 dark:text-gray-400 text-lg">
-                                {selectedModalidade && selectedGenero
+                                {modalidadeSelecionada
                                     ? 'Nenhum chaveamento encontrado. Realize o sorteio dos grupos primeiro.'
-                                    : 'Selecione Modalidade e Gênero'
+                                    : 'Selecione uma modalidade e gênero'
                                 }
                             </p>
                         </div>

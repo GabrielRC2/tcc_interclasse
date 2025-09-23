@@ -138,6 +138,10 @@ model Partida {
   statusPartida    String            @map("status_partida") @db.VarChar(20)
   pontosCasa       Int?              @map("pontos_casa")
   pontosVisitante  Int?              @map("pontos_visitante")
+  // Campos para pênaltis (só em eliminatórias)
+  penaltisCasa     Int?              @map("penaltis_casa") @default(0)
+  penaltisVisitante Int?             @map("penaltis_visitante") @default(0)
+  temPenaltis      Boolean           @map("tem_penaltis") @default(false)
   grupoId          Int?              @map("fk_id_grupo") // Opcional para partidas eliminatórias
   localId          Int               @map("fk_id_local")
   torneioId        Int               @map("fk_id_torneio")

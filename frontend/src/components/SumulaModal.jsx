@@ -3,19 +3,68 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Modal } from '@/components/Modal';
 import { Button } from '@/components/common';
 import { useTournament } from '@/contexts/TournamentContext';
-import { PDFDownloadLink } from '@react-pdf/renderer';
-import { SumulaPDF } from './SumulaPDF';
+
+// PDF Download Component that only renders on client - MOVED OUTSIDE COMPONENT
+const PDFDownloadButton = ({ className, fileName, matchData, tournamentData, teamData1, teamData2 }) => {
+  const [isClient, setIsClient] = useState(false);
+  const [PDFComponent, setPDFComponent] = useState(null);
+
+  useEffect(() => {
+    setIsClient(true);
+    
+    // Import PDF components only on client side
+    const loadPDFComponents = async () => {
+      try {
+        const [{ PDFDownloadLink }, { SumulaPDF }] = await Promise.all([
+          import('@react-pdf/renderer'),
+          import('./SumulaPDF')
+        ]);
+        
+        setPDFComponent(() => ({ PDFDownloadLink, SumulaPDF }));
+      } catch (error) {
+        console.error('Erro ao carregar componentes PDF:', error);
+      }
+    };
+
+    loadPDFComponents();
+  }, []);
+
+  if (!isClient || !PDFComponent) {
+    return (
+      <button className={className} disabled>
+        Carregando PDF...
+      </button>
+    );
+  }
+
+  const { PDFDownloadLink, SumulaPDF } = PDFComponent;
+
+  return (
+    <PDFDownloadLink
+      document={
+        <SumulaPDF 
+          match={matchData} 
+          tournament={tournamentData} 
+          showPenalities={false} 
+          team1Data={teamData1} 
+          team2Data={teamData2} 
+        />
+      }
+      fileName={fileName}
+      className={className}
+    >
+      {({ loading }) => (loading ? 'Gerando PDF...' : 'Exportar PDF')}
+    </PDFDownloadLink>
+  );
+};
 
 export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEnviada = () => {} }) => {
-  if (!match) return null;
-
   const estaAoVivo = mode === 'live';
   const { selectedTournament } = useTournament();
   const sumulaRef = useRef(null);
 
   const [carregando, setCarregando] = useState(true);
   const [salvando, setSalvando] = useState(false);
-  const [partidaDetalhes, setPartidaDetalhes] = useState(null); // Novo estado para dados da partida
 
   const [jogadoresTimeA, setJogadoresTimeA] = useState([]);
   const [jogadoresTimeB, setJogadoresTimeB] = useState([]);
@@ -25,8 +74,13 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEn
   const [edicaoTimeA, setEdicaoTimeA] = useState([]); // [{ id, points, yellow, red }]
   const [edicaoTimeB, setEdicaoTimeB] = useState([]);
 
-  const [placarA, setPlacarA] = useState(match.result ? parseInt(String(match.result).split(':')[0]) || 0 : 0);
-  const [placarB, setPlacarB] = useState(match.result ? parseInt(String(match.result).split(':')[1]) || 0 : 0);
+  const [placarA, setPlacarA] = useState(0);
+  const [placarB, setPlacarB] = useState(0);
+
+  // Estados para pênaltis (só para eliminatórias)
+  const [penaltisA, setPenaltisA] = useState(0);
+  const [penaltisB, setPenaltisB] = useState(0);
+  const [temPenaltis, setTemPenaltis] = useState(false);
 
   // permite editar mesmo quando NÃO está ao vivo (botão "Editar súmula")
   const [permitirEdicao, setPermitirEdicao] = useState(false);
@@ -34,33 +88,33 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEn
   // para garantir que o botão de export fique oculto até que os dados sejam efetivamente persistidos
   const [editingFinalizada, setEditingFinalizada] = useState(false);
 
+  // Verifica se é partida eliminatória (permitir pênaltis)
+  // Partidas eliminatórias são aquelas SEM grupo (grupoId = null)
+  const ehEliminatoria = match?.grupoId === null || match?.grupoId === undefined;
+  // Verifica se há empate (necessário pênaltis em eliminatórias)
+  const hahEmpate = placarA === placarB;
+
+  // Initialize scores safely
+  useEffect(() => {
+    if (match?.result) {
+      const resultStr = String(match.result);
+      const parts = resultStr.split(':');
+      setPlacarA(parseInt(parts[0]) || 0);
+      setPlacarB(parseInt(parts[1]) || 0);
+    } else {
+      setPlacarA(0);
+      setPlacarB(0);
+    }
+  }, [match?.result, match?.id]);
+
   useEffect(() => {
     const carregarDados = async () => {
       setCarregando(true);
       try {
-        const partidaRes = await fetch(`/api/partidas/${match.id}/detalhes`);
+        const partidaRes = await fetch(`/api/partidas/${match.id}`);
         const partidaData = partidaRes.ok ? await partidaRes.json() : null;
-        setPartidaDetalhes(partidaData); // Salvar os detalhes da partida
-        
-        // Debug: log dos dados da partida para verificar estrutura
-        console.log('Dados da partida carregados:', partidaData);
-        console.log('Times da partida:', partidaData?.times);
-        
-        // Verificar se há W.O. nos resultados
-        if (partidaData?.times) {
-          partidaData.times.forEach((time, index) => {
-            console.log(`Time ${index + 1}:`, {
-              timeId: time.timeId,
-              nome: time.time?.nome,
-              resultado: time.resultado,
-              pontosTorneio: time.pontosTorneio,
-              ehCasa: time.ehCasa
-            });
-          });
-        }
-        
-        const time1Id = partidaData?.times?.find(t => t.ehCasa)?.timeId ?? match.team1Id;
-        const time2Id = partidaData?.times?.find(t => !t.ehCasa)?.timeId ?? match.team2Id;
+        const time1Id = partidaData?.team1Id ?? match.team1Id;
+        const time2Id = partidaData?.team2Id ?? match.team2Id;
 
         const [resT1, resT2, resEv] = await Promise.all([
           fetch(`/api/teams/${time1Id}/jogadores`),
@@ -109,66 +163,23 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEn
           return { ...j, points: s.pontos || 0, yellow: s.amarelos || 0, red: s.vermelhos || 0 };
         }));
 
-        // Para W.O., usar os pontos salvos na partida, caso contrário calcular dos eventos
-        if (partidaData && partidaData.statusPartida === 'FINALIZADA') {
-          // Verificar se há W.O. através dos resultados dos times
-          const temWONaPartida = partidaData.times?.some(pt => pt.resultado === 'WO');
+        // recalcula placar inicial a partir dos eventos
+        const golsA = statsA.reduce((s, p) => s + (p.pontos || 0), 0);
+        const golsB = statsB.reduce((s, p) => s + (p.pontos || 0), 0);
+        setPlacarA(golsA);
+        setPlacarB(golsB);
+
+        // Carregar dados de pênaltis se disponíveis
+        if (partidaData) {
+          setPenaltisA(partidaData.penaltisCasa || 0);
+          setPenaltisB(partidaData.penaltisVisitante || 0);
           
-          console.log('Verificando W.O. na partida finalizada:', {
-            temWONaPartida,
-            statusPartida: partidaData.statusPartida,
-            pontosCasa: partidaData.pontosCasa,
-            pontosVisitante: partidaData.pontosVisitante,
-            times: partidaData.times?.map(t => ({
-              resultado: t.resultado,
-              timeId: t.timeId,
-              ehCasa: t.ehCasa
-            }))
-          });
+          // Detectar pênaltis se temPenaltis for true OU se o resultado contém " pen"
+          const temPenaltisDetectado = partidaData.temPenaltis || 
+            (partidaData.result && partidaData.result.includes(' pen')) ||
+            (partidaData.penaltisCasa !== null && partidaData.penaltisVisitante !== null);
           
-          if (temWONaPartida) {
-            // Em caso de W.O., ambos os times devem mostrar 0 pontos na súmula
-            // Os pontos do torneio (3-0) são apenas para classificação, não para o placar da partida
-            const timeQueDeWO = partidaData.times?.find(pt => pt.resultado === 'WO');
-            const timeVencedor = partidaData.times?.find(pt => pt.resultado === 'VENCEDOR');
-            
-            // Determinar qual é o time da casa e qual é visitante
-            const timeCasa = partidaData.times?.find(pt => pt.ehCasa);
-            const timeVisitante = partidaData.times?.find(pt => !pt.ehCasa);
-            
-            console.log('Configurando placar para W.O.:', {
-              timeQueDeWO: timeQueDeWO?.timeId,
-              timeVencedor: timeVencedor?.timeId,
-              timeCasa: timeCasa?.timeId,
-              timeVisitante: timeVisitante?.timeId
-            });
-            
-            if (timeQueDeWO?.timeId === timeCasa?.timeId) {
-              // Time da casa deu W.O.
-              setPlacarA(0); // Será exibido como "WO"
-              setPlacarB(0); // Time vencedor também mostra 0 na súmula (não ganhou jogando)
-            } else if (timeQueDeWO?.timeId === timeVisitante?.timeId) {
-              // Time visitante deu W.O.
-              setPlacarA(0); // Time vencedor também mostra 0 na súmula (não ganhou jogando)
-              setPlacarB(0); // Será exibido como "WO"
-            } else {
-              // Fallback - usar pontos da partida
-              setPlacarA(partidaData.pontosCasa || 0);
-              setPlacarB(partidaData.pontosVisitante || 0);
-            }
-          } else {
-            // Partida normal - calcular dos eventos
-            const golsA = statsA.reduce((s, p) => s + (p.pontos || 0), 0);
-            const golsB = statsB.reduce((s, p) => s + (p.pontos || 0), 0);
-            setPlacarA(golsA);
-            setPlacarB(golsB);
-          }
-        } else {
-          // Partida não finalizada - calcular dos eventos
-          const golsA = statsA.reduce((s, p) => s + (p.pontos || 0), 0);
-          const golsB = statsB.reduce((s, p) => s + (p.pontos || 0), 0);
-          setPlacarA(golsA);
-          setPlacarB(golsB);
+          setTemPenaltis(temPenaltisDetectado);
         }
       } catch (err) {
         console.error('Erro ao carregar súmula:', err);
@@ -177,9 +188,11 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEn
       }
     };
 
-    carregarDados();
+    if (match?.id && isOpen) {
+      carregarDados();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [match?.id]);
+  }, [match?.id, isOpen]);
 
   // quando edições mudam em modo live OU quando estamos em edição manual, recalcula placar
   useEffect(() => {
@@ -189,6 +202,9 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEn
     setPlacarA(gA);
     setPlacarB(gB);
   }, [edicaoTimeA, edicaoTimeB, estaAoVivo, permitirEdicao]);
+
+  // Early return for better React consistency - AFTER all hooks
+  if (!match || !isOpen) return null;
 
   const tratarMudancaInput = (time, jogadorId, campo, valor) => {
     const v = Math.max(0, parseInt(valor || '0', 10));
@@ -202,6 +218,13 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEn
   // envia eventos ao backend e atualiza pontos finais; permite envio quando ao vivo ou quando permitirEdicao=true
   const enviarSumula = async () => {
     if (!(estaAoVivo || permitirEdicao)) return;
+    
+    // Validação especial para partidas eliminatórias
+    if (ehEliminatoria && hahEmpate && (!temPenaltis || penaltisA === penaltisB)) {
+      alert('Em partidas eliminatórias não pode haver empate! Se o jogo terminou empatado, você deve registrar os pênaltis para determinar o vencedor.');
+      return;
+    }
+    
     setSalvando(true);
     try {
       // Reconcile events instead of blindly creating duplicates.
@@ -316,6 +339,12 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEn
         body: JSON.stringify({
           pontosCasa: pontosCasaCalc,
           pontosVisitante: pontosVisitanteCalc,
+          // Adicionar dados de pênaltis se for eliminatória e tiver pênaltis
+          ...(ehEliminatoria && temPenaltis && {
+            penaltisCasa: penaltisA,
+            penaltisVisitante: penaltisB,
+            temPenaltis: true
+          })
         }),
       });
 
@@ -380,7 +409,7 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEn
   };
 
   const renderTabelaJogadores = (jogadores, edicao, numTime) => (
-    <table className="w-full border-collapse">
+    <table key={`tabela-time-${numTime}`} className="w-full border-collapse">
       <thead>
         <tr className="bg-gray-50 dark:bg-gray-800">
           <th className="p-2 text-left">Jogador</th>
@@ -396,11 +425,11 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEn
             <td colSpan="5" className="p-4 text-center text-gray-500">Nenhum jogador cadastrado</td>
           </tr>
         ) : (
-          jogadores.map(j => {
+          jogadores.map((j) => {
             const linhaEdicao = (edicao || []).find(x => x.id === j.id) || { points: 0, yellow: 0, red: 0 };
             const podeEditarCampo = estaAoVivo || permitirEdicao;
             return (
-              <tr key={j.id} className="border-t">
+              <tr key={`jogador-${j.id}-${numTime}`} className="border-t">
                 <td className="p-2">{j.nome || j.name}</td>
                 <td className="p-2 text-center">
                   <span className="inline-block bg-gray-200 dark:bg-gray-700 px-2 py-1 rounded-full text-sm">
@@ -410,6 +439,7 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEn
                 <td className="p-2 text-center">
                   {podeEditarCampo ? (
                     <input
+                      key={`points-${j.id}-${numTime}`}
                       type="number"
                       min={0}
                       className="w-16 text-center border rounded px-1 py-0.5"
@@ -424,6 +454,7 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEn
                 <td className="p-2 text-center">
                   {podeEditarCampo ? (
                     <input
+                      key={`yellow-${j.id}-${numTime}`}
                       type="number"
                       min={0}
                       className="w-12 text-center border rounded px-1 py-0.5"
@@ -438,6 +469,7 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEn
                 <td className="p-2 text-center">
                   {podeEditarCampo ? (
                     <input
+                      key={`red-${j.id}-${numTime}`}
                       type="number"
                       min={0}
                       className="w-12 text-center border rounded px-1 py-0.5"
@@ -457,83 +489,12 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEn
     </table>
   );
 
-  // Controle de export: só mostrar quando a partida estiver finalizada E não estiver em edição
-  const mostrarExport = !carregando && 
-                       match?.status === 'Finalizada' && 
-                       !permitirEdicao && 
-                       !editingFinalizada;
-
-  // Determinar se houve W.O. e cores do placar
-  const temWO = partidaDetalhes?.times?.some(pt => pt.resultado === 'WO') || false;
-  
-  // Debug para W.O.
-  console.log('Verificação de W.O.:', {
-    temWO,
-    times: partidaDetalhes?.times?.map(t => ({ 
-      timeId: t.timeId, 
-      resultado: t.resultado, 
-      ehCasa: t.ehCasa,
-      nome: t.time?.nome 
-    }))
-  });
-  
-  // Identificar qual time deu W.O. e qual ganhou
-  const timeWO = partidaDetalhes?.times?.find(pt => pt.resultado === 'WO');
-  const timeVencedorWO = partidaDetalhes?.times?.find(pt => pt.resultado === 'VENCEDOR' && temWO);
-  
-  const obterCorPlacar = (pontuacao, ehTimeA) => {
-    if (match?.status !== 'Finalizada') return 'text-gray-800 dark:text-gray-100';
-    
-    if (temWO) {
-      // Em caso de W.O., verificar qual time deu W.O.
-      const timeAId = partidaDetalhes?.times?.find(pt => pt.ehCasa)?.timeId;
-      const timeBId = partidaDetalhes?.times?.find(pt => !pt.ehCasa)?.timeId;
-      
-      if (ehTimeA) {
-        return timeWO?.timeId === timeAId ? 'text-red-600 font-bold' : ' font-bold';
-      } else {
-        return timeWO?.timeId === timeBId ? 'text-red-600 font-bold' : ' font-bold';
-      }
-    }
-  };
-
-  const obterTextoPlacar = (pontuacao, ehTimeA) => {
-    if (temWO && partidaDetalhes?.times) {
-      // Encontrar qual time deu W.O.
-      const timeQueDeWO = partidaDetalhes.times.find(pt => pt.resultado === 'WO');
-      const timeVencedor = partidaDetalhes.times.find(pt => pt.resultado === 'VENCEDOR');
-      
-      if (timeQueDeWO) {
-        const timeCasa = partidaDetalhes.times.find(pt => pt.ehCasa);
-        const timeVisitante = partidaDetalhes.times.find(pt => !pt.ehCasa);
-        
-        // Se o time atual é o que deu W.O., mostrar "WO"
-        if (ehTimeA && timeQueDeWO.timeId === timeCasa?.timeId) {
-          return 'WO';
-        } else if (!ehTimeA && timeQueDeWO.timeId === timeVisitante?.timeId) {
-          return 'WO';
-        } else {
-          // Time vencedor por W.O. - mostrar 0 na súmula (pontos do torneio são só para classificação)
-          return '0';
-        }
-      }
-    }
-    return pontuacao.toString();
-  };
-
-  const obterNomeTimeWO = () => {
-    if (temWO && timeWO && partidaDetalhes?.times) {
-      const timeCasa = partidaDetalhes.times.find(pt => pt.ehCasa);
-      const timeVisitante = partidaDetalhes.times.find(pt => !pt.ehCasa);
-      
-      if (timeWO.timeId === timeCasa?.timeId) {
-        return match.team1;
-      } else if (timeWO.timeId === timeVisitante?.timeId) {
-        return match.team2;
-      }
-    }
-    return null;
-  };
+  // Controle de export: se a partida é Finalizada, o botão prefere ficar à esquerda.
+  // Entretanto, quando o usuário ativa "Editar súmula" devemos esconder o botão
+  // até que a súmula seja enviada ao banco (permitirEdicao === false novamente).
+  const exportEsquerdaBase = (match?.status === 'Finalizada');
+  // Mostrar export somente quando não estivermos em modo de edição (nem edição iniciada para partida finalizada)
+  const mostrarExport = !carregando && !permitirEdicao && !editingFinalizada;
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="INFORMAÇÕES DO TORNEIO" size="max-w-4xl max-h-[90vh]">
@@ -558,18 +519,114 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEn
               <div className="flex justify-around items-center text-center">
                 <div>
                   <p className="font-bold text-lg dark:text-gray-200">{match.team1}</p>
-                  <p className={`font-extrabold text-6xl ${obterCorPlacar(placarA, true)}`}>
-                    {obterTextoPlacar(placarA, true)}
-                  </p>
+                  <p className="font-extrabold text-6xl text-gray-800 dark:text-gray-100">{placarA}</p>
                 </div>
                 <p className="font-extrabold text-6xl text-gray-400 dark:text-gray-500">:</p>
                 <div>
                   <p className="font-bold text-lg dark:text-gray-200">{match.team2}</p>
-                  <p className={`font-extrabold text-6xl ${obterCorPlacar(placarB, false)}`}>
-                    {obterTextoPlacar(placarB, false)}
-                  </p>
+                  <p className="font-extrabold text-6xl text-gray-800 dark:text-gray-100">{placarB}</p>
                 </div>
               </div>
+
+              {/* SEÇÃO DE PÊNALTIS - Só para eliminatórias */}
+              {ehEliminatoria && (estaAoVivo || permitirEdicao) && (
+                <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-4">
+                    <h4 className="font-bold text-lg text-yellow-800 dark:text-yellow-200">⚽ PÊNALTIS</h4>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        id="penaltis-checkbox"
+                        checked={temPenaltis}
+                        onChange={(e) => setTemPenaltis(e.target.checked)}
+                        className="w-4 h-4"
+                      />
+                      <label htmlFor="penaltis-checkbox" className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
+                        Ativar pênaltis
+                      </label>
+                    </div>
+                  </div>
+                  
+                  {temPenaltis && (
+                    <>
+                      <div className="bg-yellow-100 dark:bg-yellow-900/40 rounded-md p-3 mb-4">
+                        <p className="text-xs text-yellow-800 dark:text-yellow-200 text-center">
+                          ⚠️ <strong>Importante:</strong> Os gols de pênalti servem apenas para definir o vencedor. 
+                          Não contam para estatísticas individuais dos jogadores.
+                        </p>
+                      </div>
+                      
+                      <div className="flex justify-around items-center">
+                        <div className="text-center">
+                          <p className="font-medium text-yellow-800 dark:text-yellow-200 mb-2">{match.team1}</p>
+                          <div className="flex items-center justify-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setPenaltisA(Math.max(0, penaltisA - 1))}
+                              className="w-8 h-8 rounded-full bg-red-500 hover:bg-red-600 text-white font-bold flex items-center justify-center"
+                            >
+                              −
+                            </button>
+                            <span className="font-bold text-2xl text-yellow-800 dark:text-yellow-200 w-12 text-center">
+                              {penaltisA}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => setPenaltisA(penaltisA + 1)}
+                              className="w-8 h-8 rounded-full bg-green-500 hover:bg-green-600 text-white font-bold flex items-center justify-center"
+                            >
+                              +
+                            </button>
+                          </div>
+                        </div>
+                        
+                        <div className="font-bold text-2xl text-yellow-600 dark:text-yellow-400">PEN</div>
+                        
+                        <div className="text-center">
+                          <p className="font-medium text-yellow-800 dark:text-yellow-200 mb-2">{match.team2}</p>
+                          <div className="flex items-center justify-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setPenaltisB(Math.max(0, penaltisB - 1))}
+                              className="w-8 h-8 rounded-full bg-red-500 hover:bg-red-600 text-white font-bold flex items-center justify-center"
+                            >
+                              −
+                            </button>
+                            <span className="font-bold text-2xl text-yellow-800 dark:text-yellow-200 w-12 text-center">
+                              {penaltisB}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => setPenaltisB(penaltisB + 1)}
+                              className="w-8 h-8 rounded-full bg-green-500 hover:bg-green-600 text-white font-bold flex items-center justify-center"
+                            >
+                              +
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+
+              {/* Mostrar resultado dos pênaltis quando finalizados */}
+              {ehEliminatoria && !estaAoVivo && !permitirEdicao && temPenaltis && (
+                <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+                  <h4 className="font-bold text-center text-yellow-800 dark:text-yellow-200 mb-2">⚽ RESULTADO DOS PÊNALTIS</h4>
+                  <div className="flex justify-around items-center">
+                    <div className="text-center">
+                      <p className="font-medium text-yellow-800 dark:text-yellow-200">{match.team1}</p>
+                      <p className="font-bold text-3xl text-yellow-800 dark:text-yellow-200">{penaltisA}</p>
+                    </div>
+                    <p className="font-bold text-2xl text-yellow-600 dark:text-yellow-400">:</p>
+                    <div className="text-center">
+                      <p className="font-medium text-yellow-800 dark:text-yellow-200">{match.team2}</p>
+                      <p className="font-bold text-3xl text-yellow-800 dark:text-yellow-200">{penaltisB}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               <div className="grid grid-cols-2 gap-4 text-sm border-t pt-4">
                 <div>
@@ -579,16 +636,6 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEn
                 <div>
                   <p><strong>Status:</strong> {match.status || '-'}</p>
                   <p><strong>Fase:</strong> {match.phase || match.fase || 'Grupos'}</p>
-                  {temWO && (
-                    <div className="mt-2">
-                      <p className="text-red-600 font-bold">⚠️ PARTIDA DECIDIDA POR W.O.</p>
-                      {obterNomeTimeWO() && (
-                        <p className="text-sm text-red-500">
-                          Time que deu W.O.: <strong>{obterNomeTimeWO()}</strong>
-                        </p>
-                      )}
-                    </div>
-                  )}
                 </div>
               </div>
 
@@ -619,23 +666,36 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEn
           )}
         </div>
 
-        {/* Footer: botões de ação */}
+        {/* Footer: duas áreas (esquerda / direita) para controlar posição do botão Exportar */}
         <div className="flex justify-between items-center gap-2 pt-4 border-t border-gray-200 dark:border-gray-700 mt-4 bg-white dark:bg-gray-800 px-4">
-          {/* Left area - Botão de exportar PDF (apenas quando partida finalizada) */}
+          {/* Left area */}
           <div className="flex items-center space-x-2">
-            {mostrarExport && (
-              <PDFDownloadLink
-                document={<SumulaPDF match={match} tournament={selectedTournament} showPenalties={false} team1Data={{ name: match.team1, players: jogadoresTimeA }} team2Data={{ name: match.team2, players: jogadoresTimeB }} />}
+            {exportEsquerdaBase && mostrarExport && (
+              <PDFDownloadButton
+                matchData={match}
+                tournamentData={selectedTournament}
+                teamData1={{ name: match.team1, players: jogadoresTimeA }}
+                teamData2={{ name: match.team2, players: jogadoresTimeB }}
                 fileName={gerarNomeArquivo()}
                 className="inline-flex items-center px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white font-medium rounded-md transition-colors"
-              >
-                {({ loading }) => (loading ? 'Gerando PDF...' : 'Exportar PDF')}
-              </PDFDownloadLink>
+              />
             )}
           </div>
 
-          {/* Right area - Botões de ação */}
+          {/* Right area */}
           <div className="flex items-center gap-2">
+            {/* If export should not be left, show it here */}
+            {!exportEsquerdaBase && mostrarExport && (
+              <PDFDownloadButton
+                matchData={match}
+                tournamentData={selectedTournament}
+                teamData1={{ name: match.team1, players: jogadoresTimeA }}
+                teamData2={{ name: match.team2, players: jogadoresTimeB }}
+                fileName={gerarNomeArquivo()}
+                className="inline-flex items-center px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white font-medium rounded-md transition-colors"
+              />
+            )}
+
             {estaAoVivo && !carregando && (
               <Button onClick={enviarSumula} disabled={salvando}>
                 {salvando ? 'Enviando...' : 'Enviar Súmula'}

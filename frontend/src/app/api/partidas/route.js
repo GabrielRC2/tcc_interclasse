@@ -83,6 +83,15 @@ export async function GET(request) {
         modalidadeNome = timeCasa.categoria.modalidade.nome;
       }
 
+      // Calcular resultado incluindo pênaltis
+      let result = null;
+      if (partida.pontosCasa !== null && partida.pontosVisitante !== null) {
+        result = `${partida.pontosCasa}:${partida.pontosVisitante}`;
+        if (partida.temPenaltis && partida.penaltisCasa !== null && partida.penaltisVisitante !== null) {
+          result += ` (${partida.penaltisCasa}:${partida.penaltisVisitante} pen)`;
+        }
+      }
+
       return {
         id: partida.id,
         ordem: index + 1,
@@ -92,9 +101,7 @@ export async function GET(request) {
         team2Id: timeVisitante.id,
         team1Course: timeCasa?.curso.sigla || '',
         team2Course: timeVisitante?.curso.sigla || '',
-        result: partida.pontosCasa !== null && partida.pontosVisitante !== null 
-          ? `${partida.pontosCasa}:${partida.pontosVisitante}` 
-          : null,
+        result: result,
         modality: modalidadeNome,
         category: timeCasa?.categoria?.genero || timeVisitante?.categoria?.genero || 'N/A',
         location: partida.local?.nome || 'TBD',
