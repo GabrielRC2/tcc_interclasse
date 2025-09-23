@@ -50,7 +50,7 @@ export async function GET(request) {
         local: true
       },
       orderBy: {
-        id: 'asc' // Ordem otimizada
+        ordem: 'asc' // Ordenar pela ordem armazenada no banco
       }
     });
 
@@ -94,7 +94,7 @@ export async function GET(request) {
 
       return {
         id: partida.id,
-        ordem: index + 1,
+        ordem: partida.ordem || index + 1, // Usar ordem do banco se disponível, senão calcular
         team1: timeCasa?.nome || 'TBD',
         team2: timeVisitante?.nome || 'TBD',
         team1Id: timeCasa.id,
@@ -108,7 +108,8 @@ export async function GET(request) {
         status: getStatusPortugues(partida.statusPartida),
         date: partida.dataHora.toISOString().split('T')[0],
         time: partida.dataHora.toTimeString().slice(0, 5),
-        grupo: partida.grupo?.nome || 'N/A'
+        grupo: partida.grupo?.nome || partida.fase || 'N/A', // Mostrar fase para eliminatórias
+        fase: partida.fase // Adicionar campo fase separado também
       };
     });
 

@@ -165,6 +165,15 @@ async function criarPartidasEliminatorias(torneioId, modalidadeId, genero, times
   const partidasCriadas = [];
   const dataBase = new Date();
 
+  // Buscar a maior ordem de partida existente no torneio para continuar a sequência
+  const ultimaPartida = await prisma.partida.findFirst({
+    where: { torneioId: torneioId },
+    orderBy: { ordem: 'desc' },
+    select: { ordem: true }
+  });
+  
+  let proximaOrdem = ultimaPartida?.ordem ? ultimaPartida.ordem + 1 : 1;
+
   // Criar confrontos baseados na classificação
   for (let i = 0; i < times.length; i += 2) {
     if (i + 1 < times.length) {
@@ -185,7 +194,8 @@ async function criarPartidasEliminatorias(torneioId, modalidadeId, genero, times
           tipo: 'ELIMINATORIA',
           statusPartida: 'AGENDADA',
           dataHora: new Date(dataBase.getTime() + (i * 60 * 60 * 1000)), // Intervalos de 1 hora
-          localId: local?.id || 1
+          localId: local?.id || 1,
+          ordem: proximaOrdem++ // Adicionar ordem sequencial
         }
       });
 

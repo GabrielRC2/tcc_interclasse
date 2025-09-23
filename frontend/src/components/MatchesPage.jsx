@@ -367,6 +367,87 @@ export const MatchesPage = () => {
     }
   };
 
+  // Reorganizar eliminatórias aplicando as regras de otimização
+  const reorganizarEliminatorias = async () => {
+    if (!selectedTournament) {
+      alert('❌ Selecione um torneio primeiro');
+      return;
+    }
+
+    const partidasEliminatorias = partidas.filter(p => 
+      p.fase && ['Oitavas de Final', 'Quartas de Final', 'Semifinais', 'Final', 'Triangular Final', 'Partida Extra'].includes(p.fase)
+    );
+
+    if (partidasEliminatorias.length === 0) {
+      alert('❌ Não há eliminatórias para reorganizar');
+      return;
+    }
+
+    const partidasFinalizadas = partidasEliminatorias.filter(p => p.status === 'Finalizada' || p.status === 'FINALIZADA');
+    if (partidasFinalizadas.length > 0) {
+      const confirmar = window.confirm(
+        `⚠️ ATENÇÃO: Existem ${partidasFinalizadas.length} eliminatórias já finalizadas.\n\n` +
+        `Reorganizar irá:\n` +
+        `• Manter os confrontos existentes\n` +
+        `• Reorganizar apenas horários e ordem das partidas\n` +
+        `• Aplicar as regras de otimização\n` +
+        `• MANTER todos os resultados das partidas finalizadas\n\n` +
+        `Deseja continuar?`
+      );
+      if (!confirmar) return;
+    } else {
+      const confirmar = window.confirm(
+        `🔄 Reorganizar eliminatórias?\n\n` +
+        `Esta ação irá:\n` +
+        `• Manter os confrontos existentes\n` +
+        `• Reorganizar horários e ordem das partidas\n` +
+        `• Aplicar as regras de otimização melhoradas\n\n` +
+        `📋 REGRAS APLICADAS:\n` +
+        `⚽ Regra 1: Sempre um jogo masculino e um feminino simultâneos\n` +
+        `🔄 Regra 2: Priorizar modalidades diferentes no mesmo slot\n` +
+        `🔀 Regra 3: Cada modalidade faz 5 consecutivas de um gênero, depois 5 do outro\n` +
+        `🏟️ Regra 4: Um jogo em cada quadra conforme configuração\n` +
+        `⏱️ Regra 5: Maximizar tempo de descanso dos times\n\n` +
+        `Continuar?`
+      );
+      if (!confirmar) return;
+    }
+
+    setGenerating(true);
+    try {
+      console.log('🚀 Reorganizando eliminatórias com configuração de locais:', configuracaoLocais);
+      const response = await fetch('/api/eliminatorias/reorganizar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          torneioId: selectedTournament.id,
+          configuracaoLocais
+        })
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        alert(
+          `✅ Eliminatórias reorganizadas com sucesso!\n\n` +
+          `🎲 ${result.partidasReorganizadas} partidas reorganizadas em ${result.slots} slots de tempo!\n` +
+          `⚽ Cada slot contém 1 jogo masculino + 1 feminino simultâneos\n` +
+          `🔄 Diversidade de modalidades aplicada\n` +
+          `🏟️ Distribuição otimizada entre as quadras\n` +
+          `⏱️ Novos horários otimizados com máximo descanso`
+        );
+        await carregarPartidas();
+      } else {
+        const error = await response.json();
+        alert('❌ ' + (error.error || 'Erro ao reorganizar eliminatórias'));
+      }
+    } catch (error) {
+      console.error('Erro ao reorganizar eliminatórias:', error);
+      alert('❌ Erro ao reorganizar eliminatórias');
+    } finally {
+      setGenerating(false);
+    }
+  };
+
   // gerar eliminatórias baseadas na classificação dos grupos
   // gerar eliminatórias baseadas na classificação dos grupos
   const gerarEliminatorias = async () => {
@@ -496,6 +577,14 @@ export const MatchesPage = () => {
     return '';
   })();
 
+  // Verificar se existem eliminatórias para mostrar o botão de reorganizar
+  const temEliminatorias = (() => {
+    const partidasEliminatorias = partidas.filter(p => 
+      p.fase && ['Oitavas de Final', 'Quartas de Final', 'Semifinais', 'Final', 'Triangular Final', 'Partida Extra'].includes(p.fase)
+    );
+    return partidasEliminatorias.length > 0;
+  })();
+
   // Função para obter texto do botão de gerar partidas
   const getBotaoGerarPartidasTexto = () => {
     if (proximaAcao === 'GERAR_GRUPOS') {
@@ -618,6 +707,16 @@ export const MatchesPage = () => {
             <RefreshCcw size={16} className="mr-2" />
             Refazer Sorteio
           </Button>
+          {temEliminatorias && (
+            <Button 
+              onClick={reorganizarEliminatorias}
+              disabled={!selectedTournament || generating}
+              className="bg-indigo-600 hover:bg-indigo-700"
+            >
+              <RefreshCcw size={16} className="mr-2" />
+              Reorganizar Eliminatórias
+            </Button>
+          )}
           <Button 
             onClick={gerarPontuacoesAleatorias} 
             disabled={partidas.filter(p => p.status === 'Agendada').length === 0}
@@ -708,7 +807,9 @@ export const MatchesPage = () => {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-3 mb-3">
                         <span className="text-sm font-medium text-gray-500 dark:text-gray-400">Partida #{p.ordem}</span>
-                        <span className="text-sm text-gray-500 dark:text-gray-400">Grupo {p.grupo}</span>
+                        <span className="text-sm text-gray-500 dark:text-gray-400">
+                          {p.fase ? p.fase : (p.grupo !== 'N/A' ? `Grupo ${p.grupo}` : 'Eliminatória')}
+                        </span>
 
                         <span
                           onClick={() => tratarCliqueStatus(p)}
