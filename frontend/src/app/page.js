@@ -11,7 +11,8 @@ import { RegistrationsPage } from '@/components/RegistrationsPage';
 import { BracketsPage } from '@/components/BracketsPage';
 import { MatchesPage } from '@/components/MatchesPage';
 import { GroupsPage } from '@/components/GroupsPage';
-import { TournamentProvider } from '@/contexts/TournamentContext';
+import { TournamentSelector } from '@/components/TournamentSelector';
+import { TournamentProvider, useTournament } from '@/contexts/TournamentContext';
 
 // Função utilitária centralizada para verificar permissões
 const checkUserAccess = (userType, pageName) => {
@@ -47,11 +48,14 @@ const getAllowedPages = (userType) => {
   return ['dashboard', 'seasons', 'teams', 'registrations', 'brackets', 'matches', 'groups'];
 };
 
-export default function Home() {
+function AppContent() {
   const { data: session, status } = useSession();
-  const [currentPage, setCurrentPage] = useState('dashboard'); // Começa no dashboard
+  const [currentPage, setCurrentPage] = useState('dashboard');
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [showTournamentSelector, setShowTournamentSelector] = useState(false);
+
+  const { selectedTournament, tournaments, selectTournament } = useTournament();
 
   const toggleDarkMode = () => setIsDarkMode(!isDarkMode);
 
@@ -122,27 +126,43 @@ export default function Home() {
   };
 
   return (
-    <TournamentProvider>
-      <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
-        <Sidebar
-          isSidebarOpen={isSidebarOpen}
-          toggleSidebar={toggleSidebar}
-          currentPage={currentPage}
-          setCurrentPage={handlePageChange}
-          isDarkMode={isDarkMode}
-          toggleDarkMode={toggleDarkMode}
-          isLoggedIn={!!session}
-          userType={session?.user?.tipo_usuario}
-          allowedPages={getAllowedPages(session?.user?.tipo_usuario)}
-          onLogout={handleLogout}
-          onLoginClick={handleLoginClick}
-        />
-        <div className="flex-1 flex flex-col overflow-hidden">
-          <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto">
-            {renderPage()}
-          </main>
-        </div>
+    <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
+      <Sidebar
+        isSidebarOpen={isSidebarOpen}
+        toggleSidebar={toggleSidebar}
+        currentPage={currentPage}
+        setCurrentPage={handlePageChange}
+        isDarkMode={isDarkMode}
+        toggleDarkMode={toggleDarkMode}
+        isLoggedIn={!!session}
+        userType={session?.user?.tipo_usuario}
+        allowedPages={getAllowedPages(session?.user?.tipo_usuario)}
+        onLogout={handleLogout}
+        onLoginClick={handleLoginClick}
+        selectedTournament={selectedTournament}
+        onTournamentSelectorClick={() => setShowTournamentSelector(true)}
+      />
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto">
+          {renderPage()}
+        </main>
       </div>
+
+      <TournamentSelector
+        isOpen={showTournamentSelector}
+        onClose={() => setShowTournamentSelector(false)}
+        tournaments={tournaments}
+        selectedTournament={selectedTournament}
+        onSelectTournament={selectTournament}
+      />
+    </div>
+  );
+}
+
+export default function Home() {
+  return (
+    <TournamentProvider>
+      <AppContent />
     </TournamentProvider>
   );
 }

@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Calendar, MapPin, Trophy, Users, Clock, ChevronDown, ChevronRight } from 'lucide-react';
 import { Modal } from '@/components/Modal';
 import { Button, Input, Select, CardSplat } from '@/components/common';
+import { useTournament } from '@/contexts/TournamentContext';
 
 export const SeasonsPage = () => {
     // Estados de controle de usuário
@@ -14,6 +15,8 @@ export const SeasonsPage = () => {
     const [editingSeason, setEditingSeason] = useState(null);
     const [loading, setLoading] = useState(true);
     const [expandedYears, setExpandedYears] = useState(new Set());
+    
+    const { refreshTournaments } = useTournament();
 
     const [formData, setFormData] = useState({
         name: '',
@@ -97,6 +100,8 @@ export const SeasonsPage = () => {
 
             if (response.ok) {
                 await loadSeasons();
+                // Atualizar também o contexto de torneios
+                await refreshTournaments();
                 closeModal();
                 alert(`Torneio ${editingSeason ? 'editado' : 'criado'} com sucesso!`);
             } else {
@@ -134,6 +139,8 @@ export const SeasonsPage = () => {
 
             if (response.ok) {
                 await loadSeasons();
+                // Atualizar também o contexto de torneios
+                await refreshTournaments();
                 alert('Torneio excluído com sucesso!');
             } else {
                 const error = await response.json();

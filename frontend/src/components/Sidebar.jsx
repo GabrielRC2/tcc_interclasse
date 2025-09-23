@@ -1,7 +1,6 @@
 'use client';
 
-// Importe LogIn junto com os outros ícones
-import { Home, Users, Plus, Shield, Calendar, FileText, LogOut, Moon, Sun, ChevronsLeft, LogIn } from 'lucide-react'; // <-- Adicionado LogIn
+import { Home, Users, Plus, Shield, Calendar, FileText, LogOut, Moon, Sun, ChevronsLeft, LogIn, Trophy, ChevronDown } from 'lucide-react';
 
 const NavLink = ({ icon, label, pageName, isSidebarOpen, currentPage, setCurrentPage, toggleSidebar }) => (
     <li>
@@ -35,7 +34,6 @@ const NavLink = ({ icon, label, pageName, isSidebarOpen, currentPage, setCurrent
     </li>
 );
 
-// Adicione isLoggedIn, onLogout e onLoginClick às props
 export const Sidebar = ({ 
   isSidebarOpen, 
   toggleSidebar, 
@@ -43,11 +41,13 @@ export const Sidebar = ({
   setCurrentPage, 
   isDarkMode, 
   toggleDarkMode,
-  isLoggedIn,   // <--- ADICIONADO
-  userType,     // <--- ADICIONADO (tipo do usuário)
-  allowedPages, // <--- ADICIONADO (páginas permitidas)
-  onLogout,     // <--- ADICIONADO (será a função de sair)
-  onLoginClick  // <--- ADICIONADO (será a função para ir para a tela de login)
+  isLoggedIn,
+  userType,
+  allowedPages,
+  onLogout,
+  onLoginClick,
+  selectedTournament,
+  onTournamentSelectorClick 
 }) => {
     // Lógica para escolher a logo baseada no tema e estado da sidebar
     const getLogoUrl = () => {
@@ -93,13 +93,40 @@ export const Sidebar = ({
                     </div>
                 )}
                 <nav className="flex-1 p-2 space-y-1 overflow-y-auto overflow-x-hidden">
+                    {/* Tournament Selector */}
+                    <div className="mb-4">
+                        <button
+                            onClick={onTournamentSelectorClick}
+                            className={`w-full flex items-center rounded-md transition-colors border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-red-500 dark:hover:border-red-400 ${
+                                isSidebarOpen ? 'px-3 py-3' : 'p-2 justify-center'
+                            } ${selectedTournament ? 'bg-red-50 dark:bg-red-900/20 border-red-500 dark:border-red-400' : 'hover:bg-gray-50 dark:hover:bg-gray-800'}`}
+                        >
+                            <div className={`flex items-center ${isSidebarOpen ? 'w-full' : 'justify-center'}`}>
+                                <Trophy size={20} className={selectedTournament ? 'text-red-600 dark:text-red-400' : 'text-gray-500 dark:text-gray-400'} />
+                                {isSidebarOpen && (
+                                    <>
+                                        <div className="flex-1 ml-3 text-left">
+                                            <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                                                Torneio Ativo
+                                            </div>
+                                            <div className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">
+                                                {selectedTournament ? selectedTournament.name : 'Selecionar Torneio'}
+                                            </div>
+                                        </div>
+                                        <ChevronDown size={16} className="text-gray-400 ml-2" />
+                                    </>
+                                )}
+                            </div>
+                        </button>
+                    </div>
+
                     <p className={`px-2 text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase transition-opacity duration-300 ${isSidebarOpen ? 'opacity-100' : 'opacity-0'}`}>GERAL</p>
                     <ul>
                         {/* Dashboard: SEMPRE visível */}
                         <NavLink icon={<Home size={20} />} label="Home" pageName="dashboard" isSidebarOpen={isSidebarOpen} currentPage={currentPage} setCurrentPage={setCurrentPage} toggleSidebar={toggleSidebar} />
 
                         {/* Links de navegação RESTRICTED (APENAS SE LOGADO) */}
-                        {isLoggedIn && ( // <--- INÍCIO DA RENDERIZAÇÃO CONDICIONAL
+                        {isLoggedIn && (
                           <>
                             {/* Renderização baseada em páginas permitidas */}
                             {allowedPages?.includes('teams') && (
@@ -121,7 +148,22 @@ export const Sidebar = ({
                               <NavLink icon={<Users size={20} />} label="Grupos" pageName="groups" isSidebarOpen={isSidebarOpen} currentPage={currentPage} setCurrentPage={setCurrentPage} toggleSidebar={toggleSidebar} />
                             )}
                           </>
-                        )} {/* <--- FIM DA RENDERIZAÇÃO CONDICIONAL */}
+                        )}
+
+                        {/* Tournament Selector Button */}
+                        {selectedTournament && onTournamentSelectorClick && (
+                          <button 
+                            onClick={onTournamentSelectorClick}
+                            className={`flex items-center w-full p-2 mt-2 rounded-md text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-800 ${!isSidebarOpen && 'justify-center'}`}
+                          >
+                            <div className={`flex items-center ${isSidebarOpen ? '' : 'justify-center w-full'}`}>
+                              <Calendar size={20} />
+                              <span className={`ml-3 font-medium transition-all duration-200 whitespace-nowrap ${isSidebarOpen ? 'opacity-100 w-auto' : 'opacity-0 w-0 absolute'}`}>
+                                {selectedTournament?.nome || 'Selecionar Torneio'}
+                              </span>
+                            </div>
+                          </button>
+                        )}
                     </ul>
                 </nav>
                 <div className="p-2 border-t border-gray-200 dark:border-gray-700 flex-shrink-0">

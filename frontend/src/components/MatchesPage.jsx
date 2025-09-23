@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, MapPin, Trophy, Filter, Play, Settings, Shuffle } from 'lucide-react';
+import { Calendar, MapPin, Trophy, Filter, Play, Settings, Shuffle, RefreshCcw } from 'lucide-react';
 import { Button, Select } from '@/components/common';
 import { useTournament } from '@/contexts/TournamentContext';
 import { SumulaModal } from '@/components/SumulaModal';
@@ -191,6 +191,7 @@ export const MatchesPage = () => {
           configPadrao[modalidade.nome] = modalidade.localPadrao;
       });
       setConfiguracaoLocais(configPadrao);
+      console.log('📍 Configuração de locais carregada:', configPadrao);
     } catch (error) {
       console.error('Erro ao carregar configuração de locais:', error);
     }
@@ -230,6 +231,105 @@ export const MatchesPage = () => {
         alert('❌ Erro ao gerar partidas');
     } finally {
         setGenerating(false);
+    }
+  };
+
+  // refazer sorteio de partidas com as mesmas regras otimizadas
+  const refazerSorteioPartidas = async () => {
+    if (!selectedTournament) {
+      alert('❌ Selecione um torneio primeiro');
+      return;
+    }
+
+    if (partidas.length === 0) {
+      alert('❌ Não há partidas para refazer o sorteio. Gere as partidas primeiro.');
+      return;
+    }
+
+    const partidasFinalizadas = partidas.filter(p => p.status === 'Finalizada' || p.status === 'FINALIZADA');
+    if (partidasFinalizadas.length > 0) {
+      const confirmar = window.confirm(
+        `⚠️ ATENÇÃO: Existem ${partidasFinalizadas.length} partidas já finalizadas.\n\n` +
+        `Refazer o sorteio irá:\n` +
+        `• Apagar TODAS as partidas existentes\n` +
+        `• Recriar as partidas com novos horários e confrontos\n` +
+        `• PERDER todos os resultados das partidas finalizadas\n\n` +
+        `Deseja continuar mesmo assim?`
+      );
+      if (!confirmar) return;
+    } else {
+      const confirmar = window.confirm(
+        `🔄 Refazer sorteio de partidas?\n\n` +
+        `Esta ação irá:\n` +
+        `• Apagar todas as partidas existentes\n` +
+        `• Recriar as partidas com novos horários e confrontos\n` +
+        `• Aplicar as regras de otimização melhoradas\n\n` +
+        `📋 REGRAS APLICADAS:\n` +
+        `⚽ Regra 1: Sempre um jogo masculino e um feminino simultâneos\n` +
+        `🔄 Regra 2: Priorizar modalidades diferentes no mesmo slot\n` +
+        `🔀 Regra 3: Cada modalidade faz 5 consecutivas de um gênero, depois 5 do outro\n` +
+        `🏟️ Regra 4: Um jogo em cada quadra conforme configuração\n` +
+        `⏱️ Regra 5: Maximizar tempo de descanso dos times\n\n` +
+        `Continuar?`
+      );
+      if (!confirmar) return;
+    }
+
+    setGenerating(true);
+    try {
+      // Primeiro, deletar todas as partidas existentes
+      const deleteResponse = await fetch(`/api/partidas?torneioId=${selectedTournament.id}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' }
+      });
+
+      if (!deleteResponse.ok) {
+        throw new Error('Erro ao deletar partidas existentes');
+      }
+
+      // Aguardar um momento para garantir que a deleção foi processada
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // Depois, gerar novas partidas com as mesmas regras
+      console.log('🚀 Refazendo sorteio com configuração de locais:', configuracaoLocais);
+      const response = await fetch('/api/partidas/gerar-otimizadas', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          torneioId: selectedTournament.id,
+          configuracaoLocais
+        })
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        const diversidade = result.diversidadeModalidades;
+        const alternancia = result.alternanciaPorModalidade;
+        
+        // Criar resumo das alternâncias por modalidade
+        const resumoModalidades = Object.entries(alternancia.estatisticasModalidades)
+          .map(([modalidade, stats]) => `${modalidade}: ${stats.ciclosCompletos} ciclos`)
+          .join(', ');
+        
+        alert(
+          `✅ Sorteio refeito com sucesso!\n\n` +
+          `🎲 ${result.partidasGeradas} novas partidas geradas em ${result.slots} slots de tempo!\n` +
+          `⚽ Cada slot contém 1 jogo masculino + 1 feminino simultâneos\n` +
+          `🔄 Diversidade de modalidades: ${diversidade.slotsComModalidadesDiferentes}/${diversidade.totalSlots} slots (${diversidade.percentual}%)\n` +
+          `🔀 Alternância por modalidade: ${resumoModalidades}\n` +
+          `🏟️ ${result.modalidades} modalidades distribuídas entre as quadras\n` +
+          `⏱️ Novos horários e confrontos otimizados com máximo descanso`
+        );
+        await carregarPartidas();
+      } else {
+        const error = await response.json();
+        alert('❌ ' + (error.error || 'Erro ao gerar novas partidas'));
+      }
+    } catch (error) {
+      console.error('Erro ao refazer sorteio:', error);
+      alert('❌ Erro ao refazer sorteio das partidas');
+    } finally {
+      setGenerating(false);
     }
   };
 
@@ -312,9 +412,49 @@ export const MatchesPage = () => {
   };
 
   // Função para determinar o vencedor
+  // Função para formatar resultado com pênaltis
+  const formatarResultado = (result) => {
+    if (!result) return null;
+    
+    if (result.includes(' pen')) {
+      // Separar placar normal dos pênaltis: "0:0 (1:2 pen)"
+      const [placarNormal, placarPenaltis] = result.split(' (');
+      const penaltisLimpo = placarPenaltis.replace(' pen)', '');
+      
+      return (
+        <div className="text-center">
+          <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{placarNormal}</div>
+          <div className="text-sm text-orange-600 dark:text-orange-400 font-medium">
+            Pênaltis: {penaltisLimpo}
+          </div>
+        </div>
+      );
+    } else {
+      return <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{result}</div>;
+    }
+  };
+
   const obterVencedor = (partida) => {
     if (!partida.result) return null;
     
+    // Verificar se há pênaltis no resultado
+    if (partida.result.includes(' pen')) {
+      // Formato: "0:0 (1:2 pen)" - extrair resultado dos pênaltis
+      const penaltyMatch = partida.result.match(/\((\d+):(\d+) pen\)/);
+      if (penaltyMatch) {
+        const [, penaltisCasa, penaltisVisitante] = penaltyMatch;
+        const penCasa = parseInt(penaltisCasa);
+        const penVisitante = parseInt(penaltisVisitante);
+        
+        if (penCasa > penVisitante) {
+          return { vencedor: partida.team1, tipo: 'casa' };
+        } else if (penVisitante > penCasa) {
+          return { vencedor: partida.team2, tipo: 'visitante' };
+        }
+      }
+    }
+    
+    // Resultado normal (sem pênaltis)
     const [golsCasa, golsVisitante] = partida.result.split(':').map(Number);
     
     if (golsCasa > golsVisitante) {
@@ -384,22 +524,48 @@ export const MatchesPage = () => {
   const gerarPartidasDeGrupos = async () => {
     if (!selectedTournament) return;
     
-    const confirmar = window.confirm('Deseja gerar todas as partidas de grupos para todas as modalidades e gêneros do torneio?');
+    const confirmar = window.confirm(
+      '🏆 Deseja gerar todas as partidas de grupos para todas as modalidades e gêneros do torneio?\n\n' +
+      '📋 REGRAS APLICADAS:\n' +
+      '⚽ Regra 1: Sempre um jogo masculino e um feminino simultâneos\n' +
+      '🔄 Regra 2: Priorizar modalidades diferentes no mesmo slot (ex: Vôlei Feminino + Handebol Masculino)\n' +
+      '🔀 Regra 3: Cada modalidade faz 5 consecutivas de um gênero, depois 5 do outro (Handebol: 1-5 F, 6-10 M; Vôlei: 1-5 M, 6-10 F)\n' +
+      '🏟️ Regra 4: Um jogo em cada quadra conforme configuração de locais\n' +
+      '⏱️ Regra 5: Maximizar tempo de descanso entre jogos dos times\n\n' +
+      'As partidas serão distribuídas de forma otimizada entre as quadras!'
+    );
     if (!confirmar) return;
 
     setGenerating(true);
     try {
-      const response = await fetch('/api/matches/generate', {
+      console.log('🚀 Enviando configuração de locais:', configuracaoLocais);
+      const response = await fetch('/api/partidas/gerar-otimizadas', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          torneioId: selectedTournament.id
+          torneioId: selectedTournament.id,
+          configuracaoLocais
         })
       });
 
       if (response.ok) {
         const result = await response.json();
-        alert(`✅ Partidas geradas! ${result.partidasCriadas} partidas criadas`);
+        const diversidade = result.diversidadeModalidades;
+        const alternancia = result.alternanciaPorModalidade;
+        
+        // Criar resumo das alternâncias por modalidade
+        const resumoModalidades = Object.entries(alternancia.estatisticasModalidades)
+          .map(([modalidade, stats]) => `${modalidade}: ${stats.ciclosCompletos} ciclos`)
+          .join(', ');
+        
+        alert(
+          `✅ ${result.partidasGeradas} partidas geradas em ${result.slots} slots de tempo!\n\n` +
+          `⚽ Cada slot contém 1 jogo masculino + 1 feminino simultâneos\n` +
+          `🔄 Diversidade de modalidades: ${diversidade.slotsComModalidadesDiferentes}/${diversidade.totalSlots} slots (${diversidade.percentual}%)\n` +
+          `🔀 Alternância por modalidade: ${resumoModalidades}\n` +
+          `🏟️ ${result.modalidades} modalidades distribuídas entre as quadras\n` +
+          `⏱️ Horários otimizados para máximo descanso dos times`
+        );
         await carregarPartidas();
       } else {
         const error = await response.json();
@@ -411,9 +577,7 @@ export const MatchesPage = () => {
     } finally {
       setGenerating(false);
     }
-  };
-
-  if (carregando) {
+  };  if (carregando) {
     return <div className="flex justify-center items-center h-64">Carregando...</div>;
   }
 
@@ -446,6 +610,14 @@ export const MatchesPage = () => {
               {generating ? 'Gerando...' : getBotaoGerarPartidasTexto()}
             </Button>
           )}
+          <Button 
+            onClick={refazerSorteioPartidas}
+            disabled={!selectedTournament || generating || partidas.length === 0}
+            className="bg-purple-600 hover:bg-purple-700"
+          >
+            <RefreshCcw size={16} className="mr-2" />
+            Refazer Sorteio
+          </Button>
           <Button 
             onClick={gerarPontuacoesAleatorias} 
             disabled={partidas.filter(p => p.status === 'Agendada').length === 0}
@@ -520,8 +692,14 @@ export const MatchesPage = () => {
           ) : (
             <div className="space-y-4">
               <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-                <h3 className="font-semibold text-blue-900 dark:text-blue-100 mb-2">📋 Ordem Otimizada de Partidas</h3>
-                <p className="text-sm text-blue-700 dark:text-blue-300">As partidas abaixo foram organizadas automaticamente para maximizar o tempo de descanso entre jogos dos times, garantindo uma distribuição equilibrada ao longo do torneio.</p>
+                <h3 className="font-semibold text-blue-900 dark:text-blue-100 mb-2">📋 Regras de Organização Otimizada</h3>
+                <div className="text-sm text-blue-700 dark:text-blue-300 space-y-1">
+                  <p>⚽ <strong>Regra 1:</strong> Sempre um jogo masculino e um feminino simultâneos</p>
+                  <p>🔄 <strong>Regra 2:</strong> Priorizar modalidades diferentes no mesmo slot (ex: Vôlei + Handebol)</p>
+                  <p>🔀 <strong>Regra 3:</strong> Cada modalidade faz 5 partidas consecutivas de um gênero, depois 5 do outro</p>
+                  <p>🏟️ <strong>Regra 4:</strong> Um jogo em cada quadra conforme configuração de modalidades</p>
+                  <p>⏱️ <strong>Regra 5:</strong> Maximizar tempo de descanso entre jogos dos times</p>
+                </div>
               </div>
 
               {partidasFiltradas.map(p => (
@@ -549,14 +727,14 @@ export const MatchesPage = () => {
 
                         <div className="text-center px-4">
                           {p.result ? (
-                            <div className="text-center">
-                              <div className="text-2xl font-bold text-blue-600 dark:text-blue-400 mb-1">{p.result}</div>
+                            <div className="text-center mb-1">
+                              {formatarResultado(p.result)}
                               {(() => {
                                 const resultado = obterVencedor(p);
                                 if (resultado?.tipo === 'empate') {
-                                  return <div className="text-sm font-semibold text-yellow-600 dark:text-yellow-400">EMPATE</div>;
+                                  return <div className="text-sm font-semibold text-yellow-600 dark:text-yellow-400 mt-2">EMPATE</div>;
                                 } else if (resultado?.vencedor) {
-                                  return <div className="text-sm font-semibold text-green-600 dark:text-green-400">🏆 {resultado.vencedor}</div>;
+                                  return <div className="text-sm font-semibold text-green-600 dark:text-green-400 mt-2">🏆 {resultado.vencedor}</div>;
                                 }
                                 return null;
                               })()}
@@ -571,9 +749,11 @@ export const MatchesPage = () => {
                           <p className="text-sm text-gray-500 dark:text-gray-400">{p.team2Course}</p>
                         </div>
 
-                        {/* botão acessar eventos aparece somente se Em andamento */}
-                        {p.status === 'Em andamento' && (
-                          <Button onClick={() => setPartidaSelecionada(p)}>Acessar Eventos</Button>
+                        {/* botão acessar eventos/súmula */}
+                        {(p.status === 'Em andamento' || p.status === 'Finalizada') && (
+                          <Button onClick={() => setPartidaSelecionada(p)}>
+                            {p.status === 'Em andamento' ? 'Acessar Eventos' : 'Ver Súmula'}
+                          </Button>
                         )}
                       </div>
 
@@ -587,10 +767,6 @@ export const MatchesPage = () => {
                           <span>{p.date}</span>
                         </div>
                         <div className="flex items-center gap-1">
-                          <Clock size={14} />
-                          <span>{p.time}</span>
-                        </div>
-                        <div className="flex items-center gap-1">
                           <MapPin size={14} />
                           <span>{p.location}</span>
                         </div>
@@ -602,27 +778,30 @@ export const MatchesPage = () => {
             </div>
           )}
 
-          <SumulaModal
-            isOpen={!!partidaSelecionada}
-            onClose={() => setPartidaSelecionada(null)}
-            match={partidaSelecionada}
-            mode={partidaSelecionada?.status === 'Em andamento' ? 'live' : 'final'}
-            onSumulaEnviada={(id) => tratarSumulaEnviada(id)}
-          />
+          {partidaSelecionada && (
+            <SumulaModal
+              key={`sumula-${partidaSelecionada.id}`}
+              isOpen={true}
+              onClose={() => setPartidaSelecionada(null)}
+              match={partidaSelecionada}
+              mode={partidaSelecionada?.status === 'Em andamento' ? 'live' : 'final'}
+              onSumulaEnviada={(id) => tratarSumulaEnviada(id)}
+            />
+          )}
 
           {showConfigModal && (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
               <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md">
-                <h3 className="text-lg font-bold mb-4">Configurar Locais por Modalidade</h3>
+                <h3 className="text-lg font-bold mb-4 text-gray-900 dark:text-gray-100">Configurar Locais por Modalidade</h3>
                 
                 <div className="space-y-4">
                   {modalidadesDisponiveis.map(modalidade => (
                     <div key={modalidade.id}>
-                      <label className="block text-sm font-medium mb-1">
+                      <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">
                         {modalidade.nome}
                       </label>
                       <select 
-                        className="w-full p-2 border rounded"
+                        className="w-full p-2 border rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600"
                         value={configuracaoLocais[modalidade.nome] || modalidade.localPadrao}
                         onChange={(e) => setConfiguracaoLocais(prev => ({
                             ...prev,
