@@ -77,11 +77,22 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEn
   const [placarA, setPlacarA] = useState(0);
   const [placarB, setPlacarB] = useState(0);
 
+  // Estados para pênaltis (só para eliminatórias)
+  const [penaltisA, setPenaltisA] = useState(0);
+  const [penaltisB, setPenaltisB] = useState(0);
+  const [temPenaltis, setTemPenaltis] = useState(false);
+
   // permite editar mesmo quando NÃO está ao vivo (botão "Editar súmula")
   const [permitirEdicao, setPermitirEdicao] = useState(false);
   // quando o usuário inicia edição de uma partida já finalizada, marcamos este estado
   // para garantir que o botão de export fique oculto até que os dados sejam efetivamente persistidos
   const [editingFinalizada, setEditingFinalizada] = useState(false);
+
+  // Verifica se é partida eliminatória (permitir pênaltis)
+  // Partidas eliminatórias são aquelas SEM grupo (grupoId = null)
+  const ehEliminatoria = match?.grupoId === null || match?.grupoId === undefined;
+  // Verifica se há empate (necessário pênaltis em eliminatórias)
+  const hahEmpate = placarA === placarB;
 
   // Initialize scores safely
   useEffect(() => {
@@ -157,6 +168,19 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEn
         const golsB = statsB.reduce((s, p) => s + (p.pontos || 0), 0);
         setPlacarA(golsA);
         setPlacarB(golsB);
+
+        // Carregar dados de pênaltis se disponíveis
+        if (partidaData) {
+          setPenaltisA(partidaData.penaltisCasa || 0);
+          setPenaltisB(partidaData.penaltisVisitante || 0);
+          
+          // Detectar pênaltis se temPenaltis for true OU se o resultado contém " pen"
+          const temPenaltisDetectado = partidaData.temPenaltis || 
+            (partidaData.result && partidaData.result.includes(' pen')) ||
+            (partidaData.penaltisCasa !== null && partidaData.penaltisVisitante !== null);
+          
+          setTemPenaltis(temPenaltisDetectado);
+        }
       } catch (err) {
         console.error('Erro ao carregar súmula:', err);
       } finally {
@@ -194,6 +218,13 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEn
   // envia eventos ao backend e atualiza pontos finais; permite envio quando ao vivo ou quando permitirEdicao=true
   const enviarSumula = async () => {
     if (!(estaAoVivo || permitirEdicao)) return;
+    
+    // Validação especial para partidas eliminatórias
+    if (ehEliminatoria && hahEmpate && (!temPenaltis || penaltisA === penaltisB)) {
+      alert('Em partidas eliminatórias não pode haver empate! Se o jogo terminou empatado, você deve registrar os pênaltis para determinar o vencedor.');
+      return;
+    }
+    
     setSalvando(true);
     try {
       // Reconcile events instead of blindly creating duplicates.
@@ -308,6 +339,12 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEn
         body: JSON.stringify({
           pontosCasa: pontosCasaCalc,
           pontosVisitante: pontosVisitanteCalc,
+          // Adicionar dados de pênaltis se for eliminatória e tiver pênaltis
+          ...(ehEliminatoria && temPenaltis && {
+            penaltisCasa: penaltisA,
+            penaltisVisitante: penaltisB,
+            temPenaltis: true
+          })
         }),
       });
 
@@ -490,6 +527,106 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEn
                   <p className="font-extrabold text-6xl text-gray-800 dark:text-gray-100">{placarB}</p>
                 </div>
               </div>
+
+              {/* SEÇÃO DE PÊNALTIS - Só para eliminatórias */}
+              {ehEliminatoria && (estaAoVivo || permitirEdicao) && (
+                <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-4">
+                    <h4 className="font-bold text-lg text-yellow-800 dark:text-yellow-200">⚽ PÊNALTIS</h4>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        id="penaltis-checkbox"
+                        checked={temPenaltis}
+                        onChange={(e) => setTemPenaltis(e.target.checked)}
+                        className="w-4 h-4"
+                      />
+                      <label htmlFor="penaltis-checkbox" className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
+                        Ativar pênaltis
+                      </label>
+                    </div>
+                  </div>
+                  
+                  {temPenaltis && (
+                    <>
+                      <div className="bg-yellow-100 dark:bg-yellow-900/40 rounded-md p-3 mb-4">
+                        <p className="text-xs text-yellow-800 dark:text-yellow-200 text-center">
+                          ⚠️ <strong>Importante:</strong> Os gols de pênalti servem apenas para definir o vencedor. 
+                          Não contam para estatísticas individuais dos jogadores.
+                        </p>
+                      </div>
+                      
+                      <div className="flex justify-around items-center">
+                        <div className="text-center">
+                          <p className="font-medium text-yellow-800 dark:text-yellow-200 mb-2">{match.team1}</p>
+                          <div className="flex items-center justify-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setPenaltisA(Math.max(0, penaltisA - 1))}
+                              className="w-8 h-8 rounded-full bg-red-500 hover:bg-red-600 text-white font-bold flex items-center justify-center"
+                            >
+                              −
+                            </button>
+                            <span className="font-bold text-2xl text-yellow-800 dark:text-yellow-200 w-12 text-center">
+                              {penaltisA}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => setPenaltisA(penaltisA + 1)}
+                              className="w-8 h-8 rounded-full bg-green-500 hover:bg-green-600 text-white font-bold flex items-center justify-center"
+                            >
+                              +
+                            </button>
+                          </div>
+                        </div>
+                        
+                        <div className="font-bold text-2xl text-yellow-600 dark:text-yellow-400">PEN</div>
+                        
+                        <div className="text-center">
+                          <p className="font-medium text-yellow-800 dark:text-yellow-200 mb-2">{match.team2}</p>
+                          <div className="flex items-center justify-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setPenaltisB(Math.max(0, penaltisB - 1))}
+                              className="w-8 h-8 rounded-full bg-red-500 hover:bg-red-600 text-white font-bold flex items-center justify-center"
+                            >
+                              −
+                            </button>
+                            <span className="font-bold text-2xl text-yellow-800 dark:text-yellow-200 w-12 text-center">
+                              {penaltisB}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => setPenaltisB(penaltisB + 1)}
+                              className="w-8 h-8 rounded-full bg-green-500 hover:bg-green-600 text-white font-bold flex items-center justify-center"
+                            >
+                              +
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+
+              {/* Mostrar resultado dos pênaltis quando finalizados */}
+              {ehEliminatoria && !estaAoVivo && !permitirEdicao && temPenaltis && (
+                <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+                  <h4 className="font-bold text-center text-yellow-800 dark:text-yellow-200 mb-2">⚽ RESULTADO DOS PÊNALTIS</h4>
+                  <div className="flex justify-around items-center">
+                    <div className="text-center">
+                      <p className="font-medium text-yellow-800 dark:text-yellow-200">{match.team1}</p>
+                      <p className="font-bold text-3xl text-yellow-800 dark:text-yellow-200">{penaltisA}</p>
+                    </div>
+                    <p className="font-bold text-2xl text-yellow-600 dark:text-yellow-400">:</p>
+                    <div className="text-center">
+                      <p className="font-medium text-yellow-800 dark:text-yellow-200">{match.team2}</p>
+                      <p className="font-bold text-3xl text-yellow-800 dark:text-yellow-200">{penaltisB}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               <div className="grid grid-cols-2 gap-4 text-sm border-t pt-4">
                 <div>
