@@ -48,9 +48,13 @@ export async function POST(request) {
   try {
     const { name, location, startDate, endDate, modalities } = await request.json();
 
+    // Extrair o ano da data de início para adicionar ao nome
+    const startYear = new Date(startDate).getFullYear();
+    const nomeComAno = `${name} ${startYear}`;
+
     const torneio = await prisma.torneio.create({
       data: {
-        nome: name,
+        nome: nomeComAno,
         status: 'PLANEJAMENTO',
         inicio: new Date(startDate),
         fim: new Date(endDate)

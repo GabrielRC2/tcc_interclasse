@@ -22,26 +22,45 @@ export function calcularPontosTorneio(resultado) {
 }
 
 /**
- * Determina o resultado baseado nos pontos da partida
+ * Determina o resultado baseado nos pontos da partida e pênaltis
  * @param {number} pontosCasa - Pontos/gols do time da casa
  * @param {number} pontosVisitante - Pontos/gols do time visitante
+ * @param {number} penaltisCasa - Gols de pênalti do time da casa (opcional)
+ * @param {number} penaltisVisitante - Gols de pênalti do time visitante (opcional)
+ * @param {boolean} temPenaltis - Se a partida foi para os pênaltis
  * @returns {{resultadoCasa: string, resultadoVisitante: string}}
  */
-export function determinarResultado(pontosCasa, pontosVisitante) {
-  if (pontosCasa > pontosVisitante) {
+export function determinarResultado(pontosCasa, pontosVisitante, penaltisCasa = 0, penaltisVisitante = 0, temPenaltis = false) {
+  // Se não há pênaltis, usar lógica tradicional
+  if (!temPenaltis) {
+    if (pontosCasa > pontosVisitante) {
+      return {
+        resultadoCasa: 'VENCEDOR',
+        resultadoVisitante: 'PERDEDOR'
+      };
+    } else if (pontosVisitante > pontosCasa) {
+      return {
+        resultadoCasa: 'PERDEDOR',
+        resultadoVisitante: 'VENCEDOR'
+      };
+    } else {
+      return {
+        resultadoCasa: 'EMPATE',
+        resultadoVisitante: 'EMPATE'
+      };
+    }
+  }
+
+  // Se há pênaltis, o vencedor é definido pelos pênaltis (não pode haver empate)
+  if (penaltisCasa > penaltisVisitante) {
     return {
       resultadoCasa: 'VENCEDOR',
       resultadoVisitante: 'PERDEDOR'
     };
-  } else if (pontosVisitante > pontosCasa) {
+  } else {
     return {
       resultadoCasa: 'PERDEDOR',
       resultadoVisitante: 'VENCEDOR'
-    };
-  } else {
-    return {
-      resultadoCasa: 'EMPATE',
-      resultadoVisitante: 'EMPATE'
     };
   }
 }
@@ -52,8 +71,11 @@ export function determinarResultado(pontosCasa, pontosVisitante) {
  * @param {number} partidaId - ID da partida
  * @param {number} pontosCasa - Pontos da súmula do time da casa
  * @param {number} pontosVisitante - Pontos da súmula do time visitante
+ * @param {number} penaltisCasa - Gols de pênalti do time da casa (opcional)
+ * @param {number} penaltisVisitante - Gols de pênalti do time visitante (opcional)
+ * @param {boolean} temPenaltis - Se a partida foi para os pênaltis
  */
-export async function atualizarPontuacaoTorneio(prisma, partidaId, pontosCasa, pontosVisitante) {
+export async function atualizarPontuacaoTorneio(prisma, partidaId, pontosCasa, pontosVisitante, penaltisCasa = 0, penaltisVisitante = 0, temPenaltis = false) {
   // Buscar informações da partida
   const partida = await prisma.partida.findUnique({
     where: { id: partidaId },
@@ -70,8 +92,14 @@ export async function atualizarPontuacaoTorneio(prisma, partidaId, pontosCasa, p
     throw new Error('Partida não encontrada');
   }
 
-  // Determinar resultados baseados nos pontos
-  const { resultadoCasa, resultadoVisitante } = determinarResultado(pontosCasa, pontosVisitante);
+  // Determinar resultados baseados nos pontos e pênaltis
+  const { resultadoCasa, resultadoVisitante } = determinarResultado(
+    pontosCasa, 
+    pontosVisitante, 
+    penaltisCasa, 
+    penaltisVisitante, 
+    temPenaltis
+  );
   
   const timeCasa = partida.times.find(pt => pt.ehCasa);
   const timeVisitante = partida.times.find(pt => !pt.ehCasa);
@@ -86,6 +114,7 @@ export async function atualizarPontuacaoTorneio(prisma, partidaId, pontosCasa, p
 
   // Atualizar na base de dados
   await Promise.all([
+    // Atualizar resultados dos times
     prisma.partidaTime.update({
       where: {
         partidaId_timeId: {

@@ -68,6 +68,7 @@ export async function GET(request) {
 
       return {
         id: partida.id,
+        ordem: partida.ordem,
         team1: timeCasa?.time?.nome || 'Time não definido',
         team2: timeVisitante?.time?.nome || 'Time não definido',
         modality: modalidadeNome,

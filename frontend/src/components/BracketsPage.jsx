@@ -6,62 +6,56 @@ import { useTournament } from '@/contexts/TournamentContext';
 
 export const BracketsPage = () => {
     const { selectedTournament } = useTournament();
-    const [modalidades, setModalidades] = useState([]);
+    const [modalidadesDisponiveis, setModalidadesDisponiveis] = useState([]);
     const [gruposData, setGruposData] = useState([]);
     const [classificacao, setClassificacao] = useState([]);
+    const [classificacoesPorGrupo, setClassificacoesPorGrupo] = useState({}); // Novo estado
     const [eliminatorias, setEliminatorias] = useState([]);
-    const [selectedModalidade, setSelectedModalidade] = useState(() => {
-        if (typeof window !== 'undefined') {
-            return localStorage.getItem('bracketsPage_selectedModalidade') || '';
-        }
-        return '';
-    });
-    const [selectedGenero, setSelectedGenero] = useState(() => {
-        if (typeof window !== 'undefined') {
-            return localStorage.getItem('bracketsPage_selectedGenero') || '';
-        }
-        return '';
-    });
-    const [generos] = useState(['Masculino', 'Feminino']);
+    
+    // Agora usando modalidade+gênero combinados
+    const [modalidadeSelecionada, setModalidadeSelecionada] = useState(null);
+    
     const [loading, setLoading] = useState(true);
+    const [classificacaoGeralExpandida, setClassificacaoGeralExpandida] = useState(false);
 
     useEffect(() => {
-        loadModalidades();
-    }, []);
+        if (selectedTournament) {
+            carregarGruposDisponiveis();
+        } else {
+            setModalidadesDisponiveis([]);
+        }
+    }, [selectedTournament]);
 
     useEffect(() => {
         loadData();
-    }, [selectedModalidade, selectedGenero, selectedTournament]);
+    }, [modalidadeSelecionada, selectedTournament]);
 
-    // Persistir filtros no localStorage
-    useEffect(() => {
-        if (typeof window !== 'undefined') {
-            localStorage.setItem('bracketsPage_selectedModalidade', selectedModalidade);
-        }
-    }, [selectedModalidade]);
-
-    useEffect(() => {
-        if (typeof window !== 'undefined') {
-            localStorage.setItem('bracketsPage_selectedGenero', selectedGenero);
-        }
-    }, [selectedGenero]);
-
-    const loadModalidades = async () => {
+    const carregarGruposDisponiveis = async () => {
+        setLoading(true);
         try {
-            const response = await fetch('/api/modalidades');
-            const data = await response.json();
-            setModalidades(data);
+            const response = await fetch(`/api/grupos-disponiveis?torneioId=${selectedTournament.id}`);
+            if (response.ok) {
+                const data = await response.json();
+                setModalidadesDisponiveis(data);
+            } else {
+                console.error('Erro ao carregar grupos disponíveis');
+            }
         } catch (error) {
-            console.error('Erro ao carregar modalidades:', error);
-        } finally {
-            setLoading(false);
+            console.error('Erro ao carregar grupos disponíveis:', error);
         }
+        setLoading(false);
+    };
+
+    // Função para selecionar modalidade+gênero combinados
+    const selecionarModalidade = (modalidade) => {
+        setModalidadeSelecionada(modalidade);
     };
 
     const loadData = async () => {
-        if (!selectedTournament || !selectedModalidade || !selectedGenero) {
+        if (!selectedTournament || !modalidadeSelecionada) {
             setGruposData([]);
             setClassificacao([]);
+            setClassificacoesPorGrupo({});
             setEliminatorias([]);
             return;
         }
@@ -75,18 +69,68 @@ export const BracketsPage = () => {
 
     const loadGrupos = async () => {
         try {
-            const response = await fetch(`/api/grupos?torneioId=${selectedTournament.id}&modalidadeId=${selectedModalidade}&genero=${selectedGenero}`);
+            const response = await fetch(`/api/grupos?torneioId=${selectedTournament.id}&modalidadeId=${modalidadeSelecionada.modalidadeId}&genero=${modalidadeSelecionada.genero}`);
             const data = await response.json();
             setGruposData(data);
+
+            // Carregar classificações individuais para cada grupo
+            if (data.length > 0) {
+                await loadClassificacoesPorGrupo(data);
+            } else {
+                setClassificacoesPorGrupo({});
+            }
         } catch (error) {
             console.error('Erro ao carregar grupos:', error);
             setGruposData([]);
+            setClassificacoesPorGrupo({});
+        }
+    };
+
+    const loadClassificacoesPorGrupo = async (grupos) => {
+        try {
+            const classificacoesPorGrupo = {};
+            
+            // Carregar classificação para cada grupo individualmente
+            await Promise.all(grupos.map(async (grupo) => {
+                try {
+                    // CORREÇÃO: Adicionar filtro de gênero para manter consistência
+                    const params = new URLSearchParams({
+                        torneioId: selectedTournament.id.toString(),
+                        grupoId: grupo.id.toString()
+                    });
+                    
+                    // Adicionar filtro de gênero se disponível
+                    if (modalidadeSelecionada?.genero) {
+                        params.append('genero', modalidadeSelecionada.genero);
+                    }
+                    
+                    const url = `/api/classificacao?${params.toString()}`;
+                    const response = await fetch(url);
+                    
+                    if (!response.ok) {
+                        console.error(`Erro ${response.status} ao carregar classificação do grupo ${grupo.nome}`);
+                        classificacoesPorGrupo[grupo.nome] = [];
+                        return;
+                    }
+                    
+                    const data = await response.json();
+                    classificacoesPorGrupo[grupo.nome] = data.classificacao || [];
+                } catch (error) {
+                    console.error(`Erro ao carregar classificação do grupo ${grupo.nome}:`, error);
+                    classificacoesPorGrupo[grupo.nome] = [];
+                }
+            }));
+
+            setClassificacoesPorGrupo(classificacoesPorGrupo);
+        } catch (error) {
+            console.error('Erro ao carregar classificações por grupo:', error);
+            setClassificacoesPorGrupo({});
         }
     };
 
     const loadClassificacao = async () => {
         try {
-            const response = await fetch(`/api/classificacao?torneioId=${selectedTournament.id}&modalidadeId=${selectedModalidade}&genero=${selectedGenero}`);
+            const response = await fetch(`/api/classificacao?torneioId=${selectedTournament.id}&modalidadeId=${modalidadeSelecionada.modalidadeId}&genero=${modalidadeSelecionada.genero}`);
             const data = await response.json();
             setClassificacao(data.classificacao || []);
         } catch (error) {
@@ -97,7 +141,7 @@ export const BracketsPage = () => {
 
     const loadEliminatorias = async () => {
         try {
-            const response = await fetch(`/api/eliminatorias?torneioId=${selectedTournament.id}&modalidadeId=${selectedModalidade}&genero=${selectedGenero}`);
+            const response = await fetch(`/api/eliminatorias?torneioId=${selectedTournament.id}&modalidadeId=${modalidadeSelecionada.modalidadeId}&genero=${modalidadeSelecionada.genero}`);
             const data = await response.json();
             setEliminatorias(data.eliminatorias || []);
         } catch (error) {
@@ -109,8 +153,7 @@ export const BracketsPage = () => {
     const gerarEliminatorias = async (faseEscolhida = null) => {
         console.log('=== DEBUG gerarEliminatorias ===');
         console.log('selectedTournament:', selectedTournament);
-        console.log('selectedModalidade:', selectedModalidade);
-        console.log('selectedGenero:', selectedGenero);
+        console.log('modalidadeSelecionada:', modalidadeSelecionada);
         console.log('classificacao.length:', classificacao.length);
         console.log('faseEscolhida:', faseEscolhida);
 
@@ -127,7 +170,7 @@ export const BracketsPage = () => {
             return;
         }
 
-        if (!selectedModalidade || !selectedGenero) {
+        if (!modalidadeSelecionada) {
             alert('Selecione modalidade e gênero antes de gerar eliminatórias.');
             return;
         }
@@ -150,8 +193,8 @@ export const BracketsPage = () => {
 
             const bodyData = {
                 torneioId: selectedTournament.id,
-                modalidadeId: selectedModalidade,
-                genero: selectedGenero,
+                modalidadeId: modalidadeSelecionada.modalidadeId,
+                genero: modalidadeSelecionada.genero,
                 faseEscolhida: faseEscolhida
             };
 
@@ -165,15 +208,15 @@ export const BracketsPage = () => {
 
             if (response.ok) {
                 const result = await response.json();
-
+                
                 let mensagem = `${result.fase} gerada com sucesso!\n`;
                 mensagem += `${result.timesClassificados} times classificados\n`;
                 mensagem += `${result.partidasCriadas} partidas criadas`;
-
+                
                 if (result.detalhes?.fasesExistentes?.length > 0) {
                     mensagem += `\n\nFases já criadas: ${result.detalhes.fasesExistentes.join(', ')}`;
                 }
-
+                
                 alert(mensagem);
                 await loadEliminatorias();
                 await loadClassificacao(); // Recarregar classificação
@@ -190,12 +233,11 @@ export const BracketsPage = () => {
     const mostrarOpcoesEliminatorias = () => {
         console.log('=== DEBUG mostrarOpcoesEliminatorias ===');
         console.log('selectedTournament:', selectedTournament);
-        console.log('selectedModalidade:', selectedModalidade);
-        console.log('selectedGenero:', selectedGenero);
+        console.log('modalidadeSelecionada:', modalidadeSelecionada);
         console.log('classificacao:', classificacao);
 
-        if (!selectedTournament || !selectedModalidade || !selectedGenero) {
-            alert('Selecione torneio, modalidade e gênero antes de gerar eliminatórias.');
+        if (!selectedTournament || !modalidadeSelecionada) {
+            alert('Selecione torneio e modalidade antes de gerar eliminatórias.');
             return;
         }
 
@@ -212,7 +254,7 @@ export const BracketsPage = () => {
         }
 
         const opcoes = [];
-
+        
         if (numTimes >= 16) opcoes.push('Oitavas de Final');
         if (numTimes >= 8) opcoes.push('Quartas de Final');
         if (numTimes >= 4) opcoes.push('Semifinais');
@@ -229,14 +271,14 @@ export const BracketsPage = () => {
 
         // Mostrar modal com opções
         let prompt = `Escolha a fase inicial das eliminatórias:\n`;
-        prompt += opcoes.map((op, i) => `${i + 1}. ${op}`).join('\n');
+        prompt += opcoes.map((op, i) => `${i+1}. ${op}`).join('\n');
         prompt += `\n${opcoes.length + 1}. Deixar a API decidir automaticamente`;
         prompt += '\n\nDigite o número da opção:';
-
+        
         const escolha = window.prompt(prompt);
-
+        
         console.log('escolha do usuário:', escolha);
-
+        
         if (escolha) {
             const indice = parseInt(escolha) - 1;
             if (indice >= 0 && indice < opcoes.length) {
@@ -259,125 +301,162 @@ export const BracketsPage = () => {
         return 'Final';
     };
 
+    // Componente reutilizável para tabela de classificação
+    const TabelaClassificacao = ({ dados, titulo, grupoEspecifico = false }) => (
+        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm p-6 relative overflow-hidden">
+            <div className="relative z-10">
+                <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
+                    <Award size={20} className={grupoEspecifico ? "text-blue-500" : "text-green-500"} />
+                    {titulo}
+                </h2>
+
+                <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                        <thead>
+                            <tr className="border-b border-gray-200 dark:border-gray-600">
+                                <th className="text-left py-2 px-2 font-semibold">Pos</th>
+                                <th className="text-left py-2 px-2 font-semibold">Time</th>
+                                <th className="text-center py-2 px-2 font-semibold">PTS</th>
+                                <th className="text-center py-2 px-2 font-semibold">J</th>
+                                <th className="text-center py-2 px-2 font-semibold">V</th>
+                                <th className="text-center py-2 px-2 font-semibold">E</th>
+                                <th className="text-center py-2 px-2 font-semibold">D</th>
+                                <th className="text-center py-2 px-2 font-semibold">GP</th>
+                                <th className="text-center py-2 px-2 font-semibold">GC</th>
+                                <th className="text-center py-2 px-2 font-semibold">SG</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {dados.map((time, index) => (
+                                <tr key={time.timeId} className="border-b border-gray-100 dark:border-gray-700">
+                                    <td className="py-2 px-2 font-bold">{index + 1}°</td>
+                                    <td className="py-2 px-2 font-medium">{time.nome}</td>
+                                    <td className="py-2 px-2 text-center font-bold text-blue-600 dark:text-blue-400">{time.pontos}</td>
+                                    <td className="py-2 px-2 text-center">{time.jogos}</td>
+                                    <td className="py-2 px-2 text-center text-green-600 dark:text-green-400">{time.vitorias}</td>
+                                    <td className="py-2 px-2 text-center text-yellow-600 dark:text-yellow-400">{time.empates}</td>
+                                    <td className="py-2 px-2 text-center text-red-600 dark:text-red-400">{time.derrotas}</td>
+                                    <td className="py-2 px-2 text-center">{time.golsPro}</td>
+                                    <td className="py-2 px-2 text-center">{time.golsContra}</td>
+                                    <td className="py-2 px-2 text-center font-semibold">{time.saldoGols > 0 ? '+' : ''}{time.saldoGols}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <CardSplat />
+        </div>
+    );
+
     if (loading) {
         return <div className="flex justify-center items-center h-64">Carregando...</div>;
     }
 
     return (
-        <div className="space-y-8 font-inter">
-            <div className="flex flex-wrap justify-between items-center gap-6">
+        <div className="space-y-6">
+            <div className="flex flex-wrap justify-between items-center gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold text-slate-800 dark:text-slate-100 tracking-tight">CHAVEAMENTO</h1>
+                    <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">CHAVEAMENTO</h1>
                     {selectedTournament && (
-                        <p className="text-slate-600 dark:text-slate-400 mt-1 font-medium">
+                        <p className="text-gray-500 dark:text-gray-400">
                             Torneio: {selectedTournament.name}
                         </p>
                     )}
                 </div>
+                <div className="flex gap-2">
+                    <Button 
+                        onClick={mostrarOpcoesEliminatorias} 
+                        disabled={!selectedTournament?.id || !modalidadeSelecionada || classificacao.length === 0}
+                        className="bg-red-600 hover:bg-red-700"
+                    >
+                        <Target className="mr-2" size={16} />
+                        Gerar Eliminatórias
+                    </Button>
+                </div>
             </div>
 
             {!selectedTournament ? (
-                <div className="text-center py-16">
-                    <Trophy size={56} className="mx-auto text-slate-300 mb-6" />
-                    <p className="text-slate-500 dark:text-slate-400 text-lg font-medium">
+                <div className="text-center py-12">
+                    <Trophy size={48} className="mx-auto text-gray-400 mb-4" />
+                    <p className="text-gray-500 dark:text-gray-400 text-lg">
                         Selecione um torneio no Dashboard primeiro
                     </p>
                 </div>
             ) : (
                 <>
-                    {/* Filtros */}
-                    <div className="flex flex-wrap justify-between items-center gap-6">
-                        <div className="w-full lg:w-2/3 xl:w-1/2">
-                            <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-6">
-                                <div className="flex flex-wrap justify-between items-center gap-6">
-                                    <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-6">
-                                        <Select
-                                            label="Modalidade"
-                                            value={selectedModalidade}
-                                            onChange={(e) => {
-                                                setSelectedModalidade(e.target.value);
-                                                setSelectedGenero('');
-                                            }}
-                                        >
-                                            <option value="">Selecione a modalidade</option>
-                                            {modalidades.map(m => (
-                                                <option key={m.id} value={m.id}>{m.nome}</option>
-                                            ))}
-                                        </Select>
-
-                                        <Select
-                                            label="Gênero"
-                                            value={selectedGenero}
-                                            onChange={(e) => setSelectedGenero(e.target.value)}
-                                        >
-                                            <option value="">Selecione o gênero</option>
-                                            {generos.map(g => (
-                                                <option key={g} value={g}>{g}</option>
-                                            ))}
-                                        </Select>
-                                    </div>
-
-                                    {/* Botão X para limpar filtros - dentro da caixa */}
-                                    {(selectedModalidade || selectedGenero) && (
-                                        <button
-                                            onClick={() => {
-                                                setSelectedModalidade('');
-                                                setSelectedGenero('');
-                                            }}
-                                            className="p-2 text-slate-400 hover:text-slate-600 rounded-lg transition-colors"
-                                            title="Limpar Filtros"
-                                        >
-                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                            </svg>
-                                        </button>
-                                    )}
-                                </div>
+                    {/* Seleção de Modalidade + Gênero com grupos disponíveis */}
+                    <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm p-4">
+                        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
+                            Modalidades com Grupos Criados
+                        </h3>
+                        
+                        {modalidadesDisponiveis.length === 0 ? (
+                            <div className="text-center py-8">
+                                <Users size={32} className="mx-auto text-gray-400 mb-3" />
+                                <p className="text-gray-500 dark:text-gray-400">
+                                    Nenhuma modalidade com grupos criados ainda
+                                </p>
+                                <p className="text-sm text-gray-400 dark:text-gray-500 mt-2">
+                                    Crie grupos primeiro na seção "Grupos"
+                                </p>
                             </div>
-                        </div>
-
-                        {/* Botão Gerar Eliminatórias - fora da caixa, alinhado à direita */}
-                        <div className="flex items-center gap-3">
-                            <Button
-                                variant="primary"
-                                onClick={mostrarOpcoesEliminatorias}
-                                disabled={!selectedTournament?.id || !selectedModalidade || !selectedGenero || classificacao.length === 0}
-                                className="bg-gradient-to-r from-red-500 to-red-600 font-semibold"
-                            >
-                                <Trophy className="mr-2" size={16} />
-                                Gerar Eliminatórias
-                            </Button>
-                        </div>
+                        ) : (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {modalidadesDisponiveis.map(modalidade => (
+                                    <button
+                                        key={`${modalidade.modalidadeId}-${modalidade.genero}`}
+                                        onClick={() => selecionarModalidade(modalidade)}
+                                        className={`p-6 rounded-lg border transition-all text-left ${
+                                            modalidadeSelecionada && 
+                                            modalidadeSelecionada.modalidadeId === modalidade.modalidadeId && 
+                                            modalidadeSelecionada.genero === modalidade.genero
+                                                ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 ring-2 ring-blue-200 dark:ring-blue-700'
+                                                : 'border-gray-200 dark:border-gray-600 hover:border-blue-300 dark:hover:border-blue-600 hover:bg-blue-50/50 dark:hover:bg-blue-900/10'
+                                        }`}
+                                    >
+                                        <div className="flex items-center gap-3 mb-3">
+                                            <Users size={20} className="text-blue-500" />
+                                            <span className="font-semibold text-gray-900 dark:text-gray-100 text-lg">
+                                                {modalidade.modalidadeNome}
+                                            </span>
+                                            <span className={`text-sm px-3 py-1 rounded-full ${
+                                                modalidade.genero === 'Masculino' 
+                                                    ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300'
+                                                    : 'bg-pink-100 dark:bg-pink-900 text-pink-700 dark:text-pink-300'
+                                            }`}>
+                                                {modalidade.genero}
+                                            </span>
+                                        </div>
+                                        <p className="text-base text-gray-600 dark:text-gray-400">
+                                            {modalidade.totalGrupos} grupo{modalidade.totalGrupos !== 1 ? 's' : ''} • {modalidade.totalTimes} time{modalidade.totalTimes !== 1 ? 's' : ''}
+                                        </p>
+                                    </button>
+                                ))}
+                            </div>
+                        )}
                     </div>
 
                     {/* Fase de Grupos */}
                     {gruposData.length > 0 && (
-                        <div className="bg-gradient-to-br from-slate-50 to-blue-50/30 dark:from-slate-800 dark:to-slate-700 border border-slate-200 dark:border-slate-600 rounded-2xl p-8 relative overflow-hidden">
+                        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm p-6 relative overflow-hidden">
                             <div className="relative z-10">
-                                <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100 mb-8 flex items-center gap-3">
-                                    <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-xl">
-                                        <Users size={24} className="text-blue-600 dark:text-blue-400" />
-                                    </div>
+                                <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-6 flex items-center gap-2">
+                                    <Users size={24} className="text-blue-500" />
                                     FASE DE GRUPOS
                                 </h2>
 
-                                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                                     {gruposData.map(grupo => (
-                                        <div key={grupo.nome} className="bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-600 rounded-xl p-6">
-                                            <h3 className="text-lg font-bold text-slate-700 dark:text-slate-200 mb-4 pb-2 border-b border-slate-200 dark:border-slate-600">
-                                                Grupo {grupo.nome}
-                                            </h3>
-                                            <div className="space-y-3">
-                                                {grupo.times.map(time => (
-                                                    <div key={time.id} className="flex items-center gap-3 p-3 bg-slate-50 dark:bg-slate-700 rounded-lg border border-slate-200 dark:border-slate-600">
-                                                        <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
-                                                        <span className="font-semibold text-slate-800 dark:text-slate-100 text-sm flex-1">
-                                                            {time.nome}
-                                                        </span>
-                                                        <Trophy size={14} className="text-amber-500" />
-                                                    </div>
-                                                ))}
-                                            </div>
+                                        <div key={grupo.nome} className="space-y-4">
+                                            {/* Classificação do grupo */}
+                                            {classificacoesPorGrupo[grupo.nome] && classificacoesPorGrupo[grupo.nome].length > 0 && (
+                                                <TabelaClassificacao
+                                                    dados={classificacoesPorGrupo[grupo.nome]}
+                                                    titulo={`CLASSIFICAÇÃO - GRUPO ${grupo.nome}`}
+                                                    grupoEspecifico={true}
+                                                />
+                                            )}
                                         </div>
                                     ))}
                                 </div>
@@ -388,77 +467,28 @@ export const BracketsPage = () => {
 
                     {/* Classificação */}
                     {classificacao.length > 0 && (
-                        <div className="bg-gradient-to-br from-slate-50 to-teal-50/30 dark:from-slate-800 dark:to-slate-700 border border-slate-200 dark:border-slate-600 rounded-2xl p-8 relative overflow-hidden">
+                        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm p-6 relative overflow-hidden">
                             <div className="relative z-10">
-                                <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100 mb-8 flex items-center gap-3">
-                                    <div className="p-2 bg-teal-100 dark:bg-teal-900/30 rounded-xl">
-                                        <Award size={24} className="text-teal-600 dark:text-teal-400" />
-                                    </div>
-                                    CLASSIFICAÇÃO GERAL
-                                </h2>
-
-                                <div className="overflow-x-auto bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-600">
-                                    <table className="w-full text-sm">
-                                        <thead>
-                                            <tr className="border-b border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700">
-                                                <th className="text-left py-4 px-4 font-bold text-slate-700 dark:text-slate-300">Pos</th>
-                                                <th className="text-left py-4 px-4 font-bold text-slate-700 dark:text-slate-300">Time</th>
-                                                <th className="text-center py-4 px-3 font-bold text-slate-700 dark:text-slate-300">PTS</th>
-                                                <th className="text-center py-4 px-2 font-bold text-slate-700 dark:text-slate-300">J</th>
-                                                <th className="text-center py-4 px-2 font-bold text-slate-700 dark:text-slate-300">V</th>
-                                                <th className="text-center py-4 px-2 font-bold text-slate-700 dark:text-slate-300">E</th>
-                                                <th className="text-center py-4 px-2 font-bold text-slate-700 dark:text-slate-300">D</th>
-                                                <th className="text-center py-4 px-2 font-bold text-slate-700 dark:text-slate-300">GP</th>
-                                                <th className="text-center py-4 px-2 font-bold text-slate-700 dark:text-slate-300">GC</th>
-                                                <th className="text-center py-4 px-3 font-bold text-slate-700 dark:text-slate-300">SG</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {classificacao.map((time, index) => (
-                                                <tr key={time.timeId} className={`${index < 8 ? 'bg-teal-50 dark:bg-teal-900 border-l-4 border-l-teal-400' : 'bg-white dark:bg-slate-800'} border-b border-slate-100 dark:border-slate-700`}>
-                                                    <td className="py-4 px-4 font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">
-                                                        {index < 3 ? (
-                                                            <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white ${index === 0 ? 'bg-gradient-to-r from-yellow-400 to-yellow-500' :
-                                                                index === 1 ? 'bg-gradient-to-r from-gray-400 to-gray-500' :
-                                                                    'bg-gradient-to-r from-amber-600 to-amber-700'
-                                                                }`}>
-                                                                {index + 1}
-                                                            </div>
-                                                        ) : (
-                                                            <div className="w-6 h-6 rounded-full bg-slate-200 dark:bg-slate-600 flex items-center justify-center text-xs font-bold text-slate-600 dark:text-slate-300">
-                                                                {index + 1}
-                                                            </div>
-                                                        )}
-                                                    </td>
-                                                    <td className="py-4 px-4 font-semibold text-slate-800 dark:text-slate-100 cursor-pointer">{time.nome}</td>
-                                                    <td className="py-4 px-3 text-center font-bold text-blue-600 dark:text-blue-400 text-base">{time.pontos}</td>
-                                                    <td className="py-4 px-2 text-center text-slate-600 dark:text-slate-400">{time.jogos}</td>
-                                                    <td className="py-4 px-2 text-center text-emerald-600 dark:text-emerald-400 font-semibold">{time.vitorias}</td>
-                                                    <td className="py-4 px-2 text-center text-amber-600 dark:text-amber-400 font-semibold">{time.empates}</td>
-                                                    <td className="py-4 px-2 text-center text-rose-600 dark:text-rose-400 font-semibold">{time.derrotas}</td>
-                                                    <td className="py-4 px-2 text-center text-slate-600 dark:text-slate-400">{time.golsPro}</td>
-                                                    <td className="py-4 px-2 text-center text-slate-600 dark:text-slate-400">{time.golsContra}</td>
-                                                    <td className="py-4 px-3 text-center font-bold text-slate-700 dark:text-slate-300">
-                                                        <span className={time.saldoGols > 0 ? 'text-emerald-600 dark:text-emerald-400' : time.saldoGols < 0 ? 'text-rose-600 dark:text-rose-400' : ''}>
-                                                            {time.saldoGols > 0 ? '+' : ''}{time.saldoGols}
-                                                        </span>
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
+                                <div 
+                                    className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 p-3 -m-3 rounded-lg transition-colors"
+                                    onClick={() => setClassificacaoGeralExpandida(!classificacaoGeralExpandida)}
+                                >
+                                    <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                                        <Award size={24} className="text-green-500" />
+                                        CLASSIFICAÇÃO GERAL
+                                    </h2>
+                                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                                        Clique para {classificacaoGeralExpandida ? "minimizar" : "expandir"} a tabela de classificação
+                                    </p>
                                 </div>
 
-                                {classificacao.length > 8 && (
-                                    <div className="mt-6 p-4 bg-teal-50 dark:bg-teal-900 rounded-xl border border-teal-200 dark:border-teal-700">
-                                        <div className="flex items-center gap-3">
-                                            <div className="p-2 bg-teal-100 dark:bg-teal-800 rounded-lg">
-                                                <Trophy size={18} className="text-teal-600 dark:text-teal-400" />
-                                            </div>
-                                            <p className="text-sm text-teal-700 dark:text-teal-300 font-medium">
-                                                <strong>Classificados para {determinarFase(Math.min(classificacao.length, 16))}:</strong> Primeiros {Math.min(classificacao.length, 16)} colocados (destacados em verde-água)
-                                            </p>
-                                        </div>
+                                {classificacaoGeralExpandida && (
+                                    <div className="mt-4">
+                                        <TabelaClassificacao
+                                            dados={classificacao}
+                                            titulo=""
+                                            grupoEspecifico={false}
+                                        />
                                     </div>
                                 )}
                             </div>
@@ -468,45 +498,40 @@ export const BracketsPage = () => {
 
                     {/* Eliminatórias */}
                     {eliminatorias.length > 0 && (
-                        <div className="bg-gradient-to-br from-slate-50 to-red-50/30 dark:from-slate-800 dark:to-slate-700 border border-slate-200 dark:border-slate-600 rounded-2xl p-8 relative overflow-hidden">
+                        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm p-6 relative overflow-hidden">
                             <div className="relative z-10">
-                                <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100 mb-8 flex items-center gap-3">
-                                    <div className="p-2 bg-red-100 dark:bg-red-900/30 rounded-xl">
-                                        <Target size={24} className="text-red-600 dark:text-red-400" />
-                                    </div>
+                                <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-6 flex items-center gap-2">
+                                    <Target size={24} className="text-red-500" />
                                     FASE ELIMINATÓRIA
                                 </h2>
 
-                                <div className="space-y-8">
+                                <div className="space-y-6">
                                     {eliminatorias.map(fase => (
-                                        <div key={fase.fase} className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-xl p-6">
-                                            <h3 className="text-lg font-bold text-slate-700 dark:text-slate-200 mb-6 pb-3 border-b border-slate-200 dark:border-slate-600 flex items-center gap-3">
-                                                <div className="w-2 h-8 bg-gradient-to-b from-red-400 to-red-600 rounded-full"></div>
+                                        <div key={fase.fase} className="border border-gray-200 dark:border-gray-600 rounded-lg p-4">
+                                            <h3 className="text-lg font-bold text-gray-800 dark:text-gray-200 mb-4">
                                                 {fase.fase} - {fase.partidas[0].modalidade}
                                             </h3>
-                                            <div className="grid gap-4 md:grid-cols-2">
+                                            <div className="grid gap-3">
                                                 {fase.partidas.map((partida, idx) => (
-                                                    <div key={idx} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-700 rounded-xl border border-slate-200 dark:border-slate-600">
-                                                        <div className="flex items-center gap-3 flex-1">
-                                                            <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
-                                                            <span className="font-semibold text-slate-800 dark:text-slate-100">
+                                                    <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded">
+                                                        <div className="flex items-center gap-4">
+                                                            <span className="font-semibold text-gray-900 dark:text-gray-100">
                                                                 {partida.time1}
                                                             </span>
                                                         </div>
-                                                        <div className="text-center px-4">
+                                                        <div className="text-center">
                                                             {partida.resultado ? (
-                                                                <span className="font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900 px-3 py-1 rounded-lg">
+                                                                <span className="font-bold text-blue-600 dark:text-blue-400">
                                                                     {partida.resultado}
                                                                 </span>
                                                             ) : (
-                                                                <span className="font-bold text-slate-400 bg-slate-100 dark:bg-slate-700 px-3 py-1 rounded-lg">VS</span>
+                                                                <span className="font-bold text-gray-400">VS</span>
                                                             )}
                                                         </div>
-                                                        <div className="flex items-center gap-3 flex-1 justify-end">
-                                                            <span className="font-semibold text-slate-800 dark:text-slate-100">
+                                                        <div className="flex items-center gap-4">
+                                                            <span className="font-semibold text-gray-900 dark:text-gray-100">
                                                                 {partida.time2}
                                                             </span>
-                                                            <div className="w-2 h-2 bg-red-400 rounded-full"></div>
                                                         </div>
                                                     </div>
                                                 ))}
@@ -521,12 +546,12 @@ export const BracketsPage = () => {
 
                     {/* Estado vazio */}
                     {gruposData.length === 0 && classificacao.length === 0 && (
-                        <div className="text-center py-16">
-                            <Calendar size={56} className="mx-auto text-slate-300 mb-6" />
-                            <p className="text-slate-500 dark:text-slate-400 text-lg font-medium">
-                                {selectedModalidade && selectedGenero
+                        <div className="text-center py-12">
+                            <Calendar size={48} className="mx-auto text-gray-400 mb-4" />
+                            <p className="text-gray-500 dark:text-gray-400 text-lg">
+                                {modalidadeSelecionada
                                     ? 'Nenhum chaveamento encontrado. Realize o sorteio dos grupos primeiro.'
-                                    : 'Selecione Modalidade e Gênero'
+                                    : 'Selecione uma modalidade e gênero'
                                 }
                             </p>
                         </div>

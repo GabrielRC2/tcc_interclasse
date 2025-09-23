@@ -25,7 +25,11 @@ export async function POST(request) {
           include: {
             time: {
               include: {
-                jogadores: true
+                jogadores: {
+                  include: {
+                    jogador: true
+                  }
+                }
               }
             }
           }
@@ -132,7 +136,8 @@ async function gerarEventosJogadores(partida, partidaTime, totalPontos, lado) {
   for (let i = 0; i < totalPontos; i++) {
     // Escolher jogador aleatório
     const jogadorIndex = Math.floor(Math.random() * jogadores.length);
-    const jogador = jogadores[jogadorIndex];
+    const jogadorData = jogadores[jogadorIndex];
+    const jogador = jogadorData.jogador; // Acessar o jogador através da relação
 
     // Determinar tipo de evento baseado na modalidade
     const tipoEvento = obterTipoEventoPorModalidade(partida.modalidadeId);

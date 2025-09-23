@@ -53,6 +53,36 @@ export async function GET(request) {
       whereClause.partida.grupoId = { in: gruposIds };
     } else if (grupoId) {
       whereClause.partida.grupoId = parseInt(grupoId);
+      
+      // CORREÇÃO: Se gênero foi especificado junto com grupoId, aplicar filtro de gênero
+      if (genero) {
+        // Buscar times do grupo com o gênero especificado
+        const timesDoGrupo = await prisma.grupoTime.findMany({
+          where: {
+            grupoId: parseInt(grupoId)
+          },
+          include: {
+            time: {
+              include: {
+                categoria: true
+              }
+            }
+          }
+        });
+        
+        // Filtrar apenas times do gênero especificado
+        const timesDoGenero = timesDoGrupo
+          .filter(tg => tg.time.categoria.genero === genero)
+          .map(tg => tg.timeId);
+        
+        // Se não há times do gênero especificado neste grupo, retornar array vazio
+        if (timesDoGenero.length === 0) {
+          return Response.json({ classificacao: [] });
+        }
+        
+        // Adicionar filtro por timeId
+        whereClause.timeId = { in: timesDoGenero };
+      }
     }
 
     const classificacao = await obterClassificacao(
