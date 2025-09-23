@@ -155,8 +155,10 @@ function obterTimesNecessariosPorFase(fase) {
 
 // Função para obter times dos grupos (primeira fase)
 async function obterTimesDoGrupo(torneioId, modalidadeId, genero, fase) {
-  // 1. Buscar grupos da modalidade/gênero específicos
-  const grupos = await prisma.grupo.findMany({
+  console.log(`[obterTimesDoGrupo] Buscando times para T:${torneioId} M:${modalidadeId} G:${genero}`);
+  
+  // 1. Primeiro, buscar TODOS os grupos da modalidade
+  const todosGrupos = await prisma.grupo.findMany({
     where: {
       torneioId: torneioId,
       modalidadeId: modalidadeId
@@ -167,40 +169,66 @@ async function obterTimesDoGrupo(torneioId, modalidadeId, genero, fase) {
           time: {
             include: { categoria: true }
           }
-        },
-        where: {
-          time: {
-            categoria: {
-              genero: genero
-            }
-          }
         }
       }
     }
   });
 
-  if (grupos.length === 0) {
+  console.log(`[obterTimesDoGrupo] Encontrados ${todosGrupos.length} grupos na modalidade`);
+
+  // 2. Filtrar apenas grupos que contêm times do gênero específico
+  const gruposDoGenero = todosGrupos.filter(grupo => {
+    const timesDoGenero = grupo.times.filter(gt => 
+      gt.time.categoria.genero === genero
+    );
+    return timesDoGenero.length > 0; // Grupo tem pelo menos 1 time do gênero
+  });
+
+  console.log(`[obterTimesDoGrupo] Filtrados ${gruposDoGenero.length} grupos do gênero ${genero}`);
+
+  if (gruposDoGenero.length === 0) {
+    console.log(`[obterTimesDoGrupo] ERRO: Nenhum grupo encontrado para gênero ${genero}`);
     return [];
   }
 
-  // 2. Obter classificação de cada grupo individualmente
+  // 3. Para cada grupo válido, filtrar apenas os times do gênero correto
+  const gruposLimpos = gruposDoGenero.map(grupo => ({
+    ...grupo,
+    times: grupo.times.filter(gt => gt.time.categoria.genero === genero)
+  }));
+
+  // 4. Obter classificação de cada grupo individualmente
   const timesClassificadosPorGrupo = [];
   
-  for (const grupo of grupos) {
+  for (const grupo of gruposLimpos) {
+    console.log(`[obterTimesDoGrupo] Processando grupo ${grupo.nome} com ${grupo.times.length} times`);
+    
     const whereClause = { partida: { grupoId: grupo.id } };
     const classificacaoGrupo = await obterClassificacao(prisma, torneioId, whereClause);
     
-    if (classificacaoGrupo.length > 0) {
+    // Filtrar classificação para incluir apenas times do gênero correto
+    const classificacaoFiltrada = classificacaoGrupo.filter(time => {
+      const timeObj = grupo.times.find(gt => gt.timeId === time.timeId);
+      return timeObj && timeObj.time.categoria.genero === genero;
+    });
+    
+    if (classificacaoFiltrada.length > 0) {
       timesClassificadosPorGrupo.push({
         grupo: grupo.nome,
         grupoId: grupo.id,
-        classificacao: classificacaoGrupo
+        classificacao: classificacaoFiltrada
       });
+      console.log(`[obterTimesDoGrupo] Grupo ${grupo.nome}: ${classificacaoFiltrada.length} times classificados`);
     }
   }
 
   // 3. Selecionar times baseado na lógica: 1º de cada grupo, depois 2º de cada grupo, etc.
   const timesClassificados = selecionarTimesPorPosicao(timesClassificadosPorGrupo);
+  
+  console.log(`[obterTimesDoGrupo] RESULTADO FINAL: ${timesClassificados.length} times selecionados para ${genero}`);
+  timesClassificados.forEach((time, i) => {
+    console.log(`[obterTimesDoGrupo] ${i+1}º: ${time.nome} (${time.categoria || 'categoria?'})`);
+  });
   
   return limitarTimesPorFase(timesClassificados, fase);
 }
