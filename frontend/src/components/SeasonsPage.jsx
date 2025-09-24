@@ -89,16 +89,55 @@ export const SeasonsPage = () => {
         }
     };
 
-    const handleEdit = (season) => {
-        setEditingSeason(season);
-        setFormData({
-            name: season.name,
-            location: season.location,
-            startDate: season.startDate,
-            endDate: season.endDate,
-            modalities: season.modalities,
-            status: season.status
-        });
+    const handleEdit = async (season) => {
+        try {
+            // Buscar dados completos do torneio da API
+            const response = await fetch(`/api/torneios/${season.id}`);
+            if (response.ok) {
+                const torneioCompleto = await response.json();
+                
+                setEditingSeason(torneioCompleto);
+                setFormData({
+                    name: torneioCompleto.name,
+                    location: torneioCompleto.location,
+                    startDate: torneioCompleto.startDate,
+                    endDate: torneioCompleto.endDate,
+                    modalities: torneioCompleto.modalities,
+                    status: torneioCompleto.status
+                });
+            } else {
+                // Fallback para os dados que já temos
+                setEditingSeason(season);
+                
+                // Extrair nome base removendo o ano se presente
+                const baseNome = season.name.replace(/\s\d{4}$/, '');
+                
+                setFormData({
+                    name: baseNome,
+                    location: season.location,
+                    startDate: season.startDate,
+                    endDate: season.endDate,
+                    modalities: season.modalities,
+                    status: season.status
+                });
+            }
+        } catch (error) {
+            console.error('Erro ao buscar dados do torneio:', error);
+            // Usar dados locais como fallback
+            setEditingSeason(season);
+            
+            // Extrair nome base removendo o ano se presente
+            const baseNome = season.name.replace(/\s\d{4}$/, '');
+            
+            setFormData({
+                name: baseNome,
+                location: season.location,
+                startDate: season.startDate,
+                endDate: season.endDate,
+                modalities: season.modalities,
+                status: season.status
+            });
+        }
         setIsModalOpen(true);
     };
 

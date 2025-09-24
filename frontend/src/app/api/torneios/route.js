@@ -46,7 +46,7 @@ function getModalitiesByName(nome) {
 
 export async function POST(request) {
   try {
-    const { name, location, startDate, endDate, modalities } = await request.json();
+    const { name, location, startDate, endDate, modalities, status } = await request.json();
 
     // Extrair o ano da data de início para adicionar ao nome
     const startYear = new Date(startDate).getFullYear();
@@ -55,7 +55,7 @@ export async function POST(request) {
     const torneio = await prisma.torneio.create({
       data: {
         nome: nomeComAno,
-        status: 'PLANEJAMENTO',
+        status: status || 'PLANEJAMENTO',
         inicio: new Date(startDate),
         fim: new Date(endDate)
       }

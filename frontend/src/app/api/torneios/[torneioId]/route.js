@@ -5,15 +5,20 @@ const prisma = new PrismaClient();
 
 export async function PUT(request, { params }) {
   try {
-    const { name, location, startDate, endDate, modalities } = await request.json();
+    const { name, location, startDate, endDate, modalities, status } = await request.json();
     const id = parseInt(params.torneioId);
+
+    // Extrair o ano da data de início se necessário
+    const startYear = new Date(startDate).getFullYear();
+    const nomeComAno = name.includes(startYear.toString()) ? name : `${name} ${startYear}`;
 
     const torneio = await prisma.torneio.update({
       where: { id },
       data: {
-        nome: name,
+        nome: nomeComAno,
         inicio: new Date(startDate),
-        fim: new Date(endDate)
+        fim: new Date(endDate),
+        status: status || 'PLANEJAMENTO'
       }
     });
 
@@ -128,21 +133,59 @@ async function getProximaAcao(torneioId, modalidadeId, genero) {
 
 export async function GET(request, { params }) {
   try {
-    const { torneioId } = params;
     const { searchParams } = new URL(request.url);
     const modalidadeId = searchParams.get('modalidadeId');
     const genero = searchParams.get('genero');
+    const torneioId = parseInt(params.torneioId);
 
-    if (!modalidadeId || !genero) {
-      return NextResponse.json({ error: 'modalidadeId e genero são obrigatórios' }, { status: 400 });
+    // Se modalidadeId e genero estão presentes, usar a lógica antiga de próxima ação
+    if (modalidadeId && genero) {
+      const proximaAcao = await getProximaAcao(torneioId, parseInt(modalidadeId), genero);
+      return NextResponse.json(proximaAcao);
     }
 
-    const proximaAcao = await getProximaAcao(parseInt(torneioId), parseInt(modalidadeId), genero);
+    // Caso contrário, buscar dados completos do torneio para edição
+    const torneio = await prisma.torneio.findUnique({
+      where: { id: torneioId },
+      include: {
+        times: true,
+        grupos: {
+          include: {
+            times: true
+          }
+        },
+        partidas: true
+      }
+    });
 
-    return NextResponse.json(proximaAcao);
+    if (!torneio) {
+      return NextResponse.json({ error: 'Torneio não encontrado' }, { status: 404 });
+    }
+
+    // Função helper para determinar modalidades
+    function getModalitiesByName(nome) {
+      if (nome.includes('Meio do Ano')) return 'Vôlei, Handebol';
+      if (nome.includes('Fim de Ano')) return 'Futsal, Basquete';
+      return 'Futsal, Vôlei, Basquete, Handebol';
+    }
+
+    const torneioFormatted = {
+      id: torneio.id,
+      name: torneio.nome.replace(/\s\d{4}$/, ''), // Remove o ano do final para exibição no form
+      status: torneio.status,
+      startDate: torneio.inicio.toISOString().split('T')[0],
+      endDate: torneio.fim.toISOString().split('T')[0],
+      location: 'ETEC João Belarmino',
+      modalities: getModalitiesByName(torneio.nome),
+      teamsCount: torneio.times?.length || 0,
+      matchesTotal: torneio.partidas?.length || 0,
+      matchesPlayed: torneio.partidas?.filter(p => p.statusPartida === 'FINALIZADA').length || 0
+    };
+
+    return NextResponse.json(torneioFormatted);
 
   } catch (error) {
-    console.error('Erro ao buscar status do torneio:', error);
+    console.error('Erro ao buscar torneio:', error);
     return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 });
   }
 }
