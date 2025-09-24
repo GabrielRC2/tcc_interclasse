@@ -6,7 +6,8 @@ const prisma = new PrismaClient();
 export async function PUT(request, { params }) {
   try {
     const { name, location, startDate, endDate, modalities, status } = await request.json();
-    const id = parseInt(params.torneioId);
+    const resolvedParams = await params;
+    const id = parseInt(resolvedParams.torneioId);
 
     // Extrair o ano da data de início se necessário
     const startYear = new Date(startDate).getFullYear();
@@ -39,7 +40,8 @@ export async function PUT(request, { params }) {
 
 export async function DELETE(request, { params }) {
   try {
-    const id = parseInt(params.torneioId);
+    const resolvedParams = await params;
+    const id = parseInt(resolvedParams.torneioId);
 
     // Verificar se tem dados relacionados
     const torneioComDados = await prisma.torneio.findUnique({
@@ -136,7 +138,8 @@ export async function GET(request, { params }) {
     const { searchParams } = new URL(request.url);
     const modalidadeId = searchParams.get('modalidadeId');
     const genero = searchParams.get('genero');
-    const torneioId = parseInt(params.torneioId);
+    const resolvedParams = await params;
+    const torneioId = parseInt(resolvedParams.torneioId);
 
     // Se modalidadeId e genero estão presentes, usar a lógica antiga de próxima ação
     if (modalidadeId && genero) {

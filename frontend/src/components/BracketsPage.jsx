@@ -130,7 +130,8 @@ export const BracketsPage = () => {
 
     const loadClassificacao = async () => {
         try {
-            const response = await fetch(`/api/classificacao?torneioId=${selectedTournament.id}&modalidadeId=${modalidadeSelecionada.modalidadeId}&genero=${modalidadeSelecionada.genero}`);
+            // Buscar classificação geral da modalidade/gênero selecionados (todos os grupos)
+            const response = await fetch(`/api/classificacao?torneioId=${selectedTournament.id}&modalidadeId=${modalidadeSelecionada.modalidadeId}&genero=${modalidadeSelecionada.genero}&classificacaoGeral=true`);
             const data = await response.json();
             setClassificacao(data.classificacao || []);
         } catch (error) {
@@ -302,7 +303,7 @@ export const BracketsPage = () => {
     };
 
     // Componente reutilizável para tabela de classificação
-    const TabelaClassificacao = ({ dados, titulo, grupoEspecifico = false }) => (
+    const TabelaClassificacao = ({ dados, titulo, grupoEspecifico = false, classificacaoGeral = false }) => (
         <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm p-6 relative overflow-hidden">
             <div className="relative z-10">
                 <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
@@ -316,6 +317,9 @@ export const BracketsPage = () => {
                             <tr className="border-b border-gray-200 dark:border-gray-600">
                                 <th className="text-left py-2 px-2 font-semibold">Pos</th>
                                 <th className="text-left py-2 px-2 font-semibold">Time</th>
+                                {classificacaoGeral && (
+                                    <th className="text-center py-2 px-2 font-semibold">Grupo</th>
+                                )}
                                 <th className="text-center py-2 px-2 font-semibold">PTS</th>
                                 <th className="text-center py-2 px-2 font-semibold">J</th>
                                 <th className="text-center py-2 px-2 font-semibold">V</th>
@@ -331,6 +335,13 @@ export const BracketsPage = () => {
                                 <tr key={time.timeId} className="border-b border-gray-100 dark:border-gray-700">
                                     <td className="py-2 px-2 font-bold">{index + 1}°</td>
                                     <td className="py-2 px-2 font-medium">{time.nome}</td>
+                                    {classificacaoGeral && (
+                                        <td className="py-2 px-2 text-center">
+                                            <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                                                {time.grupo}
+                                            </span>
+                                        </td>
+                                    )}
                                     <td className="py-2 px-2 text-center font-bold text-blue-600 dark:text-blue-400">{time.pontos}</td>
                                     <td className="py-2 px-2 text-center">{time.jogos}</td>
                                     <td className="py-2 px-2 text-center text-green-600 dark:text-green-400">{time.vitorias}</td>
@@ -475,19 +486,20 @@ export const BracketsPage = () => {
                                 >
                                     <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
                                         <Award size={24} className="text-green-500" />
-                                        CLASSIFICAÇÃO GERAL
+                                        CLASSIFICAÇÃO GERAL - {modalidadeSelecionada?.modalidade} {modalidadeSelecionada?.genero}
                                     </h2>
                                     <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                                        Clique para {classificacaoGeralExpandida ? "minimizar" : "expandir"} a tabela de classificação
+                                        Todos os times da modalidade organizados por pontuação geral • Clique para {classificacaoGeralExpandida ? "minimizar" : "expandir"}
                                     </p>
                                 </div>
 
                                 {classificacaoGeralExpandida && (
-                                    <div className="mt-4">
+                                    <div className="mt-6">
                                         <TabelaClassificacao
                                             dados={classificacao}
                                             titulo=""
                                             grupoEspecifico={false}
+                                            classificacaoGeral={true}
                                         />
                                     </div>
                                 )}
