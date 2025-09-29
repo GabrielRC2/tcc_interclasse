@@ -19,10 +19,10 @@ export const TournamentProvider = ({ children }) => {
   useEffect(() => {
     loadTournaments();
     
-    // Polling para atualizar a lista de torneios a cada 30 segundos
+    // Polling para atualizar a lista de torneios a cada 2 minutos
     const interval = setInterval(() => {
       loadTournaments();
-    }, 30000);
+    }, 120000);
 
     return () => clearInterval(interval);
   }, []);
@@ -31,7 +31,14 @@ export const TournamentProvider = ({ children }) => {
     try {
       const response = await fetch('/api/torneios');
       const data = await response.json();
-      setTournaments(data);
+      
+      // Só atualiza se os dados realmente mudaram (para evitar re-renders desnecessários)
+      setTournaments(prev => {
+        if (JSON.stringify(prev) === JSON.stringify(data)) {
+          return prev; // Não atualiza se os dados são iguais
+        }
+        return data;
+      });
       
       // Prioridade para seleção automática:
       // 1. Torneio "Em Andamento" ou "EM_ANDAMENTO"
@@ -50,8 +57,12 @@ export const TournamentProvider = ({ children }) => {
         // Atualizar o torneio selecionado com dados mais recentes
         const updatedSelectedTournament = data.find(t => t.id === selectedTournament.id);
         if (updatedSelectedTournament) {
-          setSelectedTournament(updatedSelectedTournament);
-          localStorage.setItem('selectedTournament', JSON.stringify(updatedSelectedTournament));
+          // Só atualiza se os dados do torneio realmente mudaram
+          const hasChanged = JSON.stringify(selectedTournament) !== JSON.stringify(updatedSelectedTournament);
+          if (hasChanged) {
+            setSelectedTournament(updatedSelectedTournament);
+            localStorage.setItem('selectedTournament', JSON.stringify(updatedSelectedTournament));
+          }
         }
       }
     } catch (error) {

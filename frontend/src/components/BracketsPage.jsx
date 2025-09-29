@@ -417,6 +417,7 @@ export const BracketsPage = () => {
                                 {modalidadesDisponiveis.map(modalidade => (
                                     <button
                                         key={`${modalidade.modalidadeId}-${modalidade.genero}`}
+                                        type="button"
                                         onClick={() => selecionarModalidade(modalidade)}
                                         className={`p-6 rounded-lg border transition-all text-left ${
                                             modalidadeSelecionada && 

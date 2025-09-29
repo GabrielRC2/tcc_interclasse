@@ -49,8 +49,6 @@ export const Dashboard = () => {
   const [modalidades, setModalidades] = useState([]);
   const [locais, setLocais] = useState([]);
 
-  const removeFilter = (filterToRemove) => setFilters(filters.filter(f => f !== filterToRemove));
-
   useEffect(() => {
     if (selectedTournament) {
       carregarProximasPartidas();
