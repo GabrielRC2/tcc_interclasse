@@ -82,11 +82,17 @@ export async function POST(request) {
     // 4. Otimizar ordem das partidas
     const partidasOtimizadas = otimizarOrdemPartidas(todasPartidas);
 
-    // 5. Buscar local padrão
-    const localPadrao = await prisma.local.findFirst();
-    if (!localPadrao) {
+    // 5. Buscar todos os locais disponíveis para distribuir as partidas
+    const locaisDisponiveis = await prisma.local.findMany({
+      orderBy: { id: 'asc' }
+    });
+    
+    if (locaisDisponiveis.length === 0) {
       return Response.json({ error: 'Nenhum local cadastrado no sistema' }, { status: 400 });
     }
+
+    console.log(`Distribuindo ${partidasOtimizadas.length} partidas entre ${locaisDisponiveis.length} locais:`, 
+                locaisDisponiveis.map(l => l.nome).join(', '));
 
     // 6. Salvar partidas no banco
     const partidasCriadas = [];
@@ -94,13 +100,18 @@ export async function POST(request) {
     for (let i = 0; i < partidasOtimizadas.length; i++) {
       const partida = partidasOtimizadas[i];
       
+      // Alternar entre os locais disponíveis
+      const localSelecionado = locaisDisponiveis[i % locaisDisponiveis.length];
+      
+      console.log(`Partida ${i + 1} será no local: ${localSelecionado.nome}`);
+      
       // Criar partida
       const novaPartida = await prisma.partida.create({
         data: {
           dataHora: new Date(Date.now() + (i * 60 * 60 * 1000)), // Intervalos de 1 hora
           statusPartida: 'AGENDADA',
           grupoId: partida.grupoId,
-          localId: localPadrao.id,
+          localId: localSelecionado.id,
           torneioId: parseInt(torneioId),
           modalidadeId: partida.modalidadeId,
           genero: partida.genero,

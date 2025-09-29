@@ -336,6 +336,18 @@ async function criarPartidasEliminatorias(torneioId, modalidadeId, genero, times
   
   let proximaOrdem = ultimaPartida?.ordem ? ultimaPartida.ordem + 1 : 1;
 
+  // Buscar todos os locais disponíveis para distribuir as partidas
+  const locaisDisponiveis = await prisma.local.findMany({
+    orderBy: { id: 'asc' }
+  });
+
+  if (locaisDisponiveis.length === 0) {
+    throw new Error('Nenhum local disponível para criar partidas');
+  }
+
+  console.log(`Distribuindo partidas entre ${locaisDisponiveis.length} locais:`, 
+              locaisDisponiveis.map(l => l.nome).join(', '));
+
   // Criar confrontos baseados na classificação
   for (let i = 0; i < times.length; i += 2) {
     if (i + 1 < times.length) {
@@ -344,8 +356,11 @@ async function criarPartidasEliminatorias(torneioId, modalidadeId, genero, times
 
       console.log(`Criando partida: ${time1.nome} vs ${time2.nome}`);
 
-      // Buscar local padrão
-      const local = await prisma.local.findFirst();
+      // Alternar entre os locais disponíveis
+      const partidaIndex = Math.floor(i / 2);
+      const localSelecionado = locaisDisponiveis[partidaIndex % locaisDisponiveis.length];
+      
+      console.log(`Partida ${partidaIndex + 1} será no local: ${localSelecionado.nome}`);
       
       const partida = await prisma.partida.create({
         data: {
@@ -356,7 +371,7 @@ async function criarPartidasEliminatorias(torneioId, modalidadeId, genero, times
           tipo: 'ELIMINATORIA',
           statusPartida: 'AGENDADA',
           dataHora: new Date(dataBase.getTime() + (i * 60 * 60 * 1000)), // Intervalos de 1 hora
-          localId: local?.id || 1,
+          localId: localSelecionado.id,
           ordem: proximaOrdem++ // Adicionar ordem sequencial
         }
       });

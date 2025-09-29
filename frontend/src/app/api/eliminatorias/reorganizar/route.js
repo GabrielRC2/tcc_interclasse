@@ -93,7 +93,22 @@ export async function POST(request) {
 
     console.log('🤖 Otimização global concluída');
 
-    // 5. Atualizar partidas no banco com nova ordem e horários
+    // 5. Buscar a maior ordem existente no torneio (excluindo eliminatórias para evitar conflito)
+    const ultimaPartidaNaoEliminatoria = await prisma.partida.findFirst({
+      where: { 
+        torneioId: parseInt(torneioId),
+        tipo: { not: 'ELIMINATORIA' }
+      },
+      orderBy: { ordem: 'desc' },
+      select: { ordem: true }
+    });
+    
+    // Começar a partir da próxima ordem disponível
+    let proximaOrdem = ultimaPartidaNaoEliminatoria?.ordem ? ultimaPartidaNaoEliminatoria.ordem + 1 : 1;
+    
+    console.log(`🔢 Reorganizando eliminatórias a partir da ordem: ${proximaOrdem}`);
+
+    // 6. Atualizar partidas no banco com nova ordem e horários
     const partidasAtualizadas = [];
     
     for (let i = 0; i < partidasOtimizadas.length; i++) {
@@ -105,7 +120,7 @@ export async function POST(request) {
         data: {
           dataHora: new Date(Date.now() + (partida.slot * 30 * 60 * 1000)), // Slots de 30min
           localId: partida.localId,
-          ordem: i + 1 // Nova ordem otimizada
+          ordem: proximaOrdem + i // Nova ordem otimizada continuando da ordem anterior
         }
       });
 
@@ -113,6 +128,7 @@ export async function POST(request) {
     }
 
     console.log(`✅ ${partidasAtualizadas.length} eliminatórias reorganizadas com sucesso`);
+    console.log(`🔢 Ordens atualizadas: ${proximaOrdem} até ${proximaOrdem + partidasOtimizadas.length - 1}`);
 
     // Calcular estatísticas de diversidade
     const diversidadeModalidades = calcularDiversidadeModalidades(partidasOtimizadas);
