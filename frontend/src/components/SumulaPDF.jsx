@@ -265,9 +265,6 @@ export const SumulaPDF = ({ match = {}, tournament = {}, showPenalties = false, 
         <View style={styles.header}>
           <Text style={styles.title}>SÚMULA DE PARTIDA</Text>
           <Text style={styles.subtitle}>{tournament?.name || 'Torneio Interclasse'}</Text>
-          <Text style={styles.subtitle}>
-            Data: {new Date().toLocaleDateString('pt-BR')} • Horário: {match?.time || '-'} • Local: {match?.location || '-'}
-          </Text>
         </View>
 
         {/* Placar */}
@@ -326,7 +323,6 @@ export const SumulaPDF = ({ match = {}, tournament = {}, showPenalties = false, 
 
         <Text style={styles.footer}>
           Documento gerado automaticamente pelo Sistema de Gerenciamento de Torneios{'\n'}
-          Gerado em: {new Date().toLocaleString('pt-BR')}
         </Text>
       </Page>
     </Document>

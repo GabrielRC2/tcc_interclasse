@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Modal } from '@/components/Modal';
 import { Button } from '@/components/common';
 import { useTournament } from '@/contexts/TournamentContext';
@@ -61,7 +61,6 @@ const PDFDownloadButton = ({ className, fileName, matchData, tournamentData, tea
 export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEnviada = () => {} }) => {
   const estaAoVivo = mode === 'live';
   const { selectedTournament } = useTournament();
-  const sumulaRef = useRef(null);
 
   const [carregando, setCarregando] = useState(true);
   const [salvando, setSalvando] = useState(false);
@@ -94,18 +93,7 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEn
   // Verifica se há empate (necessário pênaltis em eliminatórias)
   const hahEmpate = placarA === placarB;
 
-  // Initialize scores safely
-  useEffect(() => {
-    if (match?.result) {
-      const resultStr = String(match.result);
-      const parts = resultStr.split(':');
-      setPlacarA(parseInt(parts[0]) || 0);
-      setPlacarB(parseInt(parts[1]) || 0);
-    } else {
-      setPlacarA(0);
-      setPlacarB(0);
-    }
-  }, [match?.result, match?.id]);
+
 
   useEffect(() => {
     const carregarDados = async () => {
@@ -191,6 +179,28 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEn
     if (match?.id && isOpen) {
       carregarDados();
     }
+
+    // Atualiza o status da partida para "Em andamento" se estiver ao vivo
+    const atualizarStatusParaEmAndamento = async () => {
+      if (isOpen && estaAoVivo && match?.status === 'Agendada') {
+        try {
+          const response = await fetch(`/api/partidas/${match.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: 'Em andamento' }),
+          });
+          // Notificar o componente pai sobre a mudança de status para que a UI seja atualizada.
+          // Esta é a correção principal para o status não atualizar na tela.
+          if (onSumulaEnviada) {
+            onSumulaEnviada(match.id, 'Em andamento');
+          }
+        } catch (error) {
+          console.error('Falha ao atualizar status da partida:', error);
+        }
+      }
+    };
+
+    atualizarStatusParaEmAndamento();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [match?.id, isOpen]);
 
@@ -206,6 +216,54 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEn
   // Early return for better React consistency - AFTER all hooks
   if (!match || !isOpen) return null;
 
+  // Estado para controlar o salvamento assíncrono
+  const [salvamentoPendente, setSalvamentoPendente] = useState(false);
+
+  // Função para salvar eventos de forma assíncrona no banco
+  const salvarEventosAssincronos = async () => {
+    if (!match?.id || salvamentoPendente) return;
+
+    setSalvamentoPendente(true);
+
+    try {
+      // Construir a lista de eventos para enviar
+      const eventosParaSalvar = [];
+      const todasEdicoes = [
+        ...edicaoTimeA.map(e => ({ ...e, time: 1 })),
+        ...edicaoTimeB.map(e => ({ ...e, time: 2 }))
+      ];
+
+      todasEdicoes.forEach(edicao => {
+        // Gols
+        if (edicao.points > 0) {
+          eventosParaSalvar.push({ tipo: 'GOL', ponto: edicao.points, jogador: edicao.id });
+        }
+        // Cartões Amarelos
+        for (let i = 0; i < (edicao.yellow || 0); i++) {
+          eventosParaSalvar.push({ tipo: 'CARTAO_AMARELO', ponto: 0, jogador: edicao.id });
+        }
+        // Cartões Vermelhos
+        for (let i = 0; i < (edicao.red || 0); i++) {
+          eventosParaSalvar.push({ tipo: 'CARTAO_VERMELHO', ponto: 0, jogador: edicao.id });
+        }
+      });
+
+      // Enviar todos os eventos de uma vez (substituindo os antigos)
+      await fetch(`/api/partidas/${match.id}/eventos`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(eventosParaSalvar),
+      });
+
+      console.log('Eventos salvos automaticamente no banco');
+    } catch (error) {
+      console.error('Erro ao salvar eventos automaticamente:', error);
+      // Não mostrar erro para o usuário para não interromper a edição
+    } finally {
+      setSalvamentoPendente(false);
+    }
+  };
+
   const tratarMudancaInput = (time, jogadorId, campo, valor) => {
     const v = Math.max(0, parseInt(valor || '0', 10));
     if (time === 1) {
@@ -213,9 +271,11 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEn
     } else {
       setEdicaoTimeB(prev => prev.map(p => p.id === jogadorId ? { ...p, [campo]: v } : p));
     }
+
+    // Salvar automaticamente no banco imediatamente para evitar discrepâncias
+    salvarEventosAssincronos();
   };
 
-  // envia eventos ao backend e atualiza pontos finais; permite envio quando ao vivo ou quando permitirEdicao=true
   const enviarSumula = async () => {
     if (!(estaAoVivo || permitirEdicao)) return;
     
@@ -227,110 +287,37 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEn
     
     setSalvando(true);
     try {
-      // Reconcile events instead of blindly creating duplicates.
-      // 1) Load existing events for this match
-      const existingRes = await fetch(`/api/partidas/${match.id}/eventos`);
-      const existingEvents = existingRes.ok ? await existingRes.json() : [];
+      const pontosCasaCalc = (edicaoTimeA || []).reduce((s, p) => s + (p.points || 0), 0);
+      const pontosVisitanteCalc = (edicaoTimeB || []).reduce((s, p) => s + (p.points || 0), 0);
 
-      // Build lookup maps
-      const golMap = new Map(); // jogadorId -> event
-      const cardMap = new Map(); // `${jogadorId}:${tipo}` -> array of events
-      existingEvents.forEach(ev => {
-        const jid = parseInt(ev.jogadorId ?? ev.jogador ?? ev.jogador?.id, 10);
-        if (!jid) return;
-        if (ev.tipo === 'GOL') {
-          golMap.set(jid, ev);
-        } else if (ev.tipo === 'CARTAO_AMARELO' || ev.tipo === 'CARTAO_VERMELHO') {
-          const key = `${jid}:${ev.tipo}`;
-          const arr = cardMap.get(key) || [];
-          arr.push(ev);
-          cardMap.set(key, arr);
+      // 1. Construir a lista de eventos para enviar
+      const eventosParaSalvar = [];
+      const todasEdicoes = [
+        ...edicaoTimeA.map(e => ({ ...e, time: 1 })),
+        ...edicaoTimeB.map(e => ({ ...e, time: 2 }))
+      ];
+
+      todasEdicoes.forEach(edicao => {
+        // Gols
+        if (edicao.points > 0) {
+          eventosParaSalvar.push({ tipo: 'GOL', ponto: edicao.points, jogador: edicao.id });
+        }
+        // Cartões Amarelos
+        for (let i = 0; i < (edicao.yellow || 0); i++) {
+          eventosParaSalvar.push({ tipo: 'CARTAO_AMARELO', ponto: 0, jogador: edicao.id });
+        }
+        // Cartões Vermelhos
+        for (let i = 0; i < (edicao.red || 0); i++) {
+          eventosParaSalvar.push({ tipo: 'CARTAO_VERMELHO', ponto: 0, jogador: edicao.id });
         }
       });
 
-      const postsToCreate = [];
-      const patchesToDo = [];
-      const warnings = [];
-
-      const reconciliarLista = (listaEdicao) => {
-        listaEdicao.forEach(p => {
-          const jogadorId = p.id;
-          const desiredGols = Number(p.points || 0);
-
-          // GOLS: se já existe evento do tipo GOL para este jogador -> PATCH com pontosGerados = desired
-          const existingGol = golMap.get(jogadorId);
-          if (existingGol) {
-            const existingPoints = Number(existingGol.pontosGerados ?? existingGol.ponto ?? 0);
-            if (existingPoints !== desiredGols) {
-              patchesToDo.push({ id: existingGol.id, body: { pontosGerados: desiredGols } });
-            }
-          } else if (desiredGols > 0) {
-            // criar novo evento de GOL com pontos acumulados do jogador
-            postsToCreate.push({ tipo: 'GOL', ponto: desiredGols, jogador: jogadorId });
-          }
-
-          // CARTÕES: aqui cada cartão é um registro. Se faltam registros, criamos; se houverem mais do que o desejado, apenas avisamos (sem DELETE disponível).
-          const desiredY = Number(p.yellow || 0);
-          const keyY = `${jogadorId}:CARTAO_AMARELO`;
-          const existingY = (cardMap.get(keyY) || []).length;
-          if (desiredY > existingY) {
-            for (let i = 0; i < desiredY - existingY; i++) postsToCreate.push({ tipo: 'CARTAO_AMARELO', ponto: 0, jogador: jogadorId });
-          } else if (desiredY < existingY) {
-            warnings.push(`Jogador ${jogadorId} tem mais cartões amarelos no banco (${existingY}) do que o desejado (${desiredY}) — remoção não suportada pelo cliente.`);
-          }
-
-          const desiredR = Number(p.red || 0);
-          const keyR = `${jogadorId}:CARTAO_VERMELHO`;
-          const existingR = (cardMap.get(keyR) || []).length;
-          if (desiredR > existingR) {
-            for (let i = 0; i < desiredR - existingR; i++) postsToCreate.push({ tipo: 'CARTAO_VERMELHO', ponto: 0, jogador: jogadorId });
-          } else if (desiredR < existingR) {
-            warnings.push(`Jogador ${jogadorId} tem mais cartões vermelhos no banco (${existingR}) do que o desejado (${desiredR}) — remoção não suportada pelo cliente.`);
-          }
-        });
-      };
-
-      reconciliarLista(edicaoTimeA);
-      reconciliarLista(edicaoTimeB);
-
-      if (postsToCreate.length === 0 && patchesToDo.length === 0) {
-        if (!confirm('Nenhuma alteração detectada. Deseja enviar/confirmar mesmo assim?')) {
-          setSalvando(false);
-          return;
-        }
-      }
-
-      // Execute patches first
-      if (patchesToDo.length > 0) {
-        await Promise.all(patchesToDo.map(p => fetch(`/api/partidas/${match.id}/eventos/${p.id}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(p.body)
-        })));
-      }
-
-      // Then create any missing events in batch (POST accepts array)
-      if (postsToCreate.length > 0) {
-        const createRes = await fetch(`/api/partidas/${match.id}/eventos`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(postsToCreate)
-        });
-        if (!createRes.ok) {
-          const txt = await createRes.text().catch(() => '');
-          throw new Error(txt || 'Erro ao criar eventos');
-        }
-      }
-
-      // Show warnings if any (cards present more than desired and we couldn't delete)
-      if (warnings.length) {
-        console.warn('Avisos ao reconciliar eventos:', warnings.join('\n'));
-        alert('Avisos: ' + warnings.join('\n'));
-      }
-
-
-      const pontosCasaCalc = (edicaoTimeA || []).reduce((s, p) => s + (p.points || 0), 0);
-      const pontosVisitanteCalc = (edicaoTimeB || []).reduce((s, p) => s + (p.points || 0), 0);
+      // 2. Enviar todos os eventos de uma vez (substituindo os antigos)
+      await fetch(`/api/partidas/${match.id}/eventos`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(eventosParaSalvar),
+      });
 
       // Finalizar a partida usando o novo endpoint
       const finalizarResponse = await fetch(`/api/partidas/${match.id}/finalizar`, {
@@ -499,7 +486,7 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEn
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="INFORMAÇÕES DO TORNEIO" size="max-w-4xl max-h-[90vh]">
       <div className="flex flex-col h-[70vh]">
-        <div ref={sumulaRef} className="flex-1 overflow-y-auto pr-2 bg-white dark:bg-gray-800 p-4">
+        <div className="flex-1 overflow-y-auto pr-2 bg-white dark:bg-gray-800 p-4">
           <div className="text-center mb-6 border-b pb-4">
             <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
               SÚMULA DE PARTIDA {estaAoVivo && <span className="text-red-500">(AO VIVO)</span>}

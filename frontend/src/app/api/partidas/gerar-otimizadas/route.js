@@ -80,6 +80,11 @@ export async function POST(request) {
     for (let i = 0; i < partidasOtimizadas.length; i++) {
       const partida = partidasOtimizadas[i];
       
+      // Verificação de segurança para garantir que o localId não é nulo/undefined
+      if (!partida.localId) {
+        throw new Error(`Partida para a modalidade ${partida.modalidade} não pôde ser associada a um local válido.`);
+      }
+
       // Criar partida
       const novaPartida = await prisma.partida.create({
         data: {
@@ -291,8 +296,8 @@ function otimizarPartidasGlobalmente(partidas, configuracaoLocais, localMap) {
 
     // Configurar locais para as partidas
     if (primeiraPartida) {
-      const localNome1 = obterLocalParaModalidade(primeiraPartida.modalidade, configuracaoLocais);
-      const localId1 = localMap[localNome1];
+      const { localId: localId1, localNome: localNome1 } = obterLocalParaModalidade(primeiraPartida.modalidade, configuracaoLocais, localMap);
+
       
       slot.partidas.push({
         ...primeiraPartida,
@@ -310,9 +315,10 @@ function otimizarPartidasGlobalmente(partidas, configuracaoLocais, localMap) {
 
     if (segundaPartida) {
       // Para a segunda partida, usar a quadra oposta
-      const localNome1 = slot.partidas[0]?.localNome;
-      const localNome2 = localNome1 === 'Quadra de Cima' ? 'Quadra de Baixo' : 'Quadra de Cima';
-      const localId2 = localMap[localNome2];
+      const localUsado = slot.partidas[0]?.localNome;
+      const localOposto = Object.keys(localMap).find(nome => nome !== localUsado) || localUsado; // Fallback para o mesmo local se só houver um
+
+      const { localId: localId2, localNome: localNome2 } = obterLocalParaModalidade(segundaPartida.modalidade, configuracaoLocais, localMap, localOposto);
       
       slot.partidas.push({
         ...segundaPartida,
@@ -602,14 +608,25 @@ function escolherMelhorPartidaComModalidadeDiferenteEAlternancia(listaPartidas, 
 }
 
 // Função para obter o local de uma modalidade
-function obterLocalParaModalidade(modalidade, configuracaoLocais) {
-  // Configuração padrão inteligente se não foi especificada
+function obterLocalParaModalidade(modalidade, configuracaoLocais, localMap, localPreferencial = null) {
+  // 1. Tenta usar o local preferencial (para a segunda partida do slot)
+  if (localPreferencial && localMap[localPreferencial]) {
+    return { localId: localMap[localPreferencial], localNome: localPreferencial };
+  }
+
+  // 2. Tenta usar a configuração vinda do frontend
+  const localConfigurado = configuracaoLocais?.[modalidade];
+  if (localConfigurado && localMap[localConfigurado]) {
+    return { localId: localMap[localConfigurado], localNome: localConfigurado };
+  }
+
+  // 3. Usa uma configuração padrão inteligente como fallback
   const configuracaoPadrao = {
     'Vôlei': 'Quadra de Baixo',
     'Handebol': 'Quadra de Cima', 
     'Basquete': 'Quadra de Baixo',
     'Futsal': 'Quadra de Cima'
   };
-  
-  return configuracaoLocais?.[modalidade] || configuracaoPadrao[modalidade] || 'Quadra de Baixo';
+  const localPadrao = configuracaoPadrao[modalidade] || Object.keys(localMap)[0]; // Pega o primeiro local disponível se não houver padrão
+  return { localId: localMap[localPadrao], localNome: localPadrao };
 }

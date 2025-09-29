@@ -5,26 +5,21 @@ const prisma = new PrismaClient();
 
 export async function GET(request, { params }) {
   try {
-    const { partidaId } = await params;
+    const { partidaId } = params;
 
     const eventos = await prisma.eventoPartida.findMany({
       where: {
-        partidaId: parseInt(partidaId)
+        partidaId: parseInt(partidaId),
       },
       include: {
-        jogador: {
-          include: {
-            curso: true
-          }
-        }
+        jogador: true,
       },
       orderBy: {
-        id: 'asc'
-      }
+        id: 'asc',
+      },
     });
 
     return NextResponse.json(eventos);
-
   } catch (error) {
     console.error('Erro ao buscar eventos da partida:', error);
     return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 });
@@ -33,75 +28,48 @@ export async function GET(request, { params }) {
 
 export async function POST(request, { params }) {
   try {
-    const { partidaId } = await params;
-    const eventos = await request.json();
+    const { partidaId } = params;
+    const eventosParaCriar = await request.json();
 
-    if (!Array.isArray(eventos)) {
-      return NextResponse.json({ error: 'Eventos devem ser um array' }, { status: 400 });
+    if (!Array.isArray(eventosParaCriar)) {
+      return NextResponse.json({ error: 'O corpo da requisição deve ser um array de eventos' }, { status: 400 });
     }
 
-    // Validar e criar eventos em batch
-    const eventosParaCriar = eventos.map((evento, index) => {
-      const jogadorId = parseInt(evento.jogador || evento.jogadorId);
-      const partidaIdInt = parseInt(partidaId);
-      
-      if (isNaN(jogadorId)) {
-        throw new Error(`Evento ${index}: jogadorId inválido: ${evento.jogador || evento.jogadorId}`);
-      }
-      
-      if (isNaN(partidaIdInt)) {
-        throw new Error(`PartidaId inválido: ${partidaId}`);
-      }
-
-      return {
-        tipo: evento.tipo,
-        pontosGerados: evento.ponto || evento.pontosGerados || 0,
-        jogadorId: jogadorId,
-        partidaId: partidaIdInt
-      };
+    // Delete existing events for this match before creating new ones
+    await prisma.eventoPartida.deleteMany({
+      where: {
+        partidaId: parseInt(partidaId),
+      },
     });
 
-    const eventosCreated = await prisma.eventoPartida.createMany({
-      data: eventosParaCriar
+    const dadosEventos = eventosParaCriar.map(evento => ({
+      partidaId: parseInt(partidaId),
+      jogadorId: evento.jogador,
+      tipo: evento.tipo,
+      pontosGerados: evento.ponto,
+    }));
+
+    const resultado = await prisma.eventoPartida.createMany({
+      data: dadosEventos,
     });
 
-    return NextResponse.json(eventosCreated);
-
+    return NextResponse.json(resultado, { status: 201 });
   } catch (error) {
-    console.error('Erro ao criar eventos da partida:', error);
-    return NextResponse.json({ 
-      error: 'Erro interno do servidor',
-      details: error.message 
-    }, { status: 500 });
+    console.error('Erro ao criar eventos:', error);
+    return NextResponse.json({ error: 'Erro interno do servidor', details: error.message }, { status: 500 });
   }
 }
 
-export async function PATCH(request, { params }) {
+export async function DELETE(request, { params }) {
   try {
     const { partidaId } = params;
-    const updates = await request.json();
+    const { eventoId } = await request.json();
 
-    if (!Array.isArray(updates)) {
-      return NextResponse.json({ error: 'Updates devem ser um array' }, { status: 400 });
-    }
+    await prisma.eventoPartida.delete({ where: { id: eventoId } });
 
-    // Atualizar eventos em batch
-    const updatePromises = updates.map(update => 
-      prisma.eventoPartida.update({
-        where: { id: update.id },
-        data: {
-          pontosGerados: update.body.pontosGerados || update.body.ponto,
-          tipo: update.body.tipo
-        }
-      })
-    );
-
-    const updatedEventos = await Promise.all(updatePromises);
-
-    return NextResponse.json(updatedEventos);
-
+    return NextResponse.json({ message: 'Evento deletado com sucesso' }, { status: 200 });
   } catch (error) {
-    console.error('Erro ao atualizar eventos da partida:', error);
-    return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 });
+    console.error('Erro ao deletar evento:', error);
+    return NextResponse.json({ error: 'Erro interno do servidor', details: error.message }, { status: 500 });
   }
 }

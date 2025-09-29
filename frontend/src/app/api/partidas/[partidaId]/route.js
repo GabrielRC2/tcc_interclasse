@@ -131,6 +131,21 @@ export async function PATCH(request, { params }) {
       return Response.json({ error: 'Partida não encontrada' }, { status: 404 });
     }
 
+    // Mapear status do frontend para o banco
+    let statusPartida = partidaAtual.statusPartida;
+    if (data.status) {
+      const statusMap = {
+        'Agendada': 'AGENDADA',
+        'Em andamento': 'EM_ANDAMENTO',
+        'Em Andamento': 'EM_ANDAMENTO',
+        'Finalizada': 'FINALIZADA',
+        'Cancelada': 'CANCELADA'
+      };
+      statusPartida = statusMap[data.status] || data.statusPartida || partidaAtual.statusPartida;
+    } else if (data.statusPartida) {
+      statusPartida = data.statusPartida;
+    }
+
     // Atualizar a partida
     const partidaAtualizada = await prisma.partida.update({
       where: { id: parseInt(partidaId) },
@@ -140,12 +155,12 @@ export async function PATCH(request, { params }) {
         penaltisCasa: data.penaltisCasa || null,
         penaltisVisitante: data.penaltisVisitante || null,
         temPenaltis: data.temPenaltis || false,
-        statusPartida: data.statusPartida || partidaAtual.statusPartida
+        statusPartida: statusPartida
       }
     });
 
     // Se a partida foi finalizada, atualizar pontuação do torneio
-    if (data.statusPartida === 'FINALIZADA') {
+    if (statusPartida === 'FINALIZADA') {
       try {
         await atualizarPontuacaoTorneio(parseInt(partidaId));
         console.log(`Pontuação do torneio atualizada para partida ${partidaId}`);
