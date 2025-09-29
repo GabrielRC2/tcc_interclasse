@@ -425,7 +425,7 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEn
       <tbody>
         {jogadores.length === 0 ? (
           <tr>
-            <td colSpan="5" className="p-4 text-center text-gray-500">Nenhum jogador cadastrado</td>
+            <td colSpan="5" className="p-4 text-center text-gray-500 dark:text-gray-400">Nenhum jogador cadastrado</td>
           </tr>
         ) : (
           jogadores.map((j) => {
@@ -661,7 +661,7 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEn
 
               </div>
 
-              <div className="text-center text-xs text-gray-500 border-t pt-4 mt-8">
+              <div className="text-center text-xs text-gray-500 dark:text-gray-400 border-t pt-4 mt-8">
                 <p>Documento gerado automaticamente pelo Sistema de Gerenciamento de Torneios</p>
                 <p>Gerado em: {new Date().toLocaleString('pt-BR')}</p>
               </div>

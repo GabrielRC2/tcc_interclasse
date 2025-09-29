@@ -315,26 +315,26 @@ export const BracketsPage = () => {
                     <table className="w-full text-sm">
                         <thead>
                             <tr className="border-b border-gray-200 dark:border-gray-600">
-                                <th className="text-left py-2 px-2 font-semibold">Pos</th>
-                                <th className="text-left py-2 px-2 font-semibold">Time</th>
+                                <th className="text-left py-2 px-2 font-semibold text-gray-900 dark:text-gray-100">Pos</th>
+                                <th className="text-left py-2 px-2 font-semibold text-gray-900 dark:text-gray-100">Time</th>
                                 {classificacaoGeral && (
-                                    <th className="text-center py-2 px-2 font-semibold">Grupo</th>
+                                    <th className="text-center py-2 px-2 font-semibold text-gray-900 dark:text-gray-100">Grupo</th>
                                 )}
-                                <th className="text-center py-2 px-2 font-semibold">PTS</th>
-                                <th className="text-center py-2 px-2 font-semibold">J</th>
-                                <th className="text-center py-2 px-2 font-semibold">V</th>
-                                <th className="text-center py-2 px-2 font-semibold">E</th>
-                                <th className="text-center py-2 px-2 font-semibold">D</th>
-                                <th className="text-center py-2 px-2 font-semibold">GP</th>
-                                <th className="text-center py-2 px-2 font-semibold">GC</th>
-                                <th className="text-center py-2 px-2 font-semibold">SG</th>
+                                <th className="text-center py-2 px-2 font-semibold text-gray-900 dark:text-gray-100">PTS</th>
+                                <th className="text-center py-2 px-2 font-semibold text-gray-900 dark:text-gray-100">J</th>
+                                <th className="text-center py-2 px-2 font-semibold text-gray-900 dark:text-gray-100">V</th>
+                                <th className="text-center py-2 px-2 font-semibold text-gray-900 dark:text-gray-100">E</th>
+                                <th className="text-center py-2 px-2 font-semibold text-gray-900 dark:text-gray-100">D</th>
+                                <th className="text-center py-2 px-2 font-semibold text-gray-900 dark:text-gray-100">GP</th>
+                                <th className="text-center py-2 px-2 font-semibold text-gray-900 dark:text-gray-100">GC</th>
+                                <th className="text-center py-2 px-2 font-semibold text-gray-900 dark:text-gray-100">SG</th>
                             </tr>
                         </thead>
                         <tbody>
                             {dados.map((time, index) => (
                                 <tr key={time.timeId} className="border-b border-gray-100 dark:border-gray-700">
-                                    <td className="py-2 px-2 font-bold">{index + 1}°</td>
-                                    <td className="py-2 px-2 font-medium">{time.nome}</td>
+                                    <td className="py-2 px-2 font-bold text-gray-900 dark:text-gray-100">{index + 1}°</td>
+                                    <td className="py-2 px-2 font-medium text-gray-900 dark:text-gray-100">{time.nome}</td>
                                     {classificacaoGeral && (
                                         <td className="py-2 px-2 text-center">
                                             <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
@@ -343,13 +343,13 @@ export const BracketsPage = () => {
                                         </td>
                                     )}
                                     <td className="py-2 px-2 text-center font-bold text-blue-600 dark:text-blue-400">{time.pontos}</td>
-                                    <td className="py-2 px-2 text-center">{time.jogos}</td>
+                                    <td className="py-2 px-2 text-center text-gray-900 dark:text-gray-100">{time.jogos}</td>
                                     <td className="py-2 px-2 text-center text-green-600 dark:text-green-400">{time.vitorias}</td>
                                     <td className="py-2 px-2 text-center text-yellow-600 dark:text-yellow-400">{time.empates}</td>
                                     <td className="py-2 px-2 text-center text-red-600 dark:text-red-400">{time.derrotas}</td>
-                                    <td className="py-2 px-2 text-center">{time.golsPro}</td>
-                                    <td className="py-2 px-2 text-center">{time.golsContra}</td>
-                                    <td className="py-2 px-2 text-center font-semibold">{time.saldoGols > 0 ? '+' : ''}{time.saldoGols}</td>
+                                    <td className="py-2 px-2 text-center text-gray-900 dark:text-gray-100">{time.golsPro}</td>
+                                    <td className="py-2 px-2 text-center text-gray-900 dark:text-gray-100">{time.golsContra}</td>
+                                    <td className="py-2 px-2 text-center font-semibold text-gray-900 dark:text-gray-100">{time.saldoGols > 0 ? '+' : ''}{time.saldoGols}</td>
                                 </tr>
                             ))}
                         </tbody>
