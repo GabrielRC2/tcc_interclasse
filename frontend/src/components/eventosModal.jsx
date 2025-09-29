@@ -114,7 +114,7 @@ export const EventosModal = ({ isOpen, onClose, match }) => {
 
           <div className="space-y-2">
             {filtered.length === 0 && (
-              <p className="text-center text-sm text-gray-500">Nenhum evento registrado para os filtros selecionados.</p>
+              <p className="text-center text-sm text-gray-500 dark:text-gray-400">Nenhum evento registrado para os filtros selecionados.</p>
             )}
 
             {filtered.map(ev => (

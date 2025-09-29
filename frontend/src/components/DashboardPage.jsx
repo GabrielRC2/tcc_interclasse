@@ -282,7 +282,7 @@ export const Dashboard = () => {
                 {carregandoProximas ? (
                   <div className="col-span-2 text-center py-8">Carregando próximas partidas...</div>
                 ) : proximasPartidas.length === 0 ? (
-                  <div className="col-span-2 text-center py-8 text-gray-500">Nenhuma partida agendada encontrada.</div>
+                  <div className="col-span-2 text-center py-8 text-gray-500 dark:text-gray-400">Nenhuma partida agendada encontrada.</div>
                 ) : (
                   proximasPartidas.slice(0, 2).map((match) => (
                     <div key={match.id} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm p-4 relative overflow-hidden">
@@ -313,7 +313,7 @@ export const Dashboard = () => {
                 {carregandoJogadores ? (
                   <div className="text-center py-8">Carregando jogadores em destaque...</div>
                 ) : Object.keys(jogadoresDestaque).length === 0 ? (
-                  <div className="text-center py-8 text-gray-500">Nenhum jogador encontrado para este torneio.</div>
+                  <div className="text-center py-8 text-gray-500 dark:text-gray-400">Nenhum jogador encontrado para este torneio.</div>
                 ) : (
                   <div className="space-y-6">
                     {/* Renderizar cada modalidade */}
@@ -405,7 +405,7 @@ export const Dashboard = () => {
                     
                     {/* Mensagem se não há dados */}
                     {Object.keys(jogadoresDestaque).length === 0 && (
-                      <div className="text-center text-gray-500">
+                      <div className="text-center text-gray-500 dark:text-gray-400">
                         Nenhuma modalidade encontrada para este torneio.
                       </div>
                     )}
@@ -509,7 +509,7 @@ export const Dashboard = () => {
                             </tr>
                           ) : partidasAgendadas.length === 0 ? (
                             <tr>
-                              <td colSpan="6" className="p-6 text-center text-gray-500">Nenhuma partida agendada encontrada.</td>
+                              <td colSpan="6" className="p-6 text-center text-gray-500 dark:text-gray-400">Nenhuma partida agendada encontrada.</td>
                             </tr>
                           ) : (
                             partidasAgendadas.map((match, index) => (
@@ -642,7 +642,7 @@ export const Dashboard = () => {
                             </tr>
                           ) : partidasFinalizadas.length === 0 ? (
                             <tr>
-                              <td colSpan="7" className="p-6 text-center text-gray-500">Nenhuma súmula encontrada.</td>
+                              <td colSpan="7" className="p-6 text-center text-gray-500 dark:text-gray-400">Nenhuma súmula encontrada.</td>
                             </tr>
                           ) : (
                             partidasFinalizadas.map((match, index) => (

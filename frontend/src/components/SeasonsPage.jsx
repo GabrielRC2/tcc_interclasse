@@ -254,9 +254,9 @@ export const SeasonsPage = () => {
                                 >
                                     <div className="flex items-center gap-3">
                                         {expandedYears.has(year) ? (
-                                            <ChevronDown size={20} className="text-gray-500" />
+                                            <ChevronDown size={20} className="text-gray-500 dark:text-gray-400" />
                                         ) : (
-                                            <ChevronRight size={20} className="text-gray-500" />
+                                            <ChevronRight size={20} className="text-gray-500 dark:text-gray-400" />
                                         )}
                                         <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
                                             {year}
