@@ -175,10 +175,12 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEn
           setPenaltisA(partidaData.penaltisCasa || 0);
           setPenaltisB(partidaData.penaltisVisitante || 0);
           
-          // Detectar pênaltis se temPenaltis for true OU se o resultado contém " pen"
+          // Detectar pênaltis apenas se explicitamente marcado como tendo pênaltis
+          // OU se o resultado contém " pen" OU se tem valores de pênaltis > 0
           const temPenaltisDetectado = partidaData.temPenaltis || 
             (partidaData.result && partidaData.result.includes(' pen')) ||
-            (partidaData.penaltisCasa !== null && partidaData.penaltisVisitante !== null);
+            ((partidaData.penaltisCasa > 0 || partidaData.penaltisVisitante > 0) && 
+             partidaData.penaltisCasa !== null && partidaData.penaltisVisitante !== null);
           
           setTemPenaltis(temPenaltisDetectado);
         }
