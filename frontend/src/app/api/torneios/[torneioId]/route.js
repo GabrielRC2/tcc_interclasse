@@ -17,6 +17,7 @@ export async function PUT(request, { params }) {
       where: { id },
       data: {
         nome: nomeComAno,
+        local: location || 'ETEC João Belarmino',
         inicio: new Date(startDate),
         fim: new Date(endDate),
         status: status || 'PLANEJAMENTO'
@@ -29,7 +30,7 @@ export async function PUT(request, { params }) {
       status: torneio.status,
       startDate: torneio.inicio.toISOString().split('T')[0],
       endDate: torneio.fim.toISOString().split('T')[0],
-      location: location,
+      location: torneio.local,
       modalities: modalities
     });
   } catch (error) {
@@ -178,7 +179,7 @@ export async function GET(request, { params }) {
       status: torneio.status,
       startDate: torneio.inicio.toISOString().split('T')[0],
       endDate: torneio.fim.toISOString().split('T')[0],
-      location: 'ETEC João Belarmino',
+      location: torneio.local || 'ETEC João Belarmino',
       modalities: getModalitiesByName(torneio.nome),
       teamsCount: torneio.times?.length || 0,
       matchesTotal: torneio.partidas?.length || 0,

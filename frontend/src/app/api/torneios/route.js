@@ -23,7 +23,7 @@ export async function GET() {
       status: t.status,
       startDate: t.inicio.toISOString().split('T')[0],
       endDate: t.fim.toISOString().split('T')[0],
-      location: 'ETEC João Belarmino',
+      location: t.local || 'ETEC João Belarmino', // Usar o campo do banco
       modalities: getModalitiesByName(t.nome), // FUNÇÃO HELPER
       teamsCount: t.times?.length || 0, // CONTAGEM REAL DE TIMES
       matchesTotal: t.partidas?.length || 0,
@@ -55,6 +55,7 @@ export async function POST(request) {
     const torneio = await prisma.torneio.create({
       data: {
         nome: nomeComAno,
+        local: location || 'ETEC João Belarmino',
         status: status || 'PLANEJAMENTO',
         inicio: new Date(startDate),
         fim: new Date(endDate)
@@ -67,7 +68,7 @@ export async function POST(request) {
       status: torneio.status,
       startDate: torneio.inicio.toISOString().split('T')[0],
       endDate: torneio.fim.toISOString().split('T')[0],
-      location: location,
+      location: torneio.local,
       modalities: modalities,
       teamsCount: 0,
       matchesTotal: 0,

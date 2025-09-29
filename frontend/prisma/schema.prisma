@@ -22,6 +22,7 @@ datasource db {
 model Torneio {
   id                 Int                 @id @default(autoincrement()) @map("id_torneio")
   nome               String              @map("nome_torneio") @db.VarChar(200)
+  local              String              @map("local_torneio") @db.VarChar(200) @default("ETEC João Belarmino")
   status             String              @map("status_torneio") @db.VarChar(20)
   inicio             DateTime            @map("inicio_torneio") @db.DateTime
   fim                DateTime            @map("fim_torneio") @db.DateTime
