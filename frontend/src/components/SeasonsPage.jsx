@@ -219,7 +219,7 @@ export const SeasonsPage = () => {
     };
 
     if (loading) {
-        return <div className="flex justify-center items-center h-64">Carregando...</div>;
+        return <div className="flex justify-center items-center h-64 text-gray-600 dark:text-gray-400">Carregando...</div>;
     }
 
     const groupedSeasons = groupSeasonsByYear();

@@ -280,7 +280,7 @@ export const Dashboard = () => {
               <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">PARTIDAS ATUAIS</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {carregandoProximas ? (
-                  <div className="col-span-2 text-center py-8">Carregando próximas partidas...</div>
+                  <div className="col-span-2 text-center py-8 text-gray-600 dark:text-gray-400">Carregando próximas partidas...</div>
                 ) : proximasPartidas.length === 0 ? (
                   <div className="col-span-2 text-center py-8 text-gray-500 dark:text-gray-400">Nenhuma partida agendada encontrada.</div>
                 ) : (
@@ -311,7 +311,7 @@ export const Dashboard = () => {
               <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">JOGADORES(AS) EM DESTAQUE</h2>
               <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm p-6">
                 {carregandoJogadores ? (
-                  <div className="text-center py-8">Carregando jogadores em destaque...</div>
+                  <div className="text-center py-8 text-gray-600 dark:text-gray-400">Carregando jogadores em destaque...</div>
                 ) : Object.keys(jogadoresDestaque).length === 0 ? (
                   <div className="text-center py-8 text-gray-500 dark:text-gray-400">Nenhum jogador encontrado para este torneio.</div>
                 ) : (
@@ -505,7 +505,7 @@ export const Dashboard = () => {
                         <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
                           {carregandoAgendadas ? (
                             <tr>
-                              <td colSpan="6" className="p-6 text-center">Carregando partidas agendadas...</td>
+                              <td colSpan="6" className="p-6 text-center text-gray-600 dark:text-gray-400">Carregando partidas agendadas...</td>
                             </tr>
                           ) : partidasAgendadas.length === 0 ? (
                             <tr>
@@ -638,7 +638,7 @@ export const Dashboard = () => {
                         <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
                           {carregandoFinalizadas ? (
                             <tr>
-                              <td colSpan="7" className="p-6 text-center">Carregando súmulas...</td>
+                              <td colSpan="7" className="p-6 text-center text-gray-600 dark:text-gray-400">Carregando súmulas...</td>
                             </tr>
                           ) : partidasFinalizadas.length === 0 ? (
                             <tr>
