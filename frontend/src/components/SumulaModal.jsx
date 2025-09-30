@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Modal } from '@/components/Modal';
 import { Button } from '@/components/common';
 import { useTournament } from '@/contexts/TournamentContext';
@@ -73,6 +73,15 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEn
   const [edicaoTimeA, setEdicaoTimeA] = useState([]); // [{ id, points, yellow, red }]
   const [edicaoTimeB, setEdicaoTimeB] = useState([]);
 
+  // Manter refs atualizados
+  useEffect(() => {
+    edicaoTimeARef.current = edicaoTimeA;
+  }, [edicaoTimeA]);
+
+  useEffect(() => {
+    edicaoTimeBRef.current = edicaoTimeB;
+  }, [edicaoTimeB]);
+
   const [placarA, setPlacarA] = useState(0);
   const [placarB, setPlacarB] = useState(0);
 
@@ -137,9 +146,21 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEn
         const statsA = montarEstatisticas(mappedT1, dataEv);
         const statsB = montarEstatisticas(mappedT2, dataEv);
 
-        // inicializa edições a partir das estatísticas atuais
-        setEdicaoTimeA(statsA.map(s => ({ id: s.id, points: s.pontos, yellow: s.amarelos, red: s.vermelhos })));
-        setEdicaoTimeB(statsB.map(s => ({ id: s.id, points: s.pontos, yellow: s.amarelos, red: s.vermelhos })));
+        // Inicializa edições garantindo que todos os jogadores estejam presentes
+        const inicializarEdicao = (jogadores, stats) => {
+          return jogadores.map(jogador => {
+            const stat = stats.find(s => s.id === jogador.id) || { pontos: 0, amarelos: 0, vermelhos: 0 };
+            return {
+              id: jogador.id,
+              points: stat.pontos,
+              yellow: stat.amarelos,
+              red: stat.vermelhos
+            };
+          });
+        };
+
+        setEdicaoTimeA(inicializarEdicao(mappedT1, statsA));
+        setEdicaoTimeB(inicializarEdicao(mappedT2, statsB));
 
         // atualiza exibição (modo final) com estatísticas
         setJogadoresTimeA(mappedT1.map(j => {
@@ -213,52 +234,92 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEn
     setPlacarB(gB);
   }, [edicaoTimeA, edicaoTimeB, estaAoVivo, permitirEdicao]);
 
+  // Estados para controle de salvamento assíncrono
+  const [debounceTimer, setDebounceTimer] = useState(null);
+  const [salvamentoPendente, setSalvamentoPendente] = useState(false);
+  
+  // Refs para capturar estados mais recentes
+  const edicaoTimeARef = useRef(edicaoTimeA);
+  const edicaoTimeBRef = useRef(edicaoTimeB);
+
+  // Limpar timer quando componente desmontar ou modal fechar
+  useEffect(() => {
+    return () => {
+      if (debounceTimer) {
+        clearTimeout(debounceTimer);
+      }
+    };
+  }, [debounceTimer]);
+
   // Early return for better React consistency - AFTER all hooks
   if (!match || !isOpen) return null;
 
-  // Estado para controlar o salvamento assíncrono
-  const [salvamentoPendente, setSalvamentoPendente] = useState(false);
-
-  // Função para salvar eventos de forma assíncrona no banco
-  const salvarEventosAssincronos = async () => {
+  // Função para salvar eventos de forma assíncrona - corrigida para capturar estado mais recente
+  const salvarEventosAssincronos = async (estadoTimeA = null, estadoTimeB = null) => {
     if (!match?.id || salvamentoPendente) return;
 
     setSalvamentoPendente(true);
-
+    
     try {
-      // Construir a lista de eventos para enviar
+      // Usar estados passados como parâmetro ou refs com estado mais recente
+      const estadoA = estadoTimeA || edicaoTimeARef.current;
+      const estadoB = estadoTimeB || edicaoTimeBRef.current;
+
+      // Construir eventos baseado no estado atual de edição
       const eventosParaSalvar = [];
       const todasEdicoes = [
-        ...edicaoTimeA.map(e => ({ ...e, time: 1 })),
-        ...edicaoTimeB.map(e => ({ ...e, time: 2 }))
+        ...estadoA.map(e => ({ ...e, time: 1 })),
+        ...estadoB.map(e => ({ ...e, time: 2 }))
       ];
 
       todasEdicoes.forEach(edicao => {
-        // Gols
+        // GOLS: 1 evento por jogador com a quantidade total
         if (edicao.points > 0) {
-          eventosParaSalvar.push({ tipo: 'GOL', ponto: edicao.points, jogador: edicao.id });
+          eventosParaSalvar.push({
+            jogadorId: edicao.id,
+            tipo: 'GOL',
+            pontosGerados: edicao.points
+          });
         }
-        // Cartões Amarelos
-        for (let i = 0; i < (edicao.yellow || 0); i++) {
-          eventosParaSalvar.push({ tipo: 'CARTAO_AMARELO', ponto: 0, jogador: edicao.id });
-        }
-        // Cartões Vermelhos
-        for (let i = 0; i < (edicao.red || 0); i++) {
-          eventosParaSalvar.push({ tipo: 'CARTAO_VERMELHO', ponto: 0, jogador: edicao.id });
+
+        // CARTÃO: 1 evento combinado por jogador (amarelo + vermelho)
+        if (edicao.yellow > 0 || edicao.red > 0) {
+          // Prioriza vermelho se tiver, senão amarelo
+          const tipoCartao = edicao.red > 0 ? 'CARTAO_VERMELHO' : 'CARTAO_AMARELO';
+          eventosParaSalvar.push({
+            jogadorId: edicao.id,
+            tipo: tipoCartao,
+            pontosGerados: 0
+          });
         }
       });
 
-      // Enviar todos os eventos de uma vez (substituindo os antigos)
-      await fetch(`/api/partidas/${match.id}/eventos`, {
+      // Preparar dados para envio
+      const dadosParaEnvio = eventosParaSalvar.map(e => ({
+        tipo: e.tipo,
+        ponto: e.pontosGerados,
+        jogador: e.jogadorId
+      }));
+
+      console.log('Enviando eventos para o backend:', JSON.stringify(dadosParaEnvio, null, 2));
+      console.log('Estado TimeA usado:', JSON.stringify(estadoA, null, 2));
+      console.log('Estado TimeB usado:', JSON.stringify(estadoB, null, 2));
+
+      // Substituir todos os eventos da partida (DELETE + CREATE)
+      const response = await fetch(`/api/partidas/${match.id}/eventos`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(eventosParaSalvar),
+        body: JSON.stringify(dadosParaEnvio),
       });
 
-      console.log('Eventos salvos automaticamente no banco');
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(`Erro ao salvar eventos: ${error.error}`);
+      }
+
+      console.log('Eventos salvos assíncronamente com sucesso');
     } catch (error) {
-      console.error('Erro ao salvar eventos automaticamente:', error);
-      // Não mostrar erro para o usuário para não interromper a edição
+      console.error('Erro ao salvar eventos:', error);
     } finally {
       setSalvamentoPendente(false);
     }
@@ -266,14 +327,35 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEn
 
   const tratarMudancaInput = (time, jogadorId, campo, valor) => {
     const v = Math.max(0, parseInt(valor || '0', 10));
+    
+    console.log(`Mudança detectada - Time: ${time}, Jogador: ${jogadorId}, Campo: ${campo}, Valor: ${valor} -> ${v}`);
+    
+    // Atualizar estado local
     if (time === 1) {
-      setEdicaoTimeA(prev => prev.map(p => p.id === jogadorId ? { ...p, [campo]: v } : p));
+      setEdicaoTimeA(prev => {
+        const novoEstado = prev.map(p => p.id === jogadorId ? { ...p, [campo]: v } : p);
+        console.log('Novo estado edicaoTimeA:', novoEstado);
+        return novoEstado;
+      });
     } else {
-      setEdicaoTimeB(prev => prev.map(p => p.id === jogadorId ? { ...p, [campo]: v } : p));
+      setEdicaoTimeB(prev => {
+        const novoEstado = prev.map(p => p.id === jogadorId ? { ...p, [campo]: v } : p);
+        console.log('Novo estado edicaoTimeB:', novoEstado);
+        return novoEstado;
+      });
     }
 
-    // Salvar automaticamente no banco imediatamente para evitar discrepâncias
-    salvarEventosAssincronos();
+    // Debounce para salvar no banco
+    if (debounceTimer) {
+      clearTimeout(debounceTimer);
+    }
+    
+    const timer = setTimeout(() => {
+      // Usar refs para capturar estado mais recente
+      salvarEventosAssincronos(edicaoTimeARef.current, edicaoTimeBRef.current);
+    }, 800);
+    
+    setDebounceTimer(timer);
   };
 
   const enviarSumula = async () => {
@@ -290,7 +372,7 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEn
       const pontosCasaCalc = (edicaoTimeA || []).reduce((s, p) => s + (p.points || 0), 0);
       const pontosVisitanteCalc = (edicaoTimeB || []).reduce((s, p) => s + (p.points || 0), 0);
 
-      // 1. Construir a lista de eventos para enviar
+      // 1. Construir eventos simplificados (apenas 1 por tipo por jogador)
       const eventosParaSalvar = [];
       const todasEdicoes = [
         ...edicaoTimeA.map(e => ({ ...e, time: 1 })),
@@ -298,21 +380,32 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEn
       ];
 
       todasEdicoes.forEach(edicao => {
-        // Gols
+        // GOLS: 1 evento com total de gols
         if (edicao.points > 0) {
-          eventosParaSalvar.push({ tipo: 'GOL', ponto: edicao.points, jogador: edicao.id });
+          eventosParaSalvar.push({ 
+            tipo: 'GOL', 
+            ponto: edicao.points, 
+            jogador: edicao.id 
+          });
         }
-        // Cartões Amarelos
-        for (let i = 0; i < (edicao.yellow || 0); i++) {
-          eventosParaSalvar.push({ tipo: 'CARTAO_AMARELO', ponto: 0, jogador: edicao.id });
-        }
-        // Cartões Vermelhos
-        for (let i = 0; i < (edicao.red || 0); i++) {
-          eventosParaSalvar.push({ tipo: 'CARTAO_VERMELHO', ponto: 0, jogador: edicao.id });
+        
+        // CARTÕES: 1 evento por jogador (prioriza vermelho)
+        if (edicao.red > 0) {
+          eventosParaSalvar.push({ 
+            tipo: 'CARTAO_VERMELHO', 
+            ponto: 0, 
+            jogador: edicao.id 
+          });
+        } else if (edicao.yellow > 0) {
+          eventosParaSalvar.push({ 
+            tipo: 'CARTAO_AMARELO', 
+            ponto: 0, 
+            jogador: edicao.id 
+          });
         }
       });
 
-      // 2. Enviar todos os eventos de uma vez (substituindo os antigos)
+      // 2. Enviar todos os eventos (substituindo os antigos)
       await fetch(`/api/partidas/${match.id}/eventos`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
