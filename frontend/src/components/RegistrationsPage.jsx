@@ -100,10 +100,18 @@ export const RegistrationsPage = () => {
             const usersData = await response.json();
 
             // Separar usuários por tipo (importante para controle de acesso)
+            console.log('Dados dos usuários carregados:', usersData);
+            
             setUsers({
-                administradores: usersData.filter(u => u.tipo?.toLowerCase() === 'admin'),
+                administradores: usersData.filter(u => {
+                    const tipo = u.tipo?.toLowerCase();
+                    return tipo === 'admin' || tipo === 'administrador';
+                }),
                 staff: usersData.filter(u => u.tipo?.toLowerCase() === 'staff'),
-                representantes: usersData.filter(u => u.tipo?.toLowerCase() === 'representante')
+                representantes: usersData.filter(u => {
+                    const tipo = u.tipo?.toLowerCase(); 
+                    return tipo === 'representante';
+                })
             });
         } catch (error) {
             console.error('Erro ao carregar usuários:', error);
@@ -128,13 +136,28 @@ export const RegistrationsPage = () => {
 
         if (type === 'Usuários') {
             // Para usuários (importante para login)
+            // Mapear o tipo do usuário para os valores do select
+            let tipoMapeado = '';
+            const tipoOriginal = (item.tipo || '').toLowerCase();
+            
+            if (tipoOriginal === 'admin' || tipoOriginal === 'administrador') {
+                tipoMapeado = 'admin';
+            } else if (tipoOriginal === 'staff') {
+                tipoMapeado = 'staff';
+            } else if (tipoOriginal === 'representante') {
+                tipoMapeado = 'representante';
+            }
+
+            console.log('Editando usuário:', item);
+            console.log('Tipo original:', item.tipo);
+            console.log('Tipo mapeado:', tipoMapeado);
 
             setFormData({
                 name: item.nome || '',
                 sigla: '',
                 email: item.email || '',
                 senha: '',
-                tipo_usuario: item.tipo || ''
+                tipo_usuario: tipoMapeado
             });
         } else {
             // Para outros cadastros
