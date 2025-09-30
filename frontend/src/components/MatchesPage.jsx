@@ -849,13 +849,6 @@ export const MatchesPage = () => {
                           <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">{p.team2}</h3>
                           <p className="text-sm text-gray-500 dark:text-gray-400">{p.team2Course}</p>
                         </div>
-
-                        {/* botão acessar eventos/súmula */}
-                        {(p.status === 'Em andamento' || p.status === 'Finalizada') && (
-                          <Button onClick={() => setPartidaSelecionada(p)}>
-                            {p.status === 'Em andamento' ? 'Acessar Eventos' : 'Ver Súmula'}
-                          </Button>
-                        )}
                       </div>
 
                       <div className="flex flex-wrap gap-4 text-sm text-gray-500 dark:text-gray-400">
@@ -873,6 +866,15 @@ export const MatchesPage = () => {
                         </div>
                       </div>
                     </div>
+                    
+                    {/* botão acessar eventos/súmula */}
+                    {(p.status === 'Em andamento' || p.status === 'Finalizada') && (
+                      <div className="flex-shrink-0">
+                        <Button onClick={() => setPartidaSelecionada(p)}>
+                          {p.status === 'Em andamento' ? 'Acessar Eventos' : 'Ver Súmula'}
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
