@@ -12,7 +12,15 @@ export async function GET(request, { params }) {
         partidaId: parseInt(partidaId),
       },
       include: {
-        jogador: true,
+        jogador: {
+          include: {
+            times: {
+              include: {
+                time: true
+              }
+            }
+          }
+        },
       },
       orderBy: {
         id: 'asc',

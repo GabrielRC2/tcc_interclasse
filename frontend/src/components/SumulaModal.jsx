@@ -205,15 +205,17 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEn
     const atualizarStatusParaEmAndamento = async () => {
       if (isOpen && estaAoVivo && match?.status === 'Agendada') {
         try {
-          const response = await fetch(`/api/partidas/${match.id}`, {
-            method: 'PATCH',
+          const response = await fetch(`/api/partidas/${match.id}/iniciar`, {
+            method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ status: 'Em andamento' }),
           });
-          // Notificar o componente pai sobre a mudança de status para que a UI seja atualizada.
-          // Esta é a correção principal para o status não atualizar na tela.
-          if (onSumulaEnviada) {
-            onSumulaEnviada(match.id, 'Em andamento');
+          
+          if (response.ok) {
+            // Notificar o componente pai sobre a mudança de status para que a UI seja atualizada.
+            // Esta é a correção principal para o status não atualizar na tela.
+            if (onSumulaEnviada) {
+              onSumulaEnviada(match.id, 'Em andamento');
+            }
           }
         } catch (error) {
           console.error('Falha ao atualizar status da partida:', error);
