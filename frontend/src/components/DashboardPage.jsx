@@ -16,7 +16,7 @@ export const Dashboard = () => {
   // Estados para próximas partidas
   const [proximasPartidas, setProximasPartidas] = useState([]);
   const [carregandoProximas, setCarregandoProximas] = useState(false);
-  
+
   // Estados para partidas agendadas
   const [partidasAgendadas, setPartidasAgendadas] = useState([]);
   const [carregandoAgendadas, setCarregandoAgendadas] = useState(false);
@@ -157,7 +157,7 @@ export const Dashboard = () => {
     setCarregandoAgendadas(true);
     try {
       let url = `/api/partidas?torneioId=${selectedTournament.id}`;
-      
+
       // Adicionar filtros à URL
       if (filtrosAgendadas.modalidade) url += `&modalidadeId=${filtrosAgendadas.modalidade}`;
       if (filtrosAgendadas.genero) url += `&genero=${encodeURIComponent(filtrosAgendadas.genero)}`;
@@ -165,7 +165,7 @@ export const Dashboard = () => {
 
       const res = await fetch(url);
       const data = res.ok ? await res.json() : [];
-      
+
       // filtrar por status agendada/pendente
       const agendadas = (data || []).filter(p => {
         const s = (p.status || '').toLowerCase();
@@ -186,7 +186,7 @@ export const Dashboard = () => {
     setCarregandoFinalizadas(true);
     try {
       let url = `/api/partidas?torneioId=${selectedTournament.id}`;
-      
+
       // Adicionar filtros à URL
       if (filtrosFinalizadas.modalidade) url += `&modalidadeId=${filtrosFinalizadas.modalidade}`;
       if (filtrosFinalizadas.genero) url += `&genero=${encodeURIComponent(filtrosFinalizadas.genero)}`;
@@ -194,7 +194,7 @@ export const Dashboard = () => {
 
       const res = await fetch(url);
       const data = res.ok ? await res.json() : [];
-      
+
       // filtrar por status finalizada (aceitar variações de texto)
       const finalizadas = (data || []).filter(p => {
         const s = (p.status || '').toLowerCase();
@@ -239,8 +239,8 @@ export const Dashboard = () => {
     <div className="space-y-6">
       {/* Seletor de Torneio Global */}
       <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm p-6">
-        <div className="flex items-center justify-between">
-          <div>
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div className="flex-1">
             <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
               Torneio Ativo
             </h2>
@@ -248,17 +248,17 @@ export const Dashboard = () => {
               {selectedTournament ? `${selectedTournament.name} • ${selectedTournament.status}` : 'Selecione um torneio para visualizar dados específicos'}
             </p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-col md:flex-row items-start md:items-center gap-3 w-full md:w-auto">
             <Button
               onClick={() => setShowTournamentSelector(true)}
               variant="outline"
-              className="flex items-center gap-2"
+              className="flex items-center justify-center gap-2 w-full md:w-auto"
             >
               <Settings size={16} />
               {selectedTournament ? 'Alterar Torneio' : 'Selecionar Torneio'}
             </Button>
             {selectedTournament && (
-              <div className="px-3 py-1 bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200 rounded-full text-sm font-medium">
+              <div className="px-3 py-1 bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200 rounded-full text-sm font-medium w-full md:w-auto text-center">
                 {selectedTournament.name}
               </div>
             )}
@@ -317,17 +317,17 @@ export const Dashboard = () => {
                     {/* Renderizar cada modalidade */}
                     {Object.entries(jogadoresDestaque).map(([modalidade, jogadores]) => {
                       if (!jogadores || jogadores.length === 0) return null;
-                      
+
                       // Separar jogadores por gênero
                       const masculinos = jogadores.filter(player => player.gender === 'Masculino');
                       const femininos = jogadores.filter(player => player.gender === 'Feminino');
-                      
+
                       return (
                         <div key={modalidade} className="border-b border-gray-200 dark:border-gray-700 pb-6 last:border-b-0">
                           <h3 className="font-bold text-lg mb-4 text-gray-900 dark:text-gray-100 uppercase tracking-wide">
                             {modalidade === 'volei' ? 'VÔLEI' : modalidade.toUpperCase()}
                           </h3>
-                          
+
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             {/* Masculino */}
                             {masculinos.length > 0 && (
@@ -362,7 +362,7 @@ export const Dashboard = () => {
                                 </div>
                               </div>
                             )}
-                            
+
                             {/* Feminino */}
                             {femininos.length > 0 && (
                               <div>
@@ -400,7 +400,7 @@ export const Dashboard = () => {
                         </div>
                       );
                     })}
-                    
+
                     {/* Mensagem se não há dados */}
                     {Object.keys(jogadoresDestaque).length === 0 && (
                       <div className="text-center text-gray-500 dark:text-gray-400">
@@ -414,7 +414,7 @@ export const Dashboard = () => {
 
             {/* SEÇÃO: PARTIDAS AGENDADAS */}
             <div>
-              <div 
+              <div
                 className="flex items-center justify-between mb-4 cursor-pointer p-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm hover:shadow-md transition-shadow"
                 onClick={() => setSecaoAgendadasExpandida(!secaoAgendadasExpandida)}
               >
@@ -455,7 +455,7 @@ export const Dashboard = () => {
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <Select
                         value={filtrosAgendadas.modalidade}
-                        onChange={(e) => setFiltrosAgendadas({...filtrosAgendadas, modalidade: e.target.value})}
+                        onChange={(e) => setFiltrosAgendadas({ ...filtrosAgendadas, modalidade: e.target.value })}
                         className="w-full"
                       >
                         <option value="">Todas as modalidades</option>
@@ -465,7 +465,7 @@ export const Dashboard = () => {
                       </Select>
                       <Select
                         value={filtrosAgendadas.genero}
-                        onChange={(e) => setFiltrosAgendadas({...filtrosAgendadas, genero: e.target.value})}
+                        onChange={(e) => setFiltrosAgendadas({ ...filtrosAgendadas, genero: e.target.value })}
                         className="w-full"
                       >
                         <option value="">Todos os gêneros</option>
@@ -474,7 +474,7 @@ export const Dashboard = () => {
                       </Select>
                       <Select
                         value={filtrosAgendadas.local}
-                        onChange={(e) => setFiltrosAgendadas({...filtrosAgendadas, local: e.target.value})}
+                        onChange={(e) => setFiltrosAgendadas({ ...filtrosAgendadas, local: e.target.value })}
                         className="w-full"
                       >
                         <option value="">Todos os locais</option>
@@ -545,7 +545,7 @@ export const Dashboard = () => {
 
             {/* SEÇÃO: PARTIDAS FINALIZADAS (SÚMULAS) */}
             <div>
-              <div 
+              <div
                 className="flex items-center justify-between mb-4 cursor-pointer p-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm hover:shadow-md transition-shadow"
                 onClick={() => setSecaoFinalizadasExpandida(!secaoFinalizadasExpandida)}
               >
@@ -587,7 +587,7 @@ export const Dashboard = () => {
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <Select
                         value={filtrosFinalizadas.modalidade}
-                        onChange={(e) => setFiltrosFinalizadas({...filtrosFinalizadas, modalidade: e.target.value})}
+                        onChange={(e) => setFiltrosFinalizadas({ ...filtrosFinalizadas, modalidade: e.target.value })}
                         className="w-full"
                       >
                         <option value="">Todas as modalidades</option>
@@ -597,7 +597,7 @@ export const Dashboard = () => {
                       </Select>
                       <Select
                         value={filtrosFinalizadas.genero}
-                        onChange={(e) => setFiltrosFinalizadas({...filtrosFinalizadas, genero: e.target.value})}
+                        onChange={(e) => setFiltrosFinalizadas({ ...filtrosFinalizadas, genero: e.target.value })}
                         className="w-full"
                       >
                         <option value="">Todos os gêneros</option>
@@ -606,7 +606,7 @@ export const Dashboard = () => {
                       </Select>
                       <Select
                         value={filtrosFinalizadas.local}
-                        onChange={(e) => setFiltrosFinalizadas({...filtrosFinalizadas, local: e.target.value})}
+                        onChange={(e) => setFiltrosFinalizadas({ ...filtrosFinalizadas, local: e.target.value })}
                         className="w-full"
                       >
                         <option value="">Todos os locais</option>
@@ -667,7 +667,7 @@ export const Dashboard = () => {
                                 </td>
                                 <td className="p-3 md:p-4 text-right whitespace-nowrap">
                                   <div className="min-w-[100px]">
-                                    <Button 
+                                    <Button
                                       onClick={() => setPartidaSelecionada(match)}
                                       size="sm"
                                       className="whitespace-nowrap"
@@ -707,8 +707,8 @@ export const Dashboard = () => {
             <SumulaModal
               key={`sumula-dashboard-${partidaSelecionada.id}`}
               isOpen={true}
-              onClose={() => { 
-                setPartidaSelecionada(null); 
+              onClose={() => {
+                setPartidaSelecionada(null);
                 if (secaoFinalizadasExpandida) carregarPartidasFinalizadas();
                 if (secaoAgendadasExpandida) carregarPartidasAgendadas();
                 carregarProximasPartidas();

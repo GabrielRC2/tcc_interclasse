@@ -156,7 +156,7 @@ const ConfirmModal = ({ isOpen, onClose, onConfirm, config, inputValue, selected
                 </div>
 
                 {/* Footer com botões */}
-                <div className="px-6 py-4 bg-gray-50 dark:bg-gray-750 rounded-b-lg">
+                <div className="px-6 py-4 bg-gray-50 dark:bg-gray-700 rounded-b-lg">
                     <div className="flex gap-3 justify-end">
                         <button
                             onClick={onClose}

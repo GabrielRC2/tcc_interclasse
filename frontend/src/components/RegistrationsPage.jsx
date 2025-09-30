@@ -12,7 +12,7 @@ export const RegistrationsPage = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingItem, setEditingItem] = useState(null);
     const [category, setCategory] = useState('');
-    
+
     const [sports, setSports] = useState([]);
     const [locations, setLocations] = useState([]);
     const [courses, setCourses] = useState([]);
@@ -73,7 +73,7 @@ export const RegistrationsPage = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        
+
         try {
             let endpoint = '';
             let body = {};
@@ -122,7 +122,7 @@ export const RegistrationsPage = () => {
             confirmText: 'Excluir',
             cancelText: 'Cancelar'
         });
-        
+
         if (!confirmed) {
             return;
         }
@@ -173,9 +173,9 @@ export const RegistrationsPage = () => {
     return (
         <>
             <div className="space-y-8">
-                <div className="flex flex-wrap justify-between items-center gap-4">
+                <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
                     <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">CADASTROS</h1>
-                    <Button onClick={handleCreate}>Cadastrar Novo</Button>
+                    <Button onClick={handleCreate} className="w-full md:w-auto">Cadastrar Novo</Button>
                 </div>
 
                 <div>
@@ -187,7 +187,7 @@ export const RegistrationsPage = () => {
                                     <h3 className="font-bold text-lg mb-4 text-gray-900 dark:text-gray-100">{item.nome}</h3>
                                     <div className="flex gap-2">
                                         <Button onClick={() => handleEdit(item, 'Esportes')}>Editar</Button>
-                                        <Button 
+                                        <Button
                                             onClick={() => handleDelete(item, 'Esportes')}
                                             className="bg-red-600 hover:bg-red-700"
                                         >
@@ -210,7 +210,7 @@ export const RegistrationsPage = () => {
                                     <h3 className="font-bold text-lg mb-4 text-gray-900 dark:text-gray-100">{item.nome}</h3>
                                     <div className="flex gap-2">
                                         <Button onClick={() => handleEdit(item, 'Locais')}>Editar</Button>
-                                        <Button 
+                                        <Button
                                             onClick={() => handleDelete(item, 'Locais')}
                                             className="bg-red-600 hover:bg-red-700"
                                         >
@@ -234,7 +234,7 @@ export const RegistrationsPage = () => {
                                     <p className="text-gray-600 dark:text-gray-300 text-sm mb-4">Sigla: {item.sigla}</p>
                                     <div className="flex gap-2">
                                         <Button onClick={() => handleEdit(item, 'Cursos')}>Editar</Button>
-                                        <Button 
+                                        <Button
                                             onClick={() => handleDelete(item, 'Cursos')}
                                             className="bg-red-600 hover:bg-red-700"
                                         >
@@ -282,25 +282,25 @@ export const RegistrationsPage = () => {
                         <option value="Locais">Locais</option>
                         <option value="Cursos">Cursos</option>
                     </Select>
-                    
-                    <Input 
-                        label="Nome" 
-                        placeholder="Digite o nome" 
+
+                    <Input
+                        label="Nome"
+                        placeholder="Digite o nome"
                         value={formData.name}
-                        onChange={(e) => setFormData({...formData, name: e.target.value})}
+                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                         required
                     />
-                    
+
                     {category === 'Cursos' && (
-                        <Input 
-                            label="Sigla" 
-                            placeholder="Digite a sigla" 
+                        <Input
+                            label="Sigla"
+                            placeholder="Digite a sigla"
                             value={formData.sigla}
-                            onChange={(e) => setFormData({...formData, sigla: e.target.value})}
+                            onChange={(e) => setFormData({ ...formData, sigla: e.target.value })}
                             required
                         />
                     )}
-                    
+
                     <div className="flex justify-end gap-2 pt-4">
                         <Button type="button" onClick={closeModal} className="bg-gray-500">
                             Cancelar

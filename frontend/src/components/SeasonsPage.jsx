@@ -15,7 +15,7 @@ export const SeasonsPage = () => {
     const [editingSeason, setEditingSeason] = useState(null);
     const [loading, setLoading] = useState(true);
     const [expandedYears, setExpandedYears] = useState(new Set());
-    
+
     const { refreshTournaments } = useTournament();
 
     const [formData, setFormData] = useState({
@@ -61,11 +61,11 @@ export const SeasonsPage = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        
+
         try {
             let endpoint = '/api/torneios';
             let method = 'POST';
-            
+
             if (editingSeason) {
                 endpoint = `/api/torneios/${editingSeason.id}`;
                 method = 'PUT';
@@ -99,7 +99,7 @@ export const SeasonsPage = () => {
             const response = await fetch(`/api/torneios/${season.id}`);
             if (response.ok) {
                 const torneioCompleto = await response.json();
-                
+
                 setEditingSeason(torneioCompleto);
                 setFormData({
                     name: torneioCompleto.name,
@@ -112,10 +112,10 @@ export const SeasonsPage = () => {
             } else {
                 // Fallback para os dados que já temos
                 setEditingSeason(season);
-                
+
                 // Extrair nome base removendo o ano se presente
                 const baseNome = season.name.replace(/\s\d{4}$/, '');
-                
+
                 setFormData({
                     name: baseNome,
                     location: season.location,
@@ -129,10 +129,10 @@ export const SeasonsPage = () => {
             console.error('Erro ao buscar dados do torneio:', error);
             // Usar dados locais como fallback
             setEditingSeason(season);
-            
+
             // Extrair nome base removendo o ano se presente
             const baseNome = season.name.replace(/\s\d{4}$/, '');
-            
+
             setFormData({
                 name: baseNome,
                 location: season.location,
@@ -151,7 +151,7 @@ export const SeasonsPage = () => {
             confirmText: 'Excluir',
             cancelText: 'Cancelar'
         });
-        
+
         if (!confirmed) {
             return;
         }
@@ -208,7 +208,7 @@ export const SeasonsPage = () => {
             }
             grouped[year].push(season);
         });
-        
+
         // Ordenar anos de forma decrescente
         return Object.keys(grouped)
             .sort((a, b) => parseInt(b) - parseInt(a))
@@ -237,9 +237,9 @@ export const SeasonsPage = () => {
     return (
         <>
             <div className="space-y-6">
-                <div className="flex flex-wrap justify-between items-center gap-4">
+                <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
                     <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">TORNEIOS</h1>
-                    <Button onClick={() => setIsModalOpen(true)}>
+                    <Button onClick={() => setIsModalOpen(true)} className="w-full md:w-auto">
                         <Plus size={20} className="mr-2" />
                         Novo Torneio
                     </Button>
@@ -296,7 +296,7 @@ export const SeasonsPage = () => {
                                                             <Button onClick={() => handleEdit(season)} className="text-sm">
                                                                 Editar
                                                             </Button>
-                                                            <Button 
+                                                            <Button
                                                                 onClick={() => handleDelete(season)}
                                                                 className="bg-red-600 hover:bg-red-700 text-sm"
                                                             >
@@ -344,39 +344,39 @@ export const SeasonsPage = () => {
                     <Select
                         label="Nome do Torneio"
                         value={formData.name}
-                        onChange={(e) => setFormData({...formData, name: e.target.value})}
+                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                         required
                     >
                         <option value="">Selecione o tipo de torneio</option>
                         <option value="Meio do Ano">Meio do Ano</option>
                         <option value="Fim de Ano">Fim de Ano</option>
                     </Select>
-                    
-                    <Input 
-                        label="Local" 
-                        placeholder="Digite o local" 
+
+                    <Input
+                        label="Local"
+                        placeholder="Digite o local"
                         value={formData.location}
-                        onChange={(e) => setFormData({...formData, location: e.target.value})}
+                        onChange={(e) => setFormData({ ...formData, location: e.target.value })}
                         required
                     />
 
                     <div className="grid grid-cols-2 gap-4">
-                        <Input 
-                            label="Data de Início" 
-                            type="date" 
+                        <Input
+                            label="Data de Início"
+                            type="date"
                             value={formData.startDate}
-                            onChange={(e) => setFormData({...formData, startDate: e.target.value})}
+                            onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
                             required
                         />
-                        <Input 
-                            label="Data de Fim" 
-                            type="date" 
+                        <Input
+                            label="Data de Fim"
+                            type="date"
                             value={formData.endDate}
-                            onChange={(e) => setFormData({...formData, endDate: e.target.value})}
+                            onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
                             required
                         />
                     </div>
-                    
+
                     <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                             Modalidades (Automático)
@@ -389,14 +389,14 @@ export const SeasonsPage = () => {
                     <Select
                         label="Status do Torneio"
                         value={formData.status}
-                        onChange={(e) => setFormData({...formData, status: e.target.value})}
+                        onChange={(e) => setFormData({ ...formData, status: e.target.value })}
                         required
                     >
                         <option value="PLANEJAMENTO">Planejamento</option>
                         <option value="EM ANDAMENTO">Em Andamento</option>
                         <option value="FINALIZADO">Finalizado</option>
                     </Select>
-                    
+
                     <div className="flex justify-end gap-2 pt-4">
                         <Button type="button" onClick={closeModal} className="bg-gray-500">
                             Cancelar

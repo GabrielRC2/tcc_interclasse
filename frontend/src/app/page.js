@@ -23,13 +23,13 @@ function AppContent() {
   const { selectedTournament, tournaments, selectTournament } = useTournament();
 
   const toggleDarkMode = () => setIsDarkMode(!isDarkMode);
-  
+
   useEffect(() => {
     document.documentElement.classList.toggle('dark', isDarkMode);
   }, [isDarkMode]);
 
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
-  
+
   if (!isLoggedIn) {
     return <LoginPage onLogin={() => setIsLoggedIn(true)} />;
   }
@@ -49,7 +49,7 @@ function AppContent() {
 
   return (
     <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
-      <Sidebar 
+      <Sidebar
         isSidebarOpen={isSidebarOpen}
         toggleSidebar={toggleSidebar}
         currentPage={currentPage}

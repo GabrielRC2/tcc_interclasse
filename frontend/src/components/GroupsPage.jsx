@@ -29,7 +29,7 @@ export const GroupsPage = () => {
         setQuantidadeGrupos('');
         setGrupos([]);
         setTimesDisponiveis([]);
-        
+
         if (updatePageState) {
             updatePageState('groups', {
                 modalidadeSelecionada: modalidade,
@@ -152,7 +152,7 @@ export const GroupsPage = () => {
             confirmText: jaTemSorteio ? 'Refazer' : 'Confirmar',
             cancelText: 'Cancelar'
         });
-        
+
         if (!confirmed) {
             return;
         }
@@ -182,9 +182,9 @@ export const GroupsPage = () => {
         }
     };
 
-    
 
-    
+
+
 
     const limparGrupos = async () => {
         if (!selectedTournament || !modalidadeSelecionada) {
@@ -248,7 +248,7 @@ export const GroupsPage = () => {
     return (
         <>
             <div className="space-y-6">
-                <div className="flex flex-wrap justify-between items-center gap-4">
+                <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
                     <div>
                         <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">GRUPOS</h1>
                         {selectedTournament && (
@@ -257,8 +257,12 @@ export const GroupsPage = () => {
                             </p>
                         )}
                     </div>
-                    <div className="flex gap-2">
-                        <Button onClick={handleSorteio} disabled={!selectedTournament || !modalidadeSelecionada || !quantidadeGrupos}>
+                    <div className="flex flex-col md:flex-row gap-2 w-full md:w-auto">
+                        <Button
+                            onClick={handleSorteio}
+                            disabled={!selectedTournament || !modalidadeSelecionada || !quantidadeGrupos}
+                            className="w-full md:w-auto"
+                        >
                             <Shuffle size={20} className="mr-2" />
                             Realizar Sorteio
                         </Button>
@@ -268,14 +272,14 @@ export const GroupsPage = () => {
                             <Button
                                 onClick={limparGrupos}
                                 variant="outline"
-                                className="border-red-500 text-red-600 hover:bg-red-50 dark:border-red-400 dark:text-red-400 dark:hover:bg-red-900/20"
+                                className="border-red-500 text-red-600 hover:bg-red-50 dark:border-red-400 dark:text-red-400 dark:hover:bg-red-900/20 w-full md:w-auto"
                             >
                                 <Trash2 size={20} className="mr-2" />
                                 Limpar Grupos
                             </Button>
                         )}
 
-                        
+
                     </div>
                 </div>
 
@@ -293,7 +297,7 @@ export const GroupsPage = () => {
                             <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
                                 Modalidades Disponíveis
                             </h3>
-                            
+
                             {modalidadesDisponiveis.length === 0 ? (
                                 <div className="text-center py-8">
                                     <Trophy size={32} className="mx-auto text-gray-400 mb-3" />
@@ -311,24 +315,22 @@ export const GroupsPage = () => {
                                             key={`${modalidade.modalidadeId}-${modalidade.genero}`}
                                             type="button"
                                             onClick={() => selecionarModalidade(modalidade)}
-                                            className={`p-6 rounded-lg border transition-all text-left ${
-                                                modalidadeSelecionada && 
-                                                modalidadeSelecionada.modalidadeId === modalidade.modalidadeId && 
-                                                modalidadeSelecionada.genero === modalidade.genero
+                                            className={`p-6 rounded-lg border transition-all text-left ${modalidadeSelecionada &&
+                                                    modalidadeSelecionada.modalidadeId === modalidade.modalidadeId &&
+                                                    modalidadeSelecionada.genero === modalidade.genero
                                                     ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 ring-2 ring-blue-200 dark:ring-blue-700'
                                                     : 'border-gray-200 dark:border-gray-600 hover:border-blue-300 dark:hover:border-blue-600 hover:bg-blue-50/50 dark:hover:bg-blue-900/10'
-                                            }`}
+                                                }`}
                                         >
                                             <div className="flex items-center gap-3 mb-3">
                                                 <Trophy size={20} className="text-blue-500" />
                                                 <span className="font-semibold text-gray-900 dark:text-gray-100 text-lg">
                                                     {modalidade.modalidadeNome}
                                                 </span>
-                                                <span className={`text-sm px-3 py-1 rounded-full ${
-                                                    modalidade.genero === 'Masculino' 
+                                                <span className={`text-sm px-3 py-1 rounded-full ${modalidade.genero === 'Masculino'
                                                         ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300'
                                                         : 'bg-pink-100 dark:bg-pink-900 text-pink-700 dark:text-pink-300'
-                                                }`}>
+                                                    }`}>
                                                     {modalidade.genero}
                                                 </span>
                                             </div>
@@ -363,7 +365,7 @@ export const GroupsPage = () => {
                         {/* Preview dos Times que Participarão do Sorteio */}
                         {timesDisponiveis.length > 0 && (
                             <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm p-4">
-                                <div 
+                                <div
                                     className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 p-3 -m-3 rounded-lg transition-colors"
                                     onClick={() => setIsTimesExpanded(!isTimesExpanded)}
                                 >
@@ -374,7 +376,7 @@ export const GroupsPage = () => {
                                         Clique para {isTimesExpanded ? "minimizar" : "expandir"} a lista de times
                                     </p>
                                 </div>
-                                
+
                                 {isTimesExpanded && (
                                     <div className="mt-4">
                                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">

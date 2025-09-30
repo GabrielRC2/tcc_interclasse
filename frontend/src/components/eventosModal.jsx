@@ -77,8 +77,8 @@ export const EventosModal = ({ isOpen, onClose, match }) => {
     `;
     const w = window.open('', '_blank', 'width=800,height=900');
     if (!w) {
-        toast.error('Bloqueador de pop-up impediu a impressão.');
-        return;
+      toast.error('Bloqueador de pop-up impediu a impressão.');
+      return;
     }
     w.document.write(html);
     w.document.close();
@@ -101,7 +101,7 @@ export const EventosModal = ({ isOpen, onClose, match }) => {
             <select
               value={filterTeam}
               onChange={(e) => setFilterTeam(e.target.value)}
-              className="px-2 py-1 border rounded bg-white dark:bg-gray-700"
+              className="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
             >
               <option value="Todos">Todos</option>
               <option value={team1Name}>{team1Name}</option>
@@ -113,7 +113,7 @@ export const EventosModal = ({ isOpen, onClose, match }) => {
               placeholder="Pesquisar jogador / descrição / tipo..."
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              className="flex-1 px-2 py-1 border rounded bg-white dark:bg-gray-700"
+              className="flex-1 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
             />
           </div>
 
@@ -135,7 +135,7 @@ export const EventosModal = ({ isOpen, onClose, match }) => {
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="text-sm font-bold text-gray-800 dark:text-gray-100">{ev.minute ?? '-' }'</div>
+                    <div className="text-sm font-bold text-gray-800 dark:text-gray-100">{ev.minute ?? '-'}'</div>
                     <div className="text-xs text-gray-500 dark:text-gray-400">{ev.team}</div>
                   </div>
                 </div>

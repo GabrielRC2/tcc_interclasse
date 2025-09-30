@@ -14,7 +14,7 @@ const PDFDownloadButton = ({ className, fileName, matchData, tournamentData, tea
 
   useEffect(() => {
     setIsClient(true);
-    
+
     // Import PDF components only on client side
     const loadPDFComponents = async () => {
       try {
@@ -22,7 +22,7 @@ const PDFDownloadButton = ({ className, fileName, matchData, tournamentData, tea
           import('@react-pdf/renderer'),
           import('./SumulaPDF')
         ]);
-        
+
         setPDFComponent(() => ({ PDFDownloadLink, SumulaPDF }));
       } catch (error) {
         console.error('Erro ao carregar componentes PDF:', error);
@@ -45,12 +45,12 @@ const PDFDownloadButton = ({ className, fileName, matchData, tournamentData, tea
   return (
     <PDFDownloadLink
       document={
-        <SumulaPDF 
-          match={matchData} 
-          tournament={tournamentData} 
-          showPenalities={false} 
-          team1Data={teamData1} 
-          team2Data={teamData2} 
+        <SumulaPDF
+          match={matchData}
+          tournament={tournamentData}
+          showPenalities={false}
+          team1Data={teamData1}
+          team2Data={teamData2}
         />
       }
       fileName={fileName}
@@ -61,7 +61,7 @@ const PDFDownloadButton = ({ className, fileName, matchData, tournamentData, tea
   );
 };
 
-export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEnviada = () => {} }) => {
+export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEnviada = () => { } }) => {
   const estaAoVivo = mode === 'live';
   const { selectedTournament } = useTournament();
   const toast = useToast();
@@ -178,14 +178,14 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEn
         if (partidaData) {
           setPenaltisA(partidaData.penaltisCasa || 0);
           setPenaltisB(partidaData.penaltisVisitante || 0);
-          
+
           // Detectar pênaltis apenas se explicitamente marcado como tendo pênaltis
           // OU se o resultado contém " pen" OU se tem valores de pênaltis > 0
-          const temPenaltisDetectado = partidaData.temPenaltis || 
+          const temPenaltisDetectado = partidaData.temPenaltis ||
             (partidaData.result && partidaData.result.includes(' pen')) ||
-            ((partidaData.penaltisCasa > 0 || partidaData.penaltisVisitante > 0) && 
-             partidaData.penaltisCasa !== null && partidaData.penaltisVisitante !== null);
-          
+            ((partidaData.penaltisCasa > 0 || partidaData.penaltisVisitante > 0) &&
+              partidaData.penaltisCasa !== null && partidaData.penaltisVisitante !== null);
+
           setTemPenaltis(temPenaltisDetectado);
         }
       } catch (err) {
@@ -225,13 +225,13 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEn
   // envia eventos ao backend e atualiza pontos finais; permite envio quando ao vivo ou quando permitirEdicao=true
   const enviarSumula = async () => {
     if (!(estaAoVivo || permitirEdicao)) return;
-    
+
     // Validação especial para partidas eliminatórias
     if (ehEliminatoria && hahEmpate && (!temPenaltis || penaltisA === penaltisB)) {
       toast.warning('Em partidas eliminatórias não pode haver empate! Se o jogo terminou empatado, você deve registrar os pênaltis para determinar o vencedor.');
       return;
     }
-    
+
     setSalvando(true);
     try {
       // Reconcile events instead of blindly creating duplicates.
@@ -306,7 +306,7 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEn
           confirmText: 'Enviar Mesmo Assim',
           cancelText: 'Cancelar'
         });
-        
+
         if (!confirmed) {
           setSalvando(false);
           return;
@@ -402,10 +402,10 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEn
         }));
       }
 
-  toast.success(estaAoVivo ? 'Súmula enviada e partida finalizada com sucesso.' : 'Súmula atualizada com sucesso.');
-  setPermitirEdicao(false);
-  setEditingFinalizada(false);
-  onClose();
+      toast.success(estaAoVivo ? 'Súmula enviada e partida finalizada com sucesso.' : 'Súmula atualizada com sucesso.');
+      setPermitirEdicao(false);
+      setEditingFinalizada(false);
+      onClose();
     } catch (err) {
       console.error('Erro ao enviar súmula:', err);
       toast.error('Erro ao enviar súmula: ' + (err.message || err));
@@ -425,11 +425,11 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEn
     <table key={`tabela-time-${numTime}`} className="w-full border-collapse">
       <thead>
         <tr className="bg-gray-50 dark:bg-gray-800">
-          <th className="p-2 text-left">Jogador</th>
-          <th className="p-2 text-center">Camisa</th>
-          <th className="p-2 text-center">Gols</th>
-          <th className="p-2 text-center">🟨</th>
-          <th className="p-2 text-center">🟥</th>
+          <th className="p-2 text-left text-gray-900 dark:text-gray-100">Jogador</th>
+          <th className="p-2 text-center text-gray-900 dark:text-gray-100">Camisa</th>
+          <th className="p-2 text-center text-gray-900 dark:text-gray-100">Gols</th>
+          <th className="p-2 text-center text-gray-900 dark:text-gray-100">🟨</th>
+          <th className="p-2 text-center text-gray-900 dark:text-gray-100">🟥</th>
         </tr>
       </thead>
       <tbody>
@@ -442,10 +442,10 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEn
             const linhaEdicao = (edicao || []).find(x => x.id === j.id) || { points: 0, yellow: 0, red: 0 };
             const podeEditarCampo = estaAoVivo || permitirEdicao;
             return (
-              <tr key={`jogador-${j.id}-${numTime}`} className="border-t">
-                <td className="p-2">{j.nome || j.name}</td>
+              <tr key={`jogador-${j.id}-${numTime}`} className="border-t border-gray-200 dark:border-gray-700">
+                <td className="p-2 text-gray-900 dark:text-gray-100">{j.nome || j.name}</td>
                 <td className="p-2 text-center">
-                  <span className="inline-block bg-gray-200 dark:bg-gray-700 px-2 py-1 rounded-full text-sm">
+                  <span className="inline-block bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-2 py-1 rounded-full text-sm">
                     {j.numeroCamisa ?? j.numero ?? j.number ?? '-'}
                   </span>
                 </td>
@@ -455,13 +455,13 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEn
                       key={`points-${j.id}-${numTime}`}
                       type="number"
                       min={0}
-                      className="w-16 text-center border rounded px-1 py-0.5"
+                      className="w-16 text-center border border-gray-300 dark:border-gray-600 rounded px-1 py-0.5 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                       value={linhaEdicao.points ?? 0}
                       onChange={e => tratarMudancaInput(numTime, j.id, 'points', e.target.value)}
                       disabled={salvando}
                     />
                   ) : (
-                    <span className="text-lg font-semibold">{j.points}</span>
+                    <span className="text-lg font-semibold text-gray-900 dark:text-gray-100">{j.points}</span>
                   )}
                 </td>
                 <td className="p-2 text-center">
@@ -470,7 +470,7 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEn
                       key={`yellow-${j.id}-${numTime}`}
                       type="number"
                       min={0}
-                      className="w-12 text-center border rounded px-1 py-0.5"
+                      className="w-12 text-center border border-gray-300 dark:border-gray-600 rounded px-1 py-0.5 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                       value={linhaEdicao.yellow ?? 0}
                       onChange={e => tratarMudancaInput(numTime, j.id, 'yellow', e.target.value)}
                       disabled={salvando}
@@ -485,7 +485,7 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEn
                       key={`red-${j.id}-${numTime}`}
                       type="number"
                       min={0}
-                      className="w-12 text-center border rounded px-1 py-0.5"
+                      className="w-12 text-center border border-gray-300 dark:border-gray-600 rounded px-1 py-0.5 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                       value={linhaEdicao.red ?? 0}
                       onChange={e => tratarMudancaInput(numTime, j.id, 'red', e.target.value)}
                       disabled={salvando}
@@ -559,16 +559,16 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEn
                       </label>
                     </div>
                   </div>
-                  
+
                   {temPenaltis && (
                     <>
                       <div className="bg-yellow-100 dark:bg-yellow-900/40 rounded-md p-3 mb-4">
                         <p className="text-xs text-yellow-800 dark:text-yellow-200 text-center">
-                          ⚠️ <strong>Importante:</strong> Os gols de pênalti servem apenas para definir o vencedor. 
+                          ⚠️ <strong>Importante:</strong> Os gols de pênalti servem apenas para definir o vencedor.
                           Não contam para estatísticas individuais dos jogadores.
                         </p>
                       </div>
-                      
+
                       <div className="flex justify-around items-center">
                         <div className="text-center">
                           <p className="font-medium text-yellow-800 dark:text-yellow-200 mb-2">{match.team1}</p>
@@ -592,9 +592,9 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEn
                             </button>
                           </div>
                         </div>
-                        
+
                         <div className="font-bold text-2xl text-yellow-600 dark:text-yellow-400">PEN</div>
-                        
+
                         <div className="text-center">
                           <p className="font-medium text-yellow-800 dark:text-yellow-200 mb-2">{match.team2}</p>
                           <div className="flex items-center justify-center gap-2">
@@ -641,29 +641,29 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEn
                 </div>
               )}
 
-              <div className="grid grid-cols-2 gap-4 text-sm border-t pt-4">
-                <div>
+              <div className="grid grid-cols-2 gap-4 text-sm border-t border-gray-200 dark:border-gray-700 pt-4">
+                <div className="text-gray-900 dark:text-gray-100">
                   <p><strong>Esporte:</strong> {match.modality || match.modalidade || '-'}</p>
                   <p><strong>Categoria:</strong> {match.category || match.categoria || '-'}</p>
                 </div>
-                <div>
+                <div className="text-gray-900 dark:text-gray-100">
                   <p><strong>Status:</strong> {match.status || '-'}</p>
                   <p><strong>Fase:</strong> {match.phase || match.fase || 'Grupos'}</p>
                 </div>
               </div>
 
-              <div className="mt-4 border-t pt-4">
-                <h3 className="font-bold text-lg mb-3 text-center">JOGADORES E ESTATÍSTICAS</h3>
+              <div className="mt-4 border-t border-gray-200 dark:border-gray-700 pt-4">
+                <h3 className="font-bold text-lg mb-3 text-center text-gray-900 dark:text-gray-100">JOGADORES E ESTATÍSTICAS</h3>
 
                 <div className="mb-4">
                   <div className="flex flex-col md:flex-row md:items-start md:space-x-6 gap-4">
                     <div className="md:flex-1">
-                      <h4 className="font-semibold bg-gray-100 dark:bg-gray-700 p-2 text-center mb-2">{match.team1}</h4>
+                      <h4 className="font-semibold bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100 p-2 text-center mb-2">{match.team1}</h4>
                       {renderTabelaJogadores(jogadoresTimeA, edicaoTimeA, 1)}
                     </div>
 
                     <div className="md:flex-1">
-                      <h4 className="font-semibold bg-gray-100 dark:bg-gray-700 p-2 text-center mb-2">{match.team2}</h4>
+                      <h4 className="font-semibold bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100 p-2 text-center mb-2">{match.team2}</h4>
                       {renderTabelaJogadores(jogadoresTimeB, edicaoTimeB, 2)}
                     </div>
                   </div>

@@ -1,49 +1,46 @@
 'use client';
 
-import { Home, Users, Plus, Shield, Calendar, FileText, LogOut, Moon, Sun, ChevronsLeft, Trophy, ChevronDown } from 'lucide-react';
+import { Home, Users, Plus, Shield, Calendar, FileText, LogOut, Moon, Sun, ChevronsLeft, Trophy, ChevronDown, Layers } from 'lucide-react';
 
 const NavLink = ({ icon, label, pageName, isSidebarOpen, currentPage, setCurrentPage, toggleSidebar }) => (
     <li>
-      <button
-        onClick={() => {
-            setCurrentPage(pageName);
-            // Fecha a sidebar automaticamente no mobile APENAS se estiver aberta
-            if (window.innerWidth < 768 && isSidebarOpen) {
-                toggleSidebar();
-            }
-        }}
-        className={`flex items-center w-full rounded-md transition-colors ${
-          isSidebarOpen ? 'px-4 py-2' : 'p-2 justify-center'
-        } ${
-          currentPage === pageName
-            ? 'bg-red-600 text-white'
-            : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-        }`}
-      >
-        <div className={`flex items-center ${isSidebarOpen ? '' : 'justify-center w-full'}`}>
-          {icon}
-          <span
-            className={`ml-3 font-medium transition-all duration-200 whitespace-nowrap ${
-              isSidebarOpen ? 'opacity-100 w-auto' : 'opacity-0 w-0 absolute'
-            }`}
-          >
-            {label}
-          </span>
-        </div>
-      </button>
+        <button
+            onClick={() => {
+                setCurrentPage(pageName);
+                // Fecha a sidebar automaticamente no mobile APENAS se estiver aberta
+                if (window.innerWidth < 768 && isSidebarOpen) {
+                    toggleSidebar();
+                }
+            }}
+            className={`flex items-center w-full rounded-md transition-colors ${isSidebarOpen ? 'px-4 py-2' : 'p-2 justify-center'
+                } ${currentPage === pageName
+                    ? 'bg-red-600 text-white'
+                    : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                }`}
+        >
+            <div className={`flex items-center ${isSidebarOpen ? '' : 'justify-center w-full'}`}>
+                {icon}
+                <span
+                    className={`ml-3 font-medium transition-all duration-200 whitespace-nowrap ${isSidebarOpen ? 'opacity-100 w-auto' : 'opacity-0 w-0 absolute'
+                        }`}
+                >
+                    {label}
+                </span>
+            </div>
+        </button>
     </li>
 );
 
-export const Sidebar = ({ 
-  isSidebarOpen, 
-  toggleSidebar, 
-  currentPage, 
-  setCurrentPage, 
-  isDarkMode, 
-  toggleDarkMode, 
-  logout,
-  selectedTournament,
-  onTournamentSelectorClick 
+export const Sidebar = ({
+    isSidebarOpen,
+    toggleSidebar,
+    currentPage,
+    setCurrentPage,
+    isDarkMode,
+    toggleDarkMode,
+    logout,
+    selectedTournament,
+    onTournamentSelectorClick
 }) => {
     // Lógica para escolher a logo baseada no tema e estado da sidebar
     const getLogoUrl = () => {
@@ -58,18 +55,18 @@ export const Sidebar = ({
         <>
             {/* Overlay para mobile quando sidebar está aberta */}
             {isSidebarOpen && (
-                <div 
+                <div
                     className="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden"
                     onClick={toggleSidebar}
                 />
             )}
-            
+
             {/* Sidebar */}
             <aside className={`
                 bg-white dark:bg-gray-900 text-gray-800 dark:text-white 
                 flex-shrink-0 flex flex-col transition-all duration-300 z-50
-                ${isSidebarOpen 
-                    ? 'w-full md:w-64 fixed md:relative inset-0 md:inset-auto' 
+                ${isSidebarOpen
+                    ? 'w-full md:w-64 fixed md:relative inset-0 md:inset-auto'
                     : 'w-20'
                 }
             `}>
@@ -93,9 +90,8 @@ export const Sidebar = ({
                     <div className="mb-4">
                         <button
                             onClick={onTournamentSelectorClick}
-                            className={`w-full flex items-center rounded-md transition-colors border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-red-500 dark:hover:border-red-400 ${
-                                isSidebarOpen ? 'px-3 py-3' : 'p-2 justify-center'
-                            } ${selectedTournament ? 'bg-red-50 dark:bg-red-900/20 border-red-500 dark:border-red-400' : 'hover:bg-gray-50 dark:hover:bg-gray-800'}`}
+                            className={`w-full flex items-center rounded-md transition-colors border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-red-500 dark:hover:border-red-400 ${isSidebarOpen ? 'px-3 py-3' : 'p-2 justify-center'
+                                } ${selectedTournament ? 'bg-red-50 dark:bg-red-900/20 border-red-500 dark:border-red-400' : 'hover:bg-gray-50 dark:hover:bg-gray-800'}`}
                         >
                             <div className={`flex items-center ${isSidebarOpen ? 'w-full' : 'justify-center'}`}>
                                 <Trophy size={20} className={selectedTournament ? 'text-red-600 dark:text-red-400' : 'text-gray-500 dark:text-gray-400'} />
@@ -119,10 +115,10 @@ export const Sidebar = ({
                     <p className={`px-2 text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase transition-opacity duration-300 ${isSidebarOpen ? 'opacity-100' : 'opacity-0'}`}>GERAL</p>
                     <ul>
                         <NavLink icon={<Home size={20} />} label="Home" pageName="dashboard" isSidebarOpen={isSidebarOpen} currentPage={currentPage} setCurrentPage={setCurrentPage} toggleSidebar={toggleSidebar} />
-                        <NavLink icon={<Plus size={20} />} label="Cadastros" pageName="registrations" isSidebarOpen={isSidebarOpen} currentPage={currentPage} setCurrentPage={setCurrentPage} toggleSidebar={toggleSidebar} />                        
-                        <NavLink icon={<Calendar size={20} />} label="Temporadas" pageName="seasons" isSidebarOpen={isSidebarOpen} currentPage={currentPage} setCurrentPage={setCurrentPage} toggleSidebar={toggleSidebar} />                        
+                        <NavLink icon={<Plus size={20} />} label="Cadastros" pageName="registrations" isSidebarOpen={isSidebarOpen} currentPage={currentPage} setCurrentPage={setCurrentPage} toggleSidebar={toggleSidebar} />
+                        <NavLink icon={<Calendar size={20} />} label="Temporadas" pageName="seasons" isSidebarOpen={isSidebarOpen} currentPage={currentPage} setCurrentPage={setCurrentPage} toggleSidebar={toggleSidebar} />
                         <NavLink icon={<Users size={20} />} label="Times" pageName="teams" isSidebarOpen={isSidebarOpen} currentPage={currentPage} setCurrentPage={setCurrentPage} toggleSidebar={toggleSidebar} />
-                        <NavLink icon={<Users size={20} />} label="Grupos" pageName="groups" isSidebarOpen={isSidebarOpen} currentPage={currentPage} setCurrentPage={setCurrentPage} toggleSidebar={toggleSidebar} />
+                        <NavLink icon={<Layers size={20} />} label="Grupos" pageName="groups" isSidebarOpen={isSidebarOpen} currentPage={currentPage} setCurrentPage={setCurrentPage} toggleSidebar={toggleSidebar} />
                         <NavLink icon={<FileText size={20} />} label="Partidas" pageName="matches" isSidebarOpen={isSidebarOpen} currentPage={currentPage} setCurrentPage={setCurrentPage} toggleSidebar={toggleSidebar} />
                         <NavLink icon={<Shield size={20} />} label="Chaveamento" pageName="brackets" isSidebarOpen={isSidebarOpen} currentPage={currentPage} setCurrentPage={setCurrentPage} toggleSidebar={toggleSidebar} />
                     </ul>

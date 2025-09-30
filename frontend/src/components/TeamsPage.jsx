@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { Plus, Edit, Trash2, UserCircle, Filter, X } from 'lucide-react';
+import { Plus, Edit, Trash2, UserCircle, Filter, X, MoreVertical } from 'lucide-react';
 import { Modal } from '@/components/Modal';
 import { Button, Input, Select, CardSplat } from '@/components/common';
 import { useTournament } from '@/contexts/TournamentContext';
@@ -49,7 +49,7 @@ function TeamsPage() {
       setLoading(true);
       const response = await fetch(`/api/teams?torneioId=${selectedTournament.id}`);
       if (!response.ok) throw new Error('Erro ao carregar times');
-      
+
       const data = await response.json();
       setTeams(data);
     } catch (error) {
@@ -168,7 +168,7 @@ function TeamsPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!selectedTournament) {
       toast.warning('Selecione um torneio no Dashboard primeiro');
       return;
@@ -260,11 +260,11 @@ function TeamsPage() {
   // Adicionar função para gerar nome automaticamente
   const generateTeamName = (year, course) => {
     if (!year || !course) return '';
-    
+
     // Buscar sigla do curso no estado cursos
     const cursoObj = cursos.find(c => c.nome === course);
     const sigla = cursoObj ? cursoObj.sigla : course.substring(0, 4).toUpperCase();
-    
+
     return `${year}${sigla}`;
   };
 
@@ -309,6 +309,63 @@ function TeamsPage() {
     }
   };
 
+  // Função para editar jogador
+  const editPlayer = async (e) => {
+    e.preventDefault();
+
+    try {
+      const response = await fetch(`/api/teams/${selectedTeam.id}/jogadores/${editingPlayer.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: editingPlayer.name,
+          numero: editingPlayer.numero ? parseInt(editingPlayer.numero) : null
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        toast.error(error.error || 'Erro ao editar jogador');
+        return;
+      }
+
+      // Recarregar dados do time
+      await reloadSelectedTeam();
+      setShowEditPlayer(false);
+      setEditingPlayer(null);
+
+      toast.success('Jogador editado com sucesso!');
+    } catch (error) {
+      console.error('Erro ao editar jogador:', error);
+      toast.error('Erro ao editar jogador');
+    }
+  };
+
+  // Função para excluir jogador
+  const deletePlayer = async (playerId) => {
+    try {
+      const response = await fetch(`/api/teams/${selectedTeam.id}/jogadores/${playerId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        toast.error(error.error || 'Erro ao excluir jogador');
+        return;
+      }
+
+      // Recarregar dados do time
+      await reloadSelectedTeam();
+
+      toast.success('Jogador excluído com sucesso!');
+    } catch (error) {
+      console.error('Erro ao excluir jogador:', error);
+      toast.error('Erro ao excluir jogador');
+    }
+  };
+
   // Função para excluir time
   const deleteTeam = async (teamId) => {
     const confirmed = await confirm.danger('Tem certeza que deseja excluir este time? Esta ação não pode ser desfeita.', {
@@ -316,7 +373,7 @@ function TeamsPage() {
       confirmText: 'Excluir',
       cancelText: 'Cancelar'
     });
-    
+
     if (!confirmed) {
       return;
     }
@@ -377,6 +434,45 @@ function TeamsPage() {
   // Adicionar estados para seleção múltipla
   const [selectedTeamsIds, setSelectedTeamsIds] = useState([]);
 
+  // Estados para menu de 3 pontinhos e edição de jogadores
+  const [openDropdownId, setOpenDropdownId] = useState(null);
+  const [showEditPlayer, setShowEditPlayer] = useState(false);
+  const [editingPlayer, setEditingPlayer] = useState(null);
+
+  // Effect para fechar dropdown ao clicar fora
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (openDropdownId && !event.target.closest('.relative')) {
+        setOpenDropdownId(null);
+      }
+    };
+
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, [openDropdownId]);
+
+  // Função para recarregar apenas o time selecionado
+  const reloadSelectedTeam = async () => {
+    if (!selectedTeam) return;
+
+    try {
+      const response = await fetch(`/api/teams/${selectedTeam.id}`);
+      if (!response.ok) throw new Error('Erro ao carregar time');
+
+      const updatedTeam = await response.json();
+      setSelectedTeam(updatedTeam);
+
+      // Também atualizar na lista de times
+      setTeams(prevTeams =>
+        prevTeams.map(team =>
+          team.id === updatedTeam.id ? updatedTeam : team
+        )
+      );
+    } catch (error) {
+      console.error('Erro ao recarregar time:', error);
+    }
+  };
+
   // Função para selecionar/deselecionar time
   const toggleTeamSelection = (teamId) => {
     setSelectedTeamsIds(prev =>
@@ -407,7 +503,7 @@ function TeamsPage() {
       confirmText: 'Excluir Todos',
       cancelText: 'Cancelar'
     });
-    
+
     if (!confirmed) {
       return;
     }
@@ -455,14 +551,14 @@ function TeamsPage() {
   return (
     <>
       <div className="space-y-6">
-        <div className="flex flex-wrap justify-between items-center gap-4">
+        <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4">
           <div>
             <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">TIMES</h1>
             <p className="text-gray-500 dark:text-gray-400">
               Torneio: {selectedTournament.name}
             </p>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex flex-col md:flex-row items-center gap-4 w-full md:w-auto">
             {/* Mostrar contador e botão delete quando há seleções */}
             {selectedTeamsIds.length > 0 && (
               <>
@@ -478,7 +574,7 @@ function TeamsPage() {
                 </button>
               </>
             )}
-            <Button onClick={() => openDetails(null)}>Criar Novo Time</Button>
+            <Button onClick={() => openDetails(null)} className="w-full md:w-auto">Criar Novo Time</Button>
           </div>
         </div>
 
@@ -656,7 +752,7 @@ function TeamsPage() {
                   <h4 className="text-md font-semibold text-gray-900 dark:text-gray-100">
                     Jogadores ({selectedTeam.players?.length || 0})
                   </h4>
-                  <Button 
+                  <Button
                     onClick={() => {
                       loadAvailablePlayers();
                       setShowAddPlayer(true);
@@ -667,11 +763,11 @@ function TeamsPage() {
                     Adicionar Jogador
                   </Button>
                 </div>
-                
+
                 {selectedTeam.players && selectedTeam.players.length > 0 ? (
                   <div className="space-y-2 max-h-60 overflow-y-auto">
                     {selectedTeam.players.map((player, index) => (
-                      <div key={player.id} className="flex items-center gap-3 p-2 bg-gray-50 dark:bg-gray-700 rounded">
+                      <div key={player.id} className="flex items-center gap-3 p-2 bg-gray-50 dark:bg-gray-700 rounded relative">
                         <div className="w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold">
                           {player.numero || index + 1}
                         </div>
@@ -681,6 +777,51 @@ function TeamsPage() {
                             {player.sala} • {player.genero}
                           </p>
                         </div>
+                        <div className="relative">
+                          <button
+                            onClick={() => setOpenDropdownId(openDropdownId === player.id ? null : player.id)}
+                            className="p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded"
+                          >
+                            <MoreVertical size={16} className="text-gray-500 dark:text-gray-400" />
+                          </button>
+                          {openDropdownId === player.id && (
+                            <div className="absolute right-0 top-8 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-10 min-w-[120px]">
+                              <button
+                                onClick={() => {
+                                  setEditingPlayer({
+                                    id: player.id,
+                                    name: player.name,
+                                    numero: player.numero || ''
+                                  });
+                                  setShowEditPlayer(true);
+                                  setOpenDropdownId(null);
+                                }}
+                                className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                              >
+                                <Edit size={14} />
+                                Editar
+                              </button>
+                              <button
+                                onClick={async () => {
+                                  const confirmed = await confirm.danger(`Tem certeza que deseja excluir o jogador ${player.name}?`, {
+                                    title: 'Confirmar Exclusão',
+                                    confirmText: 'Excluir',
+                                    cancelText: 'Cancelar'
+                                  });
+
+                                  if (confirmed) {
+                                    deletePlayer(player.id);
+                                  }
+                                  setOpenDropdownId(null);
+                                }}
+                                className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 text-red-600 dark:text-red-400 flex items-center gap-2"
+                              >
+                                <Trash2 size={14} />
+                                Excluir
+                              </button>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -688,7 +829,7 @@ function TeamsPage() {
                   <div className="text-center py-8 text-gray-500 dark:text-gray-400">
                     <UserCircle size={48} className="mx-auto mb-2" />
                     <p>Nenhum jogador cadastrado</p>
-                    <Button 
+                    <Button
                       onClick={() => {
                         loadAvailablePlayers();
                         setShowAddPlayer(true);
@@ -976,6 +1117,53 @@ function TeamsPage() {
                 Cancelar
               </Button>
               <Button type="submit">Criar Jogador</Button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {/* Modal para editar jogador */}
+      {showEditPlayer && editingPlayer && (
+        <Modal
+          isOpen={showEditPlayer}
+          onClose={() => {
+            setShowEditPlayer(false);
+            setEditingPlayer(null);
+          }}
+          title="Editar Jogador"
+          size="max-w-md"
+        >
+          <form onSubmit={editPlayer} className="space-y-4">
+            <Input
+              label="Nome do Jogador"
+              type="text"
+              value={editingPlayer.name}
+              onChange={(e) => setEditingPlayer({ ...editingPlayer, name: e.target.value })}
+              required
+            />
+
+            <Input
+              label="Número da Camisa"
+              type="number"
+              value={editingPlayer.numero}
+              onChange={(e) => setEditingPlayer({ ...editingPlayer, numero: e.target.value })}
+              placeholder="Opcional"
+              min="1"
+              max="99"
+            />
+
+            <div className="flex justify-end gap-2">
+              <Button
+                type="button"
+                onClick={() => {
+                  setShowEditPlayer(false);
+                  setEditingPlayer(null);
+                }}
+                className="bg-gray-500"
+              >
+                Cancelar
+              </Button>
+              <Button type="submit">Salvar Alterações</Button>
             </div>
           </form>
         </Modal>

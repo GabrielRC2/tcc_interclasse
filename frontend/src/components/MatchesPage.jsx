@@ -196,13 +196,13 @@ export const MatchesPage = () => {
     try {
       const response = await fetch('/api/modalidades-locais');
       const data = await response.json();
-      
+
       setModalidadesDisponiveis(data.modalidades);
-      
+
       // Configuração padrão
       const configPadrao = {};
       data.modalidades.forEach(modalidade => {
-          configPadrao[modalidade.nome] = modalidade.localPadrao;
+        configPadrao[modalidade.nome] = modalidade.localPadrao;
       });
       setConfiguracaoLocais(configPadrao);
       console.log('📍 Configuração de locais carregada:', configPadrao);
@@ -213,8 +213,8 @@ export const MatchesPage = () => {
 
   const gerarPartidasOtimizadas = async () => {
     if (!selectedTournament) {
-        toast.warning('Selecione um torneio primeiro');
-        return;
+      toast.warning('Selecione um torneio primeiro');
+      return;
     }
 
     const confirmed = await confirm.info('Gerar partidas otimizadas? Esta ação criará TODAS as partidas de TODAS as modalidades de forma otimizada e simultânea.', {
@@ -222,35 +222,35 @@ export const MatchesPage = () => {
       confirmText: 'Gerar Partidas',
       cancelText: 'Cancelar'
     });
-    
+
     if (!confirmed) {
-        return;
+      return;
     }
 
     setGenerating(true);
     try {
-        const response = await fetch('/api/partidas/gerar-otimizadas', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                torneioId: selectedTournament.id,
-                configuracaoLocais
-            })
-        });
+      const response = await fetch('/api/partidas/gerar-otimizadas', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          torneioId: selectedTournament.id,
+          configuracaoLocais
+        })
+      });
 
-        if (response.ok) {
-            const result = await response.json();
-            toast.success(`✅ ${result.partidasGeradas} partidas geradas em ${result.slots} slots de tempo! ${result.modalidades} modalidades otimizadas.`);
-            carregarPartidas(); // Recarregar partidas
-        } else {
-            const error = await response.json();
-            toast.error('❌ ' + (error.error || 'Erro ao gerar partidas'));
-        }
+      if (response.ok) {
+        const result = await response.json();
+        toast.success(`✅ ${result.partidasGeradas} partidas geradas em ${result.slots} slots de tempo! ${result.modalidades} modalidades otimizadas.`);
+        carregarPartidas(); // Recarregar partidas
+      } else {
+        const error = await response.json();
+        toast.error('❌ ' + (error.error || 'Erro ao gerar partidas'));
+      }
     } catch (error) {
-        console.error('Erro ao gerar partidas:', error);
-        toast.error('❌ Erro ao gerar partidas');
+      console.error('Erro ao gerar partidas:', error);
+      toast.error('❌ Erro ao gerar partidas');
     } finally {
-        setGenerating(false);
+      setGenerating(false);
     }
   };
 
@@ -281,7 +281,7 @@ export const MatchesPage = () => {
           cancelText: 'Cancelar'
         }
       );
-      
+
       if (!confirmar) return;
     } else {
       const confirmar = await confirm.warning(
@@ -300,7 +300,7 @@ export const MatchesPage = () => {
           cancelText: 'Cancelar'
         }
       );
-      
+
       if (!confirmar) return;
     }
 
@@ -334,12 +334,12 @@ export const MatchesPage = () => {
         const result = await response.json();
         const diversidade = result.diversidadeModalidades;
         const alternancia = result.alternanciaPorModalidade;
-        
+
         // Criar resumo das alternâncias por modalidade
         const resumoModalidades = Object.entries(alternancia.estatisticasModalidades)
           .map(([modalidade, stats]) => `${modalidade}: ${stats.ciclosCompletos} ciclos`)
           .join(', ');
-        
+
         toast.success(
           `✅ Sorteio refeito com sucesso!\n\n` +
           `🎲 ${result.partidasGeradas} novas partidas geradas em ${result.slots} slots de tempo!\n` +
@@ -365,7 +365,7 @@ export const MatchesPage = () => {
   // gerar pontuações aleatórias para partidas agendadas
   const gerarPontuacoesAleatorias = async () => {
     const partidasAgendadas = partidas.filter(p => p.status === 'Agendada');
-    
+
     if (partidasAgendadas.length === 0) {
       toast.warning('❌ Nenhuma partida agendada encontrada');
       return;
@@ -376,7 +376,7 @@ export const MatchesPage = () => {
       confirmText: 'Finalizar Partidas',
       cancelText: 'Cancelar'
     });
-    
+
     if (!confirmar) return;
 
     try {
@@ -408,7 +408,7 @@ export const MatchesPage = () => {
       return;
     }
 
-    const partidasEliminatorias = partidas.filter(p => 
+    const partidasEliminatorias = partidas.filter(p =>
       p.fase && ['Oitavas de Final', 'Quartas de Final', 'Semifinais', 'Final', 'Triangular Final', 'Partida Extra'].includes(p.fase)
     );
 
@@ -433,7 +433,7 @@ export const MatchesPage = () => {
           cancelText: 'Cancelar'
         }
       );
-      
+
       if (!confirmar) return;
     } else {
       const confirmar = await confirm.info(
@@ -450,7 +450,7 @@ export const MatchesPage = () => {
           cancelText: 'Cancelar'
         }
       );
-      
+
       if (!confirmar) return;
     }
 
@@ -507,7 +507,7 @@ export const MatchesPage = () => {
       confirmText: 'Gerar',
       cancelText: 'Cancelar'
     });
-    
+
     if (!confirmar) return;
 
     setGenerating(true);
@@ -542,12 +542,12 @@ export const MatchesPage = () => {
   // Função para formatar resultado com pênaltis
   const formatarResultado = (result) => {
     if (!result) return null;
-    
+
     if (result.includes(' pen')) {
       // Separar placar normal dos pênaltis: "0:0 (1:2 pen)"
       const [placarNormal, placarPenaltis] = result.split(' (');
       const penaltisLimpo = placarPenaltis.replace(' pen)', '');
-      
+
       return (
         <div className="text-center">
           <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{placarNormal}</div>
@@ -563,7 +563,7 @@ export const MatchesPage = () => {
 
   const obterVencedor = (partida) => {
     if (!partida.result) return null;
-    
+
     // Verificar se há pênaltis no resultado
     if (partida.result.includes(' pen')) {
       // Formato: "0:0 (1:2 pen)" - extrair resultado dos pênaltis
@@ -572,7 +572,7 @@ export const MatchesPage = () => {
         const [, penaltisCasa, penaltisVisitante] = penaltyMatch;
         const penCasa = parseInt(penaltisCasa);
         const penVisitante = parseInt(penaltisVisitante);
-        
+
         if (penCasa > penVisitante) {
           return { vencedor: partida.team1, tipo: 'casa' };
         } else if (penVisitante > penCasa) {
@@ -580,10 +580,10 @@ export const MatchesPage = () => {
         }
       }
     }
-    
+
     // Resultado normal (sem pênaltis)
     const [golsCasa, golsVisitante] = partida.result.split(':').map(Number);
-    
+
     if (golsCasa > golsVisitante) {
       return { vencedor: partida.team1, tipo: 'casa' };
     } else if (golsVisitante > golsCasa) {
@@ -596,36 +596,36 @@ export const MatchesPage = () => {
   // Função para determinar a próxima ação do torneio
   const proximaAcao = (() => {
     if (!selectedTournament) return '';
-    
+
     // Se não há partidas, pode gerar grupos ou eliminatórias
     if (!partidas.length) {
       return 'GERAR_GRUPOS';
     }
-    
+
     // Verificar se há partidas de grupos pendentes
     const partidasGrupos = partidas.filter(p => p.fase === 'Grupos' || p.fase === 'Fase de Grupos' || !p.fase);
     const partidasGruposPendentes = partidasGrupos.filter(p => p.status !== 'FINALIZADA');
-    
+
     if (partidasGruposPendentes.length > 0) {
       return 'AGUARDAR_GRUPOS';
     }
-    
+
     // Verificar se já existem eliminatórias
-    const partidasEliminatorias = partidas.filter(p => 
+    const partidasEliminatorias = partidas.filter(p =>
       p.fase && ['Oitavas de Final', 'Quartas de Final', 'Semifinais', 'Final', 'Triangular Final', 'Partida Extra'].includes(p.fase)
     );
-    
+
     // Se há partidas de grupos finalizadas mas não há eliminatórias, pode gerar eliminatórias
     if (partidasGrupos.length > 0 && partidasEliminatorias.length === 0) {
       return 'GERAR_ELIMINATORIAS';
     }
-    
+
     return '';
   })();
 
   // Verificar se existem eliminatórias para mostrar o botão de reorganizar
   const temEliminatorias = (() => {
-    const partidasEliminatorias = partidas.filter(p => 
+    const partidasEliminatorias = partidas.filter(p =>
       p.fase && ['Oitavas de Final', 'Quartas de Final', 'Semifinais', 'Final', 'Triangular Final', 'Partida Extra'].includes(p.fase)
     );
     return partidasEliminatorias.length > 0;
@@ -645,7 +645,7 @@ export const MatchesPage = () => {
   // Função para lidar com geração de partidas
   const handleGerarPartidas = async () => {
     if (!selectedTournament) return;
-    
+
     if (proximaAcao === 'GERAR_GRUPOS') {
       await gerarPartidasDeGrupos();
     } else if (proximaAcao === 'GERAR_ELIMINATORIAS') {
@@ -658,7 +658,7 @@ export const MatchesPage = () => {
   // Função para gerar partidas de grupos
   const gerarPartidasDeGrupos = async () => {
     if (!selectedTournament) return;
-    
+
     const confirmar = await confirm.info(
       '🏆 Deseja gerar todas as partidas de grupos para todas as modalidades e gêneros do torneio?\n\n' +
       '📋 REGRAS APLICADAS:\n' +
@@ -670,7 +670,7 @@ export const MatchesPage = () => {
         cancelText: 'Cancelar'
       }
     );
-    
+
     if (!confirmar) return;
 
     setGenerating(true);
@@ -689,12 +689,12 @@ export const MatchesPage = () => {
         const result = await response.json();
         const diversidade = result.diversidadeModalidades;
         const alternancia = result.alternanciaPorModalidade;
-        
+
         // Criar resumo das alternâncias por modalidade
         const resumoModalidades = Object.entries(alternancia.estatisticasModalidades)
           .map(([modalidade, stats]) => `${modalidade}: ${stats.ciclosCompletos} ciclos`)
           .join(', ');
-        
+
         toast.success(
           `✅ ${result.partidasGeradas} partidas geradas em ${result.slots} slots de tempo!\n\n` +
           `⚽ Cada slot contém 1 jogo masculino + 1 feminino simultâneos\n` +
@@ -714,13 +714,13 @@ export const MatchesPage = () => {
     } finally {
       setGenerating(false);
     }
-  };  if (carregando) {
+  }; if (carregando) {
     return <div className="flex justify-center items-center h-64 text-gray-600 dark:text-gray-400">Carregando...</div>;
   }
 
   return (
     <div>
-      <div className="flex flex-wrap justify-between items-center gap-4">
+      <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">PARTIDAS</h1>
           {selectedTournament && (
@@ -729,51 +729,53 @@ export const MatchesPage = () => {
             </p>
           )}
         </div>
-        <div className="flex gap-2">
-          <Button 
+        <div className="flex flex-col md:flex-row gap-2 w-full md:w-auto">
+          <Button
             onClick={() => setShowConfigModal(true)}
             variant="outline"
             disabled={!selectedTournament}
+            className="w-full md:w-auto"
           >
             <Settings size={16} className="mr-2" />
             Configurar Locais
           </Button>
           {proximaAcao && proximaAcao.startsWith('GERAR') && (
-            <Button 
+            <Button
               onClick={handleGerarPartidas}
               disabled={!selectedTournament || generating}
+              className="w-full md:w-auto"
             >
               <Play size={16} className="mr-2" />
               {generating ? 'Gerando...' : getBotaoGerarPartidasTexto()}
             </Button>
           )}
-          <Button 
+          <Button
             onClick={refazerSorteioPartidas}
             disabled={!selectedTournament || generating || partidas.length === 0}
-            className="bg-purple-600 hover:bg-purple-700"
+            className="bg-purple-600 hover:bg-purple-700 w-full md:w-auto"
           >
             <RefreshCcw size={16} className="mr-2" />
             Refazer Sorteio
           </Button>
           {temEliminatorias && (
-            <Button 
+            <Button
               onClick={reorganizarEliminatorias}
               disabled={!selectedTournament || generating}
-              className="bg-indigo-600 hover:bg-indigo-700"
+              className="bg-indigo-600 hover:bg-indigo-700 w-full md:w-auto"
             >
               <RefreshCcw size={16} className="mr-2" />
               Reorganizar Eliminatórias
             </Button>
           )}
-          <Button 
-            onClick={gerarPontuacoesAleatorias} 
+          <Button
+            onClick={gerarPontuacoesAleatorias}
             disabled={partidas.filter(p => p.status === 'Agendada').length === 0}
-            className="bg-orange-600 hover:bg-orange-700"
+            className="bg-orange-600 hover:bg-orange-700 w-full md:w-auto"
           >
             <Shuffle size={16} className="mr-2" />
             Gerar Pontuações Aleatórias
           </Button>
-          
+
         </div>
       </div>
 
@@ -850,18 +852,20 @@ export const MatchesPage = () => {
               </div>
 
               {partidasFiltradas.map(p => (
-                <div key={p.id} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm p-6">
-                  <div className="flex flex-wrap justify-between items-start gap-4">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-3 mb-3">
-                        <span className="text-sm font-medium text-gray-500 dark:text-gray-400">Partida #{p.ordem}</span>
-                        <span className="text-sm text-gray-500 dark:text-gray-400">
-                          {p.fase ? p.fase : (p.grupo !== 'N/A' ? `Grupo ${p.grupo}` : 'Eliminatória')}
-                        </span>
+                <div key={p.id} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm p-5 md:p-6">
+                  <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 md:gap-6">
+                    <div className="flex-1 min-w-0 space-y-4 md:space-y-3">
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 mb-4 md:mb-3">
+                        <div className="flex items-center gap-3">
+                          <span className="text-sm font-medium text-gray-500 dark:text-gray-400">#{p.ordem}</span>
+                          <span className="text-sm text-gray-500 dark:text-gray-400">
+                            {p.fase ? p.fase : (p.grupo !== 'N/A' ? `Grupo ${p.grupo}` : 'Eliminatória')}
+                          </span>
+                        </div>
 
                         <span
                           onClick={() => tratarCliqueStatus(p)}
-                          className={`px-2 py-1 rounded-full text-xs font-medium cursor-pointer ${obterCorStatus(p.status)}`}
+                          className={`px-2 py-1 rounded-full text-xs font-medium cursor-pointer self-start sm:self-center ${obterCorStatus(p.status)}`}
                           title="Clique para alternar Agendada / Em andamento"
                         >
                           {p.status || 'Agendada'}
@@ -869,55 +873,67 @@ export const MatchesPage = () => {
                       </div>
 
                       <div className="flex items-center justify-center gap-4 mb-4">
-                        <div className="text-center">
-                          <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">{p.team1}</h3>
-                          <p className="text-sm text-gray-500 dark:text-gray-400">{p.team1Course}</p>
+                        <div className="text-center min-w-0 flex-1 md:flex-none md:min-w-0">
+                          <h3 className="text-base md:text-lg font-bold text-gray-900 dark:text-gray-100 truncate md:truncate-none">{p.team1}</h3>
+                          <p className="text-xs md:text-sm text-gray-500 dark:text-gray-400 truncate md:truncate-none">{p.team1Course}</p>
                         </div>
 
-                        <div className="text-center px-4">
+                        <div className="text-center px-3 md:px-4 flex-shrink-0">
                           {p.result ? (
                             <div className="text-center mb-1">
                               {formatarResultado(p.result)}
                               {(() => {
                                 const resultado = obterVencedor(p);
                                 if (resultado?.tipo === 'empate') {
-                                  return <div className="text-sm font-semibold text-yellow-600 dark:text-yellow-400 mt-2">EMPATE</div>;
+                                  return <div className="text-xs md:text-sm font-semibold text-yellow-600 dark:text-yellow-400 mt-2">EMPATE</div>;
                                 } else if (resultado?.vencedor) {
-                                  return <div className="text-sm font-semibold text-green-600 dark:text-green-400 mt-2">🏆 {resultado.vencedor}</div>;
+                                  return <div className="text-xs md:text-sm font-semibold text-green-600 dark:text-green-400 mt-2">🏆 {resultado.vencedor}</div>;
                                 }
                                 return null;
                               })()}
                             </div>
                           ) : (
-                            <div className="text-xl font-bold text-gray-400">VS</div>
+                            <div className="text-lg md:text-xl font-bold text-gray-400">VS</div>
                           )}
                         </div>
 
-                        <div className="text-center">
-                          <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">{p.team2}</h3>
-                          <p className="text-sm text-gray-500 dark:text-gray-400">{p.team2Course}</p>
+                        <div className="text-center min-w-0 flex-1 md:flex-none md:min-w-0">
+                          <h3 className="text-base md:text-lg font-bold text-gray-900 dark:text-gray-100 truncate md:truncate-none">{p.team2}</h3>
+                          <p className="text-xs md:text-sm text-gray-500 dark:text-gray-400 truncate md:truncate-none">{p.team2Course}</p>
                         </div>
                       </div>
 
-                      <div className="flex flex-wrap gap-4 text-sm text-gray-500 dark:text-gray-400">
+                      {/* Botão no mobile - aparece abaixo do TIME VS TIME */}
+                      {(p.status === 'Em andamento' || p.status === 'Finalizada') && (
+                        <div className="block md:hidden mb-4">
+                          <Button
+                            onClick={() => setPartidaSelecionada(p)}
+                            className="w-full"
+                          >
+                            {p.status === 'Em andamento' ? 'Acessar Eventos' : 'Ver Súmula'}
+                          </Button>
+                        </div>
+                      )}
+
+                      <div className="flex flex-col sm:flex-row sm:flex-wrap gap-3 sm:gap-4 text-xs md:text-sm text-gray-500 dark:text-gray-400">
                         <div className="flex items-center gap-1">
                           <Trophy size={14} />
-                          <span>{p.modality} • {p.category}</span>
+                          <span className="truncate">{p.modality} • {p.category}</span>
                         </div>
                         <div className="flex items-center gap-1">
                           <Calendar size={14} />
-                          <span>{p.date}</span>
+                          <span className="truncate">{p.date}</span>
                         </div>
                         <div className="flex items-center gap-1">
                           <MapPin size={14} />
-                          <span>{p.location}</span>
+                          <span className="truncate">{p.location}</span>
                         </div>
                       </div>
                     </div>
-                    
-                    {/* botão acessar eventos/súmula */}
+
+                    {/* Botão no desktop - aparece à direita centralizado verticalmente */}
                     {(p.status === 'Em andamento' || p.status === 'Finalizada') && (
-                      <div className="flex-shrink-0">
+                      <div className="hidden md:flex flex-shrink-0 items-center">
                         <Button onClick={() => setPartidaSelecionada(p)}>
                           {p.status === 'Em andamento' ? 'Acessar Eventos' : 'Ver Súmula'}
                         </Button>
@@ -940,8 +956,8 @@ export const MatchesPage = () => {
             />
           )}
 
-          <Modal 
-            isOpen={showConfigModal} 
+          <Modal
+            isOpen={showConfigModal}
             onClose={() => setShowConfigModal(false)}
             title="Configurar Locais por Modalidade"
             size="max-w-md"
@@ -953,12 +969,12 @@ export const MatchesPage = () => {
                     <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">
                       {modalidade.nome}
                     </label>
-                    <select 
+                    <select
                       className="w-full p-2 border rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600"
                       value={configuracaoLocais[modalidade.nome] || modalidade.localPadrao}
                       onChange={(e) => setConfiguracaoLocais(prev => ({
-                          ...prev,
-                          [modalidade.nome]: e.target.value
+                        ...prev,
+                        [modalidade.nome]: e.target.value
                       }))}
                     >
                       <option value="Quadra de Baixo">Quadra de Baixo</option>
@@ -969,14 +985,14 @@ export const MatchesPage = () => {
               </div>
 
               <div className="flex gap-2">
-                <Button 
+                <Button
                   onClick={() => setShowConfigModal(false)}
                   variant="outline"
                   className="flex-1"
                 >
                   Cancelar
                 </Button>
-                <Button 
+                <Button
                   onClick={() => {
                     setShowConfigModal(false);
                     // Salvar configurações se necessário
