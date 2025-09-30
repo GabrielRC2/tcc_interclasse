@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Calendar, Trophy, MapPin, Users, X, ChevronRight, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/common';
+import { Modal } from '@/components/Modal';
 import { useTournament } from '@/contexts/TournamentContext';
 
 export const TournamentSelector = ({ 
@@ -88,10 +89,15 @@ export const TournamentSelector = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-lg w-full max-w-4xl max-h-[80vh] flex flex-col">
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+    <Modal 
+      isOpen={isOpen} 
+      onClose={onClose}
+      title=""
+      size="max-w-4xl"
+    >
+      <div className="max-h-[70vh] flex flex-col -mt-4">
+        {/* Header customizado */}
+        <div className="flex items-center justify-between pb-4 border-b border-gray-200 dark:border-gray-700 mb-4">
           <div className="flex items-center gap-3">
             <Trophy className="text-red-600 dark:text-red-400" size={24} />
             <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
@@ -106,12 +112,6 @@ export const TournamentSelector = ({
               title="Atualizar lista de torneios"
             >
               <RefreshCw size={20} className={`text-gray-500 dark:text-gray-400 ${isRefreshing ? 'animate-spin' : ''}`} />
-            </button>
-            <button
-              onClick={onClose}
-              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"
-            >
-              <X size={20} className="text-gray-500 dark:text-gray-400" />
             </button>
           </div>
         </div>
@@ -224,6 +224,6 @@ export const TournamentSelector = ({
           )}
         </div>
       </div>
-    </div>
+    </Modal>
   );
 };

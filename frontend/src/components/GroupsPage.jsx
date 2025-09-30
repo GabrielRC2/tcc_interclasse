@@ -4,9 +4,13 @@ import { Shuffle, Users, Trophy, Play, Trash2 } from 'lucide-react';
 import { Modal } from '@/components/Modal';
 import { Button, Select, CardSplat } from '@/components/common';
 import { useTournament } from '@/contexts/TournamentContext';
+import { useToast } from '@/components/Toast';
+import { useConfirm } from '@/components/Confirm';
 
 export const GroupsPage = () => {
     const { selectedTournament, pageStates, updatePageState } = useTournament();
+    const toast = useToast();
+    const confirm = useConfirm();
     const [modalidadesDisponiveis, setModalidadesDisponiveis] = useState([]);
     const [grupos, setGrupos] = useState([]);
     const [timesDisponiveis, setTimesDisponiveis] = useState([]);
@@ -123,17 +127,17 @@ export const GroupsPage = () => {
 
     const handleSorteio = async () => {
         if (!selectedTournament || !modalidadeSelecionada) {
-            alert('Selecione uma modalidade e gênero primeiro');
+            toast.warning('Selecione uma modalidade e gênero primeiro');
             return;
         }
 
         if (!quantidadeGrupos || parseInt(quantidadeGrupos) < 1) {
-            alert('Selecione a quantidade de grupos');
+            toast.warning('Selecione a quantidade de grupos');
             return;
         }
 
         if (timesDisponiveis.length < parseInt(quantidadeGrupos)) {
-            alert(`Número insuficiente de times. Você tem ${timesDisponiveis.length} times e quer ${quantidadeGrupos} grupos.`);
+            toast.error(`Número insuficiente de times. Você tem ${timesDisponiveis.length} times e quer ${quantidadeGrupos} grupos.`);
             return;
         }
 
@@ -143,7 +147,13 @@ export const GroupsPage = () => {
             ? `REFAZER sorteio de ${timesDisponiveis.length} times em ${quantidadeGrupos} grupos? O sorteio atual será substituído.`
             : `Realizar sorteio de ${timesDisponiveis.length} times em ${quantidadeGrupos} grupos?`;
 
-        if (!confirm(mensagem)) {
+        const confirmed = await confirm.warning(mensagem, {
+            title: jaTemSorteio ? 'Refazer Sorteio' : 'Realizar Sorteio',
+            confirmText: jaTemSorteio ? 'Refazer' : 'Confirmar',
+            cancelText: 'Cancelar'
+        });
+        
+        if (!confirmed) {
             return;
         }
 
@@ -161,14 +171,14 @@ export const GroupsPage = () => {
 
             if (response.ok) {
                 await loadGrupos();
-                alert(jaTemSorteio ? 'Sorteio refeito com sucesso!' : 'Sorteio realizado com sucesso!');
+                toast.success(jaTemSorteio ? 'Sorteio refeito com sucesso!' : 'Sorteio realizado com sucesso!');
             } else {
                 const error = await response.json();
-                alert(error.error || 'Erro ao realizar sorteio');
+                toast.error(error.error || 'Erro ao realizar sorteio');
             }
         } catch (error) {
             console.error('Erro ao realizar sorteio:', error);
-            alert('Erro ao realizar sorteio');
+            toast.error('Erro ao realizar sorteio');
         }
     };
 
@@ -178,25 +188,30 @@ export const GroupsPage = () => {
 
     const limparGrupos = async () => {
         if (!selectedTournament || !modalidadeSelecionada) {
-            alert('Selecione uma modalidade e gênero primeiro');
+            toast.warning('Selecione uma modalidade e gênero primeiro');
             return;
         }
 
         if (grupos.length === 0) {
-            alert('Nenhum grupo para limpar');
+            toast.warning('Nenhum grupo para limpar');
             return;
         }
 
         const partidasResponse = await fetch(`/api/partidas?torneioId=${selectedTournament.id}&modalidadeId=${modalidadeSelecionada.modalidadeId}&genero=${modalidadeSelecionada.genero}`);
         const partidas = await partidasResponse.json();
 
-        const confirmacao = window.confirm(
+        const confirmacao = await confirm.danger(
             `⚠️ ATENÇÃO: Limpar TODOS os grupos de ${modalidadeSelecionada.modalidadeNome} ${modalidadeSelecionada.genero}?\n\n` +
             `Isso irá deletar:\n` +
             `• ${grupos.length} grupo(s)\n` +
             `• ${partidas.length} partida(s) relacionada(s)\n` +
             `• Todos os eventos e estatísticas\n\n` +
-            `Esta ação NÃO PODE ser desfeita!`
+            `Esta ação NÃO PODE ser desfeita!`,
+            {
+                title: 'Confirmar Limpeza de Grupos',
+                confirmText: 'Limpar Tudo',
+                cancelText: 'Cancelar'
+            }
         );
 
         if (!confirmacao) return;
@@ -215,14 +230,14 @@ export const GroupsPage = () => {
             if (response.ok) {
                 const result = await response.json();
                 await loadGrupos(); // Recarregar para atualizar a interface
-                alert(`✅ ${result.message}\n\nGrupos limpos: ${result.gruposNomes?.join(', ') || 'N/A'}`);
+                toast.success(`✅ ${result.message}\n\nGrupos limpos: ${result.gruposNomes?.join(', ') || 'N/A'}`);
             } else {
                 const error = await response.json();
-                alert('❌ ' + (error.error || 'Erro ao limpar grupos'));
+                toast.error('❌ ' + (error.error || 'Erro ao limpar grupos'));
             }
         } catch (error) {
             console.error('Erro ao limpar grupos:', error);
-            alert('❌ Erro ao limpar grupos');
+            toast.error('❌ Erro ao limpar grupos');
         }
     };
 

@@ -2,8 +2,10 @@
 import React, { useState } from 'react';
 import { Modal } from '@/components/Modal';
 import { Button } from '@/components/common';
+import { useToast } from '@/components/Toast';
 
 export const WOModal = ({ isOpen, onClose, match, onWOConfirmed }) => {
+  const toast = useToast();
   const [timeWOSelecionado, setTimeWOSelecionado] = useState(null);
   const [enviando, setEnviando] = useState(false);
 
@@ -29,12 +31,12 @@ export const WOModal = ({ isOpen, onClose, match, onWOConfirmed }) => {
         throw new Error(error || 'Erro ao registrar WO');
       }
 
-      alert('WO registrado com sucesso!');
+      toast.success('WO registrado com sucesso!');
       onWOConfirmed?.();
       handleCloseModal();
     } catch (error) {
       console.error('Erro ao enviar WO:', error);
-      alert('Erro ao registrar WO: ' + error.message);
+      toast.error('Erro ao registrar WO: ' + error.message);
     } finally {
       setEnviando(false);
     }

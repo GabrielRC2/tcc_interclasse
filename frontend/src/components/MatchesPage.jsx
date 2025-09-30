@@ -4,9 +4,14 @@ import { Calendar, MapPin, Trophy, Filter, Play, Settings, Shuffle, RefreshCcw }
 import { Button, Select } from '@/components/common';
 import { useTournament } from '@/contexts/TournamentContext';
 import { SumulaModal } from '@/components/SumulaModal';
+import { Modal } from '@/components/Modal';
+import { useToast } from '@/components/Toast';
+import { useConfirm } from '@/components/Confirm';
 
 export const MatchesPage = () => {
   const { selectedTournament } = useTournament();
+  const toast = useToast();
+  const confirm = useConfirm();
 
   // estados (nomes em português)
   const [partidas, setPartidas] = useState([]);
@@ -142,13 +147,22 @@ export const MatchesPage = () => {
     let desejado = atual === 'Agendada' ? 'Em andamento' : (atual === 'Em andamento' ? 'Agendada' : null);
 
     if (!desejado) {
-      const escolha = window.confirm('Definir status como "Em andamento"? OK = Em andamento, Cancel = Agendada');
+      const escolha = await confirm.info('Definir status como "Em andamento"?', {
+        title: 'Definir Status da Partida',
+        confirmText: 'Em andamento',
+        cancelText: 'Agendada'
+      });
       desejado = escolha ? 'Em andamento' : 'Agendada';
     } else {
       const msg = desejado === 'Em andamento'
         ? 'Deseja iniciar a partida e abrir a súmula em modo AO VIVO?'
         : 'Deseja marcar a partida como AGENDADA?';
-      if (!window.confirm(msg)) return;
+      const confirmed = await confirm.info(msg, {
+        title: 'Confirmar Mudança de Status',
+        confirmText: 'Confirmar',
+        cancelText: 'Cancelar'
+      });
+      if (!confirmed) return;
     }
 
     // atualização otimista na UI
@@ -199,11 +213,17 @@ export const MatchesPage = () => {
 
   const gerarPartidasOtimizadas = async () => {
     if (!selectedTournament) {
-        alert('Selecione um torneio primeiro');
+        toast.warning('Selecione um torneio primeiro');
         return;
     }
 
-    if (!confirm('Gerar partidas otimizadas? Esta ação criará TODAS as partidas de TODAS as modalidades de forma otimizada e simultânea.')) {
+    const confirmed = await confirm.info('Gerar partidas otimizadas? Esta ação criará TODAS as partidas de TODAS as modalidades de forma otimizada e simultânea.', {
+      title: 'Confirmar Geração de Partidas',
+      confirmText: 'Gerar Partidas',
+      cancelText: 'Cancelar'
+    });
+    
+    if (!confirmed) {
         return;
     }
 
@@ -220,15 +240,15 @@ export const MatchesPage = () => {
 
         if (response.ok) {
             const result = await response.json();
-            alert(`✅ ${result.partidasGeradas} partidas geradas em ${result.slots} slots de tempo! ${result.modalidades} modalidades otimizadas.`);
+            toast.success(`✅ ${result.partidasGeradas} partidas geradas em ${result.slots} slots de tempo! ${result.modalidades} modalidades otimizadas.`);
             carregarPartidas(); // Recarregar partidas
         } else {
             const error = await response.json();
-            alert('❌ ' + (error.error || 'Erro ao gerar partidas'));
+            toast.error('❌ ' + (error.error || 'Erro ao gerar partidas'));
         }
     } catch (error) {
         console.error('Erro ao gerar partidas:', error);
-        alert('❌ Erro ao gerar partidas');
+        toast.error('❌ Erro ao gerar partidas');
     } finally {
         setGenerating(false);
     }
@@ -237,28 +257,34 @@ export const MatchesPage = () => {
   // refazer sorteio de partidas com as mesmas regras otimizadas
   const refazerSorteioPartidas = async () => {
     if (!selectedTournament) {
-      alert('❌ Selecione um torneio primeiro');
+      toast.warning('❌ Selecione um torneio primeiro');
       return;
     }
 
     if (partidas.length === 0) {
-      alert('❌ Não há partidas para refazer o sorteio. Gere as partidas primeiro.');
+      toast.warning('❌ Não há partidas para refazer o sorteio. Gere as partidas primeiro.');
       return;
     }
 
     const partidasFinalizadas = partidas.filter(p => p.status === 'Finalizada' || p.status === 'FINALIZADA');
     if (partidasFinalizadas.length > 0) {
-      const confirmar = window.confirm(
+      const confirmar = await confirm.danger(
         `⚠️ ATENÇÃO: Existem ${partidasFinalizadas.length} partidas já finalizadas.\n\n` +
         `Refazer o sorteio irá:\n` +
         `• Apagar TODAS as partidas existentes\n` +
         `• Recriar as partidas com novos horários e confrontos\n` +
         `• PERDER todos os resultados das partidas finalizadas\n\n` +
-        `Deseja continuar mesmo assim?`
+        `Deseja continuar mesmo assim?`,
+        {
+          title: 'Confirmar Refazer Sorteio',
+          confirmText: 'Refazer Mesmo Assim',
+          cancelText: 'Cancelar'
+        }
       );
+      
       if (!confirmar) return;
     } else {
-      const confirmar = window.confirm(
+      const confirmar = await confirm.warning(
         `🔄 Refazer sorteio de partidas?\n\n` +
         `Esta ação irá:\n` +
         `• Apagar todas as partidas existentes\n` +
@@ -267,11 +293,14 @@ export const MatchesPage = () => {
         `📋 REGRAS APLICADAS:\n` +
         `⚽ Regra 1: Sempre um jogo masculino e um feminino simultâneos\n` +
         `🔄 Regra 2: Priorizar modalidades diferentes no mesmo slot\n` +
-        `🔀 Regra 3: Cada modalidade faz 5 consecutivas de um gênero, depois 5 do outro\n` +
-        `🏟️ Regra 4: Um jogo em cada quadra conforme configuração\n` +
-        `⏱️ Regra 5: Maximizar tempo de descanso dos times\n\n` +
-        `Continuar?`
+        `🔀 Regra 3: Cada modalidade faz 5 consecutivas de um gênero, depois 5 do outro\n`,
+        {
+          title: 'Confirmar Refazer Sorteio',
+          confirmText: 'Refazer Sorteio',
+          cancelText: 'Cancelar'
+        }
       );
+      
       if (!confirmar) return;
     }
 
@@ -311,7 +340,7 @@ export const MatchesPage = () => {
           .map(([modalidade, stats]) => `${modalidade}: ${stats.ciclosCompletos} ciclos`)
           .join(', ');
         
-        alert(
+        toast.success(
           `✅ Sorteio refeito com sucesso!\n\n` +
           `🎲 ${result.partidasGeradas} novas partidas geradas em ${result.slots} slots de tempo!\n` +
           `⚽ Cada slot contém 1 jogo masculino + 1 feminino simultâneos\n` +
@@ -323,11 +352,11 @@ export const MatchesPage = () => {
         await carregarPartidas();
       } else {
         const error = await response.json();
-        alert('❌ ' + (error.error || 'Erro ao gerar novas partidas'));
+        toast.error('❌ ' + (error.error || 'Erro ao gerar novas partidas'));
       }
     } catch (error) {
       console.error('Erro ao refazer sorteio:', error);
-      alert('❌ Erro ao refazer sorteio das partidas');
+      toast.error('❌ Erro ao refazer sorteio das partidas');
     } finally {
       setGenerating(false);
     }
@@ -338,11 +367,16 @@ export const MatchesPage = () => {
     const partidasAgendadas = partidas.filter(p => p.status === 'Agendada');
     
     if (partidasAgendadas.length === 0) {
-      alert('❌ Nenhuma partida agendada encontrada');
+      toast.warning('❌ Nenhuma partida agendada encontrada');
       return;
     }
 
-    const confirmar = window.confirm(`Finalizar ${partidasAgendadas.length} partidas com pontuações aleatórias?`);
+    const confirmar = await confirm.warning(`Finalizar ${partidasAgendadas.length} partidas com pontuações aleatórias?`, {
+      title: 'Gerar Pontuações Aleatórias',
+      confirmText: 'Finalizar Partidas',
+      cancelText: 'Cancelar'
+    });
+    
     if (!confirmar) return;
 
     try {
@@ -354,23 +388,23 @@ export const MatchesPage = () => {
 
       if (response.ok) {
         const result = await response.json();
-        alert(`✅ ${result.partidasFinalizadas} partidas finalizadas!`);
+        toast.success(`✅ ${result.partidasFinalizadas} partidas finalizadas!`);
         // Recarregar partidas do servidor para mostrar as pontuações
         await carregarPartidas();
       } else {
         const error = await response.json();
-        alert('❌ ' + (error.error || 'Erro ao gerar pontuações'));
+        toast.error('❌ ' + (error.error || 'Erro ao gerar pontuações'));
       }
     } catch (error) {
       console.error('Erro:', error);
-      alert('❌ Erro ao gerar pontuações');
+      toast.error('❌ Erro ao gerar pontuações');
     }
   };
 
   // Reorganizar eliminatórias aplicando as regras de otimização
   const reorganizarEliminatorias = async () => {
     if (!selectedTournament) {
-      alert('❌ Selecione um torneio primeiro');
+      toast.warning('❌ Selecione um torneio primeiro');
       return;
     }
 
@@ -379,37 +413,44 @@ export const MatchesPage = () => {
     );
 
     if (partidasEliminatorias.length === 0) {
-      alert('❌ Não há eliminatórias para reorganizar');
+      toast.warning('❌ Não há eliminatórias para reorganizar');
       return;
     }
 
     const partidasFinalizadas = partidasEliminatorias.filter(p => p.status === 'Finalizada' || p.status === 'FINALIZADA');
     if (partidasFinalizadas.length > 0) {
-      const confirmar = window.confirm(
+      const confirmar = await confirm.warning(
         `⚠️ ATENÇÃO: Existem ${partidasFinalizadas.length} eliminatórias já finalizadas.\n\n` +
         `Reorganizar irá:\n` +
         `• Manter os confrontos existentes\n` +
         `• Reorganizar apenas horários e ordem das partidas\n` +
         `• Aplicar as regras de otimização\n` +
         `• MANTER todos os resultados das partidas finalizadas\n\n` +
-        `Deseja continuar?`
+        `Deseja continuar?`,
+        {
+          title: 'Confirmar Reorganização',
+          confirmText: 'Reorganizar',
+          cancelText: 'Cancelar'
+        }
       );
+      
       if (!confirmar) return;
     } else {
-      const confirmar = window.confirm(
+      const confirmar = await confirm.info(
         `🔄 Reorganizar eliminatórias?\n\n` +
         `Esta ação irá:\n` +
         `• Manter os confrontos existentes\n` +
         `• Reorganizar horários e ordem das partidas\n` +
         `• Aplicar as regras de otimização melhoradas\n\n` +
         `📋 REGRAS APLICADAS:\n` +
-        `⚽ Regra 1: Sempre um jogo masculino e um feminino simultâneos\n` +
-        `🔄 Regra 2: Priorizar modalidades diferentes no mesmo slot\n` +
-        `🔀 Regra 3: Cada modalidade faz 5 consecutivas de um gênero, depois 5 do outro\n` +
-        `🏟️ Regra 4: Um jogo em cada quadra conforme configuração\n` +
-        `⏱️ Regra 5: Maximizar tempo de descanso dos times\n\n` +
-        `Continuar?`
+        `⚽ Regra 1: Sempre um jogo masculino e um feminino simultâneos\n`,
+        {
+          title: 'Reorganizar Eliminatórias',
+          confirmText: 'Reorganizar',
+          cancelText: 'Cancelar'
+        }
       );
+      
       if (!confirmar) return;
     }
 
@@ -427,7 +468,7 @@ export const MatchesPage = () => {
 
       if (response.ok) {
         const result = await response.json();
-        alert(
+        toast.success(
           `✅ Eliminatórias reorganizadas com sucesso!\n\n` +
           `🎲 ${result.partidasReorganizadas} partidas reorganizadas em ${result.slots} slots de tempo!\n` +
           `⚽ Cada slot contém 1 jogo masculino + 1 feminino simultâneos\n` +
@@ -438,11 +479,11 @@ export const MatchesPage = () => {
         await carregarPartidas();
       } else {
         const error = await response.json();
-        alert('❌ ' + (error.error || 'Erro ao reorganizar eliminatórias'));
+        toast.error('❌ ' + (error.error || 'Erro ao reorganizar eliminatórias'));
       }
     } catch (error) {
       console.error('Erro ao reorganizar eliminatórias:', error);
-      alert('❌ Erro ao reorganizar eliminatórias');
+      toast.error('❌ Erro ao reorganizar eliminatórias');
     } finally {
       setGenerating(false);
     }
@@ -452,16 +493,21 @@ export const MatchesPage = () => {
   // gerar eliminatórias baseadas na classificação dos grupos
   const gerarEliminatorias = async () => {
     if (!selectedTournament?.id) {
-      alert('❌ Selecione um torneio primeiro');
+      toast.warning('❌ Selecione um torneio primeiro');
       return;
     }
 
     if (!modalidadeSelecionada || !generoSelecionado) {
-      alert('❌ Selecione uma modalidade e gênero para gerar as eliminatórias.');
+      toast.warning('❌ Selecione uma modalidade e gênero para gerar as eliminatórias.');
       return;
     }
 
-    const confirmar = window.confirm('Gerar eliminatórias baseadas na classificação atual dos grupos?');
+    const confirmar = await confirm.info('Gerar eliminatórias baseadas na classificação atual dos grupos?', {
+      title: 'Gerar Eliminatórias',
+      confirmText: 'Gerar',
+      cancelText: 'Cancelar'
+    });
+    
     if (!confirmar) return;
 
     setGenerating(true);
@@ -478,15 +524,15 @@ export const MatchesPage = () => {
 
       if (response.ok) {
         const result = await response.json();
-        alert(`✅ Eliminatórias geradas! ${result.partidasCriadas} partidas criadas na fase: ${result.fase}`);
+        toast.success(`✅ Eliminatórias geradas! ${result.partidasCriadas} partidas criadas na fase: ${result.fase}`);
         await carregarPartidas();
       } else {
         const error = await response.json();
-        alert('❌ ' + (error.error || 'Erro ao gerar eliminatórias'));
+        toast.error('❌ ' + (error.error || 'Erro ao gerar eliminatórias'));
       }
     } catch (error) {
       console.error('Erro:', error);
-      alert('❌ Erro ao gerar eliminatórias');
+      toast.error('❌ Erro ao gerar eliminatórias');
     } finally {
       setGenerating(false);
     }
@@ -605,7 +651,7 @@ export const MatchesPage = () => {
     } else if (proximaAcao === 'GERAR_ELIMINATORIAS') {
       await gerarEliminatorias();
     } else {
-      alert('Funcionalidade em desenvolvimento');
+      toast.info('Funcionalidade em desenvolvimento');
     }
   };
 
@@ -613,16 +659,18 @@ export const MatchesPage = () => {
   const gerarPartidasDeGrupos = async () => {
     if (!selectedTournament) return;
     
-    const confirmar = window.confirm(
+    const confirmar = await confirm.info(
       '🏆 Deseja gerar todas as partidas de grupos para todas as modalidades e gêneros do torneio?\n\n' +
       '📋 REGRAS APLICADAS:\n' +
       '⚽ Regra 1: Sempre um jogo masculino e um feminino simultâneos\n' +
-      '🔄 Regra 2: Priorizar modalidades diferentes no mesmo slot (ex: Vôlei Feminino + Handebol Masculino)\n' +
-      '🔀 Regra 3: Cada modalidade faz 5 consecutivas de um gênero, depois 5 do outro (Handebol: 1-5 F, 6-10 M; Vôlei: 1-5 M, 6-10 F)\n' +
-      '🏟️ Regra 4: Um jogo em cada quadra conforme configuração de locais\n' +
-      '⏱️ Regra 5: Maximizar tempo de descanso entre jogos dos times\n\n' +
-      'As partidas serão distribuídas de forma otimizada entre as quadras!'
+      '🔄 Regra 2: Priorizar modalidades diferentes no mesmo slot (ex: Vôlei Feminino + Handebol Masculino)\n',
+      {
+        title: 'Gerar Partidas de Grupos',
+        confirmText: 'Gerar',
+        cancelText: 'Cancelar'
+      }
     );
+    
     if (!confirmar) return;
 
     setGenerating(true);
@@ -647,7 +695,7 @@ export const MatchesPage = () => {
           .map(([modalidade, stats]) => `${modalidade}: ${stats.ciclosCompletos} ciclos`)
           .join(', ');
         
-        alert(
+        toast.success(
           `✅ ${result.partidasGeradas} partidas geradas em ${result.slots} slots de tempo!\n\n` +
           `⚽ Cada slot contém 1 jogo masculino + 1 feminino simultâneos\n` +
           `🔄 Diversidade de modalidades: ${diversidade.slotsComModalidadesDiferentes}/${diversidade.totalSlots} slots (${diversidade.percentual}%)\n` +
@@ -658,11 +706,11 @@ export const MatchesPage = () => {
         await carregarPartidas();
       } else {
         const error = await response.json();
-        alert('❌ ' + (error.error || 'Erro ao gerar partidas'));
+        toast.error('❌ ' + (error.error || 'Erro ao gerar partidas'));
       }
     } catch (error) {
       console.error('Erro:', error);
-      alert('❌ Erro ao gerar partidas');
+      toast.error('❌ Erro ao gerar partidas');
     } finally {
       setGenerating(false);
     }
@@ -671,7 +719,7 @@ export const MatchesPage = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div>
       <div className="flex flex-wrap justify-between items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">PARTIDAS</h1>
@@ -730,14 +778,14 @@ export const MatchesPage = () => {
       </div>
 
       {!selectedTournament ? (
-        <div className="text-center py-12">
+        <div className="text-center py-12 mt-6">
           <Trophy size={48} className="mx-auto text-gray-400 mb-4" />
           <p className="text-gray-500 dark:text-gray-400 text-lg">Selecione um torneio no Dashboard primeiro</p>
         </div>
       ) : (
         <>
           {/* filtros */}
-          <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm p-4">
+          <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm p-4 mt-6">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <Select
                 label="Modalidade"
@@ -782,14 +830,14 @@ export const MatchesPage = () => {
 
           {/* lista de partidas */}
           {partidasFiltradas.length === 0 ? (
-            <div className="text-center py-12">
+            <div className="text-center py-12 mt-6">
               <Calendar size={48} className="mx-auto text-gray-400 mb-4" />
               <p className="text-gray-500 dark:text-gray-400 text-lg">
                 {partidas.length === 0 ? 'Nenhuma partida encontrada. Gere o chaveamento primeiro.' : 'Nenhuma partida corresponde aos filtros selecionados.'}
               </p>
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-4 mt-6">
               <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
                 <h3 className="font-semibold text-blue-900 dark:text-blue-100 mb-2">📋 Regras de Organização Otimizada</h3>
                 <div className="text-sm text-blue-700 dark:text-blue-300 space-y-1">
@@ -892,53 +940,54 @@ export const MatchesPage = () => {
             />
           )}
 
-          {showConfigModal && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-              <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md">
-                <h3 className="text-lg font-bold mb-4 text-gray-900 dark:text-gray-100">Configurar Locais por Modalidade</h3>
-                
-                <div className="space-y-4">
-                  {modalidadesDisponiveis.map(modalidade => (
-                    <div key={modalidade.id}>
-                      <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">
-                        {modalidade.nome}
-                      </label>
-                      <select 
-                        className="w-full p-2 border rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600"
-                        value={configuracaoLocais[modalidade.nome] || modalidade.localPadrao}
-                        onChange={(e) => setConfiguracaoLocais(prev => ({
-                            ...prev,
-                            [modalidade.nome]: e.target.value
-                        }))}
-                      >
-                        <option value="Quadra de Baixo">Quadra de Baixo</option>
-                        <option value="Quadra de Cima">Quadra de Cima</option>
-                      </select>
-                    </div>
-                  ))}
-                </div>
+          <Modal 
+            isOpen={showConfigModal} 
+            onClose={() => setShowConfigModal(false)}
+            title="Configurar Locais por Modalidade"
+            size="max-w-md"
+          >
+            <div className="space-y-4">
+              <div className="space-y-4">
+                {modalidadesDisponiveis.map(modalidade => (
+                  <div key={modalidade.id}>
+                    <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">
+                      {modalidade.nome}
+                    </label>
+                    <select 
+                      className="w-full p-2 border rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600"
+                      value={configuracaoLocais[modalidade.nome] || modalidade.localPadrao}
+                      onChange={(e) => setConfiguracaoLocais(prev => ({
+                          ...prev,
+                          [modalidade.nome]: e.target.value
+                      }))}
+                    >
+                      <option value="Quadra de Baixo">Quadra de Baixo</option>
+                      <option value="Quadra de Cima">Quadra de Cima</option>
+                    </select>
+                  </div>
+                ))}
+              </div>
 
-                <div className="flex gap-2 mt-6">
-                  <Button 
-                    onClick={() => setShowConfigModal(false)}
-                    variant="outline"
-                    className="flex-1"
-                  >
-                    Cancelar
-                  </Button>
-                  <Button 
-                    onClick={() => {
-                      setShowConfigModal(false);
-                      // Salvar configurações se necessário
-                    }}
-                    className="flex-1"
-                  >
-                    Salvar
-                  </Button>
-                </div>
+              <div className="flex gap-2">
+                <Button 
+                  onClick={() => setShowConfigModal(false)}
+                  variant="outline"
+                  className="flex-1"
+                >
+                  Cancelar
+                </Button>
+                <Button 
+                  onClick={() => {
+                    setShowConfigModal(false);
+                    // Salvar configurações se necessário
+                  }}
+                  className="flex-1"
+                >
+                  Salvar
+                </Button>
               </div>
             </div>
-          )}
+          </Modal>
         </>
       )}
     </div>

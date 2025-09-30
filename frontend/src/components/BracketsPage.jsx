@@ -3,9 +3,13 @@ import React, { useState, useEffect } from 'react';
 import { Trophy, Users, Calendar, Target, Award } from 'lucide-react';
 import { Button, Select, CardSplat } from '@/components/common';
 import { useTournament } from '@/contexts/TournamentContext';
+import { useToast } from '@/components/Toast';
+import { useConfirm } from '@/components/Confirm';
 
 export const BracketsPage = () => {
     const { selectedTournament } = useTournament();
+    const toast = useToast();
+    const confirm = useConfirm();
     const [modalidadesDisponiveis, setModalidadesDisponiveis] = useState([]);
     const [gruposData, setGruposData] = useState([]);
     const [classificacao, setClassificacao] = useState([]);
@@ -160,35 +164,40 @@ export const BracketsPage = () => {
 
         // Verificações mais robustas
         if (!selectedTournament) {
-            alert('Erro: Nenhum torneio selecionado');
+            toast.error('Erro: Nenhum torneio selecionado');
             console.error('selectedTournament é null/undefined');
             return;
         }
 
         if (!selectedTournament.id) {
-            alert('Erro: Torneio selecionado não tem ID válido');
+            toast.error('Erro: Torneio selecionado não tem ID válido');
             console.error('selectedTournament.id é null/undefined:', selectedTournament);
             return;
         }
 
         if (!modalidadeSelecionada) {
-            alert('Selecione modalidade e gênero antes de gerar eliminatórias.');
+            toast.warning('Selecione modalidade e gênero antes de gerar eliminatórias.');
             return;
         }
 
         if (classificacao.length === 0) {
-            alert('Nenhuma classificação encontrada. Complete a fase de grupos primeiro.');
+            toast.warning('Nenhuma classificação encontrada. Complete a fase de grupos primeiro.');
             return;
         }
 
         const faseTexto = faseEscolhida || 'automática';
-        const confirmar = window.confirm(`Gerar ${faseTexto} com base na classificação atual?`);
+        const confirmar = await confirm.info(`Gerar ${faseTexto} com base na classificação atual?`, {
+            title: 'Gerar Eliminatórias',
+            confirmText: 'Gerar',
+            cancelText: 'Cancelar'
+        });
+        
         if (!confirmar) return;
 
         try {
             // Verificação adicional antes de acessar propriedades
             if (!selectedTournament?.id) {
-                alert('Erro: Torneio não selecionado ou ID inválido');
+                toast.error('Erro: Torneio não selecionado ou ID inválido');
                 return;
             }
 
@@ -218,27 +227,27 @@ export const BracketsPage = () => {
                     mensagem += `\n\nFases já criadas: ${result.detalhes.fasesExistentes.join(', ')}`;
                 }
                 
-                alert(mensagem);
+                toast.success(mensagem);
                 await loadEliminatorias();
                 await loadClassificacao(); // Recarregar classificação
             } else {
                 const error = await response.json();
-                alert(error.error || 'Erro ao gerar eliminatórias');
+                toast.error(error.error || 'Erro ao gerar eliminatórias');
             }
         } catch (error) {
             console.error('Erro ao gerar eliminatórias:', error);
-            alert('Erro ao gerar eliminatórias');
+            toast.error('Erro ao gerar eliminatórias');
         }
     };
 
-    const mostrarOpcoesEliminatorias = () => {
+    const mostrarOpcoesEliminatorias = async () => {
         console.log('=== DEBUG mostrarOpcoesEliminatorias ===');
         console.log('selectedTournament:', selectedTournament);
         console.log('modalidadeSelecionada:', modalidadeSelecionada);
         console.log('classificacao:', classificacao);
 
         if (!selectedTournament || !modalidadeSelecionada) {
-            alert('Selecione torneio e modalidade antes de gerar eliminatórias.');
+            toast.warning('Selecione torneio e modalidade antes de gerar eliminatórias.');
             return;
         }
 
@@ -247,7 +256,12 @@ export const BracketsPage = () => {
 
         // Se não há classificação, pode ser que seja uma fase subsequente
         if (numTimes === 0) {
-            const confirmar = window.confirm('Não há classificação dos grupos carregada. Deseja tentar gerar a próxima fase das eliminatórias baseada nos vencedores da fase anterior?');
+            const confirmar = await confirm.info('Não há classificação dos grupos carregada. Deseja tentar gerar a próxima fase das eliminatórias baseada nos vencedores da fase anterior?', {
+                title: 'Gerar Próxima Fase',
+                confirmText: 'Gerar',
+                cancelText: 'Cancelar'
+            });
+            
             if (confirmar) {
                 gerarEliminatorias(); // Sem especificar fase, deixa a API decidir
             }
@@ -271,24 +285,41 @@ export const BracketsPage = () => {
         }
 
         // Mostrar modal com opções
-        let prompt = `Escolha a fase inicial das eliminatórias:\n`;
-        prompt += opcoes.map((op, i) => `${i+1}. ${op}`).join('\n');
-        prompt += `\n${opcoes.length + 1}. Deixar a API decidir automaticamente`;
-        prompt += '\n\nDigite o número da opção:';
+        const opcoesSelect = opcoes.map((op, i) => ({
+            value: op,
+            label: `${i+1}. ${op}`,
+            description: `Gerar ${op}`
+        }));
         
-        const escolha = window.prompt(prompt);
+        // Adicionar opção automática
+        opcoesSelect.push({
+            value: 'auto',
+            label: `${opcoes.length + 1}. Deixar a API decidir automaticamente`,
+            description: 'A API escolherá a melhor fase baseada no número de times'
+        });
+        
+        const escolha = await confirm.select(
+            'Escolha a fase inicial das eliminatórias:',
+            opcoesSelect,
+            {
+                title: 'Configurar Eliminatórias',
+                confirmText: 'Gerar',
+                cancelText: 'Cancelar',
+                required: true
+            }
+        );
         
         console.log('escolha do usuário:', escolha);
         
         if (escolha) {
-            const indice = parseInt(escolha) - 1;
-            if (indice >= 0 && indice < opcoes.length) {
-                const faseEscolhida = opcoes[indice];
-                console.log('faseEscolhida:', faseEscolhida);
-                gerarEliminatorias(faseEscolhida);
-            } else if (indice === opcoes.length) {
-                console.log('Deixando API decidir automaticamente');
+            if (escolha === 'auto') {
+                // Deixar a API decidir automaticamente
+                console.log('Deixando a API decidir automaticamente');
                 gerarEliminatorias(); // Sem especificar fase
+            } else {
+                // Usar a fase escolhida
+                console.log('faseEscolhida:', escolha);
+                gerarEliminatorias(escolha);
             }
         }
     };

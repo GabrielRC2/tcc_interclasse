@@ -4,8 +4,10 @@ import { Modal } from '@/components/Modal';
 import { Button } from '@/components/common';
 import { mockData } from '@/data';
 import { useTournament } from '@/contexts/TournamentContext';
+import { useToast } from '@/components/Toast';
 
 export const EventosModal = ({ isOpen, onClose, match }) => {
+  const toast = useToast();
   if (!match) return null;
 
   const { selectedTournament } = useTournament();
@@ -74,7 +76,10 @@ export const EventosModal = ({ isOpen, onClose, match }) => {
       </html>
     `;
     const w = window.open('', '_blank', 'width=800,height=900');
-    if (!w) return alert('Bloqueador de pop-up impediu a impressão.');
+    if (!w) {
+        toast.error('Bloqueador de pop-up impediu a impressão.');
+        return;
+    }
     w.document.write(html);
     w.document.close();
     w.focus();

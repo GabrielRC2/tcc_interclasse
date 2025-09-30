@@ -4,6 +4,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Modal } from '@/components/Modal';
 import { Button } from '@/components/common';
 import { useTournament } from '@/contexts/TournamentContext';
+import { useToast } from '@/components/Toast';
+import { useConfirm } from '@/components/Confirm';
 
 // PDF Download Component that only renders on client - MOVED OUTSIDE COMPONENT
 const PDFDownloadButton = ({ className, fileName, matchData, tournamentData, teamData1, teamData2 }) => {
@@ -62,6 +64,8 @@ const PDFDownloadButton = ({ className, fileName, matchData, tournamentData, tea
 export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEnviada = () => {} }) => {
   const estaAoVivo = mode === 'live';
   const { selectedTournament } = useTournament();
+  const toast = useToast();
+  const confirm = useConfirm();
   const sumulaRef = useRef(null);
 
   const [carregando, setCarregando] = useState(true);
@@ -224,7 +228,7 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEn
     
     // Validação especial para partidas eliminatórias
     if (ehEliminatoria && hahEmpate && (!temPenaltis || penaltisA === penaltisB)) {
-      alert('Em partidas eliminatórias não pode haver empate! Se o jogo terminou empatado, você deve registrar os pênaltis para determinar o vencedor.');
+      toast.warning('Em partidas eliminatórias não pode haver empate! Se o jogo terminou empatado, você deve registrar os pênaltis para determinar o vencedor.');
       return;
     }
     
@@ -297,7 +301,13 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEn
       reconciliarLista(edicaoTimeB);
 
       if (postsToCreate.length === 0 && patchesToDo.length === 0) {
-        if (!confirm('Nenhuma alteração detectada. Deseja enviar/confirmar mesmo assim?')) {
+        const confirmed = await confirm.info('Nenhuma alteração detectada. Deseja enviar/confirmar mesmo assim?', {
+          title: 'Confirmar Envio',
+          confirmText: 'Enviar Mesmo Assim',
+          cancelText: 'Cancelar'
+        });
+        
+        if (!confirmed) {
           setSalvando(false);
           return;
         }
@@ -328,7 +338,7 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEn
       // Show warnings if any (cards present more than desired and we couldn't delete)
       if (warnings.length) {
         console.warn('Avisos ao reconciliar eventos:', warnings.join('\n'));
-        alert('Avisos: ' + warnings.join('\n'));
+        toast.warning('Avisos: ' + warnings.join('\n'));
       }
 
 
@@ -392,13 +402,13 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEn
         }));
       }
 
-  alert(estaAoVivo ? 'Súmula enviada e partida finalizada com sucesso.' : 'Súmula atualizada com sucesso.');
+  toast.success(estaAoVivo ? 'Súmula enviada e partida finalizada com sucesso.' : 'Súmula atualizada com sucesso.');
   setPermitirEdicao(false);
   setEditingFinalizada(false);
   onClose();
     } catch (err) {
       console.error('Erro ao enviar súmula:', err);
-      alert('Erro ao enviar súmula: ' + (err.message || err));
+      toast.error('Erro ao enviar súmula: ' + (err.message || err));
     } finally {
       setSalvando(false);
     }

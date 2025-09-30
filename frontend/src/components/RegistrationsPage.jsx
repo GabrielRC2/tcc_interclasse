@@ -3,8 +3,12 @@ import React, { useState, useEffect } from 'react';
 import { Trash2 } from 'lucide-react';
 import { Modal } from '@/components/Modal';
 import { Button, Input, Select, CardSplat } from '@/components/common';
+import { useToast } from '@/components/Toast';
+import { useConfirm } from '@/components/Confirm';
 
 export const RegistrationsPage = () => {
+    const toast = useToast();
+    const confirm = useConfirm();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingItem, setEditingItem] = useState(null);
     const [category, setCategory] = useState('');
@@ -89,7 +93,7 @@ export const RegistrationsPage = () => {
                     body = { name: formData.name, sigla: formData.sigla };
                     break;
                 default:
-                    alert('Selecione uma categoria');
+                    toast.warning('Selecione uma categoria');
                     return;
             }
 
@@ -102,18 +106,24 @@ export const RegistrationsPage = () => {
             if (response.ok) {
                 await loadAllData();
                 setIsModalOpen(false);
-                alert(`${category.slice(0, -1)} ${editingItem ? 'editado' : 'criado'} com sucesso!`);
+                toast.success(`${category.slice(0, -1)} ${editingItem ? 'editado' : 'criado'} com sucesso!`);
             } else {
-                alert(`Erro ao ${editingItem ? 'editar' : 'criar'} cadastro`);
+                toast.error(`Erro ao ${editingItem ? 'editar' : 'criar'} cadastro`);
             }
         } catch (error) {
             console.error('Erro ao salvar:', error);
-            alert('Erro ao salvar cadastro');
+            toast.error('Erro ao salvar cadastro');
         }
     };
 
     const handleDelete = async (item, type) => {
-        if (!confirm(`Tem certeza que deseja excluir "${item.nome || item.name}"?`)) {
+        const confirmed = await confirm.danger(`Tem certeza que deseja excluir "${item.nome || item.name}"?`, {
+            title: 'Confirmar Exclusão',
+            confirmText: 'Excluir',
+            cancelText: 'Cancelar'
+        });
+        
+        if (!confirmed) {
             return;
         }
 
@@ -139,13 +149,13 @@ export const RegistrationsPage = () => {
 
             if (response.ok) {
                 await loadAllData();
-                alert(`${type.slice(0, -1)} excluído com sucesso!`);
+                toast.success(`${type.slice(0, -1)} excluído com sucesso!`);
             } else {
-                alert('Erro ao excluir cadastro');
+                toast.error('Erro ao excluir cadastro');
             }
         } catch (error) {
             console.error('Erro ao excluir:', error);
-            alert('Erro ao excluir cadastro');
+            toast.error('Erro ao excluir cadastro');
         }
     };
 

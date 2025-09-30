@@ -4,9 +4,13 @@ import { Plus, Edit, Trash2, UserCircle, Filter, X } from 'lucide-react';
 import { Modal } from '@/components/Modal';
 import { Button, Input, Select, CardSplat } from '@/components/common';
 import { useTournament } from '@/contexts/TournamentContext';
+import { useToast } from '@/components/Toast';
+import { useConfirm } from '@/components/Confirm';
 
 function TeamsPage() {
   const { selectedTournament } = useTournament();
+  const toast = useToast();
+  const confirm = useConfirm();
   const [teams, setTeams] = useState([]);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [selectedTeam, setSelectedTeam] = useState(null);
@@ -166,7 +170,7 @@ function TeamsPage() {
     e.preventDefault();
     
     if (!selectedTournament) {
-      alert('Selecione um torneio no Dashboard primeiro');
+      toast.warning('Selecione um torneio no Dashboard primeiro');
       return;
     }
 
@@ -184,14 +188,14 @@ function TeamsPage() {
         await loadTeams();
         setIsDetailOpen(false);
         setFormData({ course: '', year: '', gender: '', sport: '' });
-        alert('Time criado com sucesso!');
+        toast.success('Time criado com sucesso!');
       } else {
         const error = await response.json();
-        alert(error.error || 'Erro ao criar time');
+        toast.error(error.error || 'Erro ao criar time');
       }
     } catch (error) {
       console.error('Erro ao criar time:', error);
-      alert('Erro ao criar time');
+      toast.error('Erro ao criar time');
     }
   };
 
@@ -235,7 +239,7 @@ function TeamsPage() {
 
       if (!response.ok) {
         const error = await response.json();
-        alert(error.error || 'Erro ao adicionar jogador');
+        toast.error(error.error || 'Erro ao adicionar jogador');
         return;
       }
 
@@ -246,10 +250,10 @@ function TeamsPage() {
       setNewPlayer({ name: '', numeroCamisa: '', jogadorId: null });
       setShowAddPlayer(false);
 
-      alert('Jogador adicionado com sucesso!');
+      toast.success('Jogador adicionado com sucesso!');
     } catch (error) {
       console.error('Erro ao adicionar jogador:', error);
-      alert('Erro ao adicionar jogador');
+      toast.error('Erro ao adicionar jogador');
     }
   };
 
@@ -287,7 +291,7 @@ function TeamsPage() {
 
       if (!response.ok) {
         const error = await response.json();
-        alert(error.error || 'Erro ao criar jogador');
+        toast.error(error.error || 'Erro ao criar jogador');
         return;
       }
 
@@ -298,16 +302,22 @@ function TeamsPage() {
       setNewPlayerData({ name: '', sala: '', genero: 'Masculino', cursoId: null });
       setShowCreatePlayer(false);
 
-      alert('Jogador criado com sucesso!');
+      toast.success('Jogador criado com sucesso!');
     } catch (error) {
       console.error('Erro ao criar jogador:', error);
-      alert('Erro ao criar jogador');
+      toast.error('Erro ao criar jogador');
     }
   };
 
   // Função para excluir time
   const deleteTeam = async (teamId) => {
-    if (!confirm('Tem certeza que deseja excluir este time? Esta ação não pode ser desfeita.')) {
+    const confirmed = await confirm.danger('Tem certeza que deseja excluir este time? Esta ação não pode ser desfeita.', {
+      title: 'Confirmar Exclusão',
+      confirmText: 'Excluir',
+      cancelText: 'Cancelar'
+    });
+    
+    if (!confirmed) {
       return;
     }
 
@@ -318,16 +328,16 @@ function TeamsPage() {
 
       if (!response.ok) {
         const error = await response.json();
-        alert(error.error || 'Erro ao excluir time');
+        toast.error(error.error || 'Erro ao excluir time');
         return;
       }
 
       await loadTeams();
       setIsDetailOpen(false);
-      alert('Time excluído com sucesso!');
+      toast.success('Time excluído com sucesso!');
     } catch (error) {
       console.error('Erro ao excluir time:', error);
-      alert('Erro ao excluir time');
+      toast.error('Erro ao excluir time');
     }
   };
 
@@ -350,17 +360,17 @@ function TeamsPage() {
 
       if (!response.ok) {
         const error = await response.json();
-        alert(error.error || 'Erro ao editar time');
+        toast.error(error.error || 'Erro ao editar time');
         return;
       }
 
       await loadTeams();
       setIsDetailOpen(false);
       setIsEditing(false);
-      alert('Time editado com sucesso!');
+      toast.success('Time editado com sucesso!');
     } catch (error) {
       console.error('Erro ao editar time:', error);
-      alert('Erro ao editar time');
+      toast.error('Erro ao editar time');
     }
   };
 
@@ -388,11 +398,17 @@ function TeamsPage() {
   // Função para excluir times selecionados
   const deleteSelectedTeams = async () => {
     if (selectedTeamsIds.length === 0) {
-      alert('Selecione pelo menos um time para excluir');
+      toast.warning('Selecione pelo menos um time para excluir');
       return;
     }
 
-    if (!confirm(`Tem certeza que deseja excluir ${selectedTeamsIds.length} time(s) selecionado(s)? Esta ação não pode ser desfeita.`)) {
+    const confirmed = await confirm.danger(`Tem certeza que deseja excluir ${selectedTeamsIds.length} time(s) selecionado(s)? Esta ação não pode ser desfeita.`, {
+      title: 'Confirmar Exclusão em Massa',
+      confirmText: 'Excluir Todos',
+      cancelText: 'Cancelar'
+    });
+    
+    if (!confirmed) {
       return;
     }
 
@@ -408,9 +424,9 @@ function TeamsPage() {
       const failed = results.filter(response => !response.ok);
 
       if (failed.length > 0) {
-        alert(`Erro ao excluir ${failed.length} time(s). Alguns podem ter sido excluídos com sucesso.`);
+        toast.warning(`Erro ao excluir ${failed.length} time(s). Alguns podem ter sido excluídos com sucesso.`);
       } else {
-        alert(`${selectedTeamsIds.length} time(s) excluído(s) com sucesso!`);
+        toast.success(`${selectedTeamsIds.length} time(s) excluído(s) com sucesso!`);
       }
 
       // Recarregar lista e limpar seleção
@@ -418,7 +434,7 @@ function TeamsPage() {
       setSelectedTeamsIds([]);
     } catch (error) {
       console.error('Erro ao excluir times:', error);
-      alert('Erro ao excluir times selecionados');
+      toast.error('Erro ao excluir times selecionados');
     }
   };
 

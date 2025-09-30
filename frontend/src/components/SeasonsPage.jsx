@@ -4,8 +4,12 @@ import { Plus, Calendar, MapPin, Trophy, Users, Clock, ChevronDown, ChevronRight
 import { Modal } from '@/components/Modal';
 import { Button, Input, Select, CardSplat } from '@/components/common';
 import { useTournament } from '@/contexts/TournamentContext';
+import { useToast } from '@/components/Toast';
+import { useConfirm } from '@/components/Confirm';
 
 export const SeasonsPage = () => {
+    const toast = useToast();
+    const confirm = useConfirm();
     const [seasons, setSeasons] = useState([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingSeason, setEditingSeason] = useState(null);
@@ -78,14 +82,14 @@ export const SeasonsPage = () => {
                 // Atualizar também o contexto de torneios
                 await refreshTournaments();
                 closeModal();
-                alert(`Torneio ${editingSeason ? 'editado' : 'criado'} com sucesso!`);
+                toast.success(`Torneio ${editingSeason ? 'editado' : 'criado'} com sucesso!`);
             } else {
                 const error = await response.json();
-                alert(error.error || 'Erro ao salvar torneio');
+                toast.error(error.error || 'Erro ao salvar torneio');
             }
         } catch (error) {
             console.error('Erro ao salvar torneio:', error);
-            alert('Erro ao salvar torneio');
+            toast.error('Erro ao salvar torneio');
         }
     };
 
@@ -142,7 +146,13 @@ export const SeasonsPage = () => {
     };
 
     const handleDelete = async (season) => {
-        if (!confirm(`Tem certeza que deseja excluir o torneio "${season.name}"?`)) {
+        const confirmed = await confirm.danger(`Tem certeza que deseja excluir o torneio "${season.name}"?`, {
+            title: 'Confirmar Exclusão',
+            confirmText: 'Excluir',
+            cancelText: 'Cancelar'
+        });
+        
+        if (!confirmed) {
             return;
         }
 
@@ -155,14 +165,14 @@ export const SeasonsPage = () => {
                 await loadSeasons();
                 // Atualizar também o contexto de torneios
                 await refreshTournaments();
-                alert('Torneio excluído com sucesso!');
+                toast.success('Torneio excluído com sucesso!');
             } else {
                 const error = await response.json();
-                alert(error.error || 'Erro ao excluir torneio');
+                toast.error(error.error || 'Erro ao excluir torneio');
             }
         } catch (error) {
             console.error('Erro ao excluir torneio:', error);
-            alert('Erro ao excluir torneio');
+            toast.error('Erro ao excluir torneio');
         }
     };
 
