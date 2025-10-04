@@ -244,6 +244,15 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEn
   const edicaoTimeARef = useRef(edicaoTimeA);
   const edicaoTimeBRef = useRef(edicaoTimeB);
 
+  // Atualizar refs sempre que os estados mudarem
+  useEffect(() => {
+    edicaoTimeARef.current = edicaoTimeA;
+  }, [edicaoTimeA]);
+
+  useEffect(() => {
+    edicaoTimeBRef.current = edicaoTimeB;
+  }, [edicaoTimeB]);
+
   // Limpar timer quando componente desmontar ou modal fechar
   useEffect(() => {
     return () => {
@@ -284,13 +293,20 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEn
           });
         }
 
-        // CARTÃO: 1 evento combinado por jogador (amarelo + vermelho)
-        if (edicao.yellow > 0 || edicao.red > 0) {
-          // Prioriza vermelho se tiver, senão amarelo
-          const tipoCartao = edicao.red > 0 ? 'CARTAO_VERMELHO' : 'CARTAO_AMARELO';
+        // CARTÕES AMARELOS: múltiplos eventos por jogador
+        for (let i = 0; i < (edicao.yellow || 0); i++) {
           eventosParaSalvar.push({
             jogadorId: edicao.id,
-            tipo: tipoCartao,
+            tipo: 'CARTAO_AMARELO',
+            pontosGerados: 0
+          });
+        }
+
+        // CARTÕES VERMELHOS: múltiplos eventos por jogador
+        for (let i = 0; i < (edicao.red || 0); i++) {
+          eventosParaSalvar.push({
+            jogadorId: edicao.id,
+            tipo: 'CARTAO_VERMELHO',
             pontosGerados: 0
           });
         }
@@ -391,16 +407,19 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEn
           });
         }
         
-        // CARTÕES: 1 evento por jogador (prioriza vermelho)
-        if (edicao.red > 0) {
+        // CARTÕES AMARELOS: múltiplos eventos por jogador
+        for (let i = 0; i < (edicao.yellow || 0); i++) {
           eventosParaSalvar.push({ 
-            tipo: 'CARTAO_VERMELHO', 
+            tipo: 'CARTAO_AMARELO', 
             ponto: 0, 
             jogador: edicao.id 
           });
-        } else if (edicao.yellow > 0) {
+        }
+
+        // CARTÕES VERMELHOS: múltiplos eventos por jogador
+        for (let i = 0; i < (edicao.red || 0); i++) {
           eventosParaSalvar.push({ 
-            tipo: 'CARTAO_AMARELO', 
+            tipo: 'CARTAO_VERMELHO', 
             ponto: 0, 
             jogador: edicao.id 
           });
@@ -587,9 +606,6 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEn
               SÚMULA DE PARTIDA {estaAoVivo && <span className="text-red-500">(AO VIVO)</span>}
             </h1>
             <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">{selectedTournament?.name || 'Torneio Interclasse'}</p>
-            <p className="text-xs text-gray-500 dark:text-gray-500">
-              Data: {new Date().toLocaleDateString('pt-BR')} | Horário: {match.time || '-'} | Local: {match.location || '-'}
-            </p>
           </div>
 
           {carregando ? (
@@ -742,7 +758,6 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEn
 
               <div className="text-center text-xs text-gray-500 border-t pt-4 mt-8">
                 <p>Documento gerado automaticamente pelo Sistema de Gerenciamento de Torneios</p>
-                <p>Gerado em: {new Date().toLocaleString('pt-BR')}</p>
               </div>
             </div>
           )}
