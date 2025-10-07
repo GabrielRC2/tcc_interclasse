@@ -236,7 +236,7 @@ export const Dashboard = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div>
       {/* Seletor de Torneio Global */}
       <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm p-6">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -268,11 +268,11 @@ export const Dashboard = () => {
 
       {selectedTournament && (
         <>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mt-6">
             Dashboard - {selectedTournament.name}
           </h1>
 
-          <div className="space-y-8">
+          <div className="mt-6">
             {/* PARTIDAS ATUAIS (próximas partidas do banco de dados) */}
             <div>
               <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">PARTIDAS ATUAIS</h2>
@@ -305,7 +305,7 @@ export const Dashboard = () => {
             </div>
 
             {/* JOGADORES EM DESTAQUE (dados reais do banco) */}
-            <div>
+            <div className="mt-8">
               <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">JOGADORES(AS) EM DESTAQUE</h2>
               <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm p-6">
                 {carregandoJogadores ? (
@@ -413,7 +413,7 @@ export const Dashboard = () => {
             </div>
 
             {/* SEÇÃO: PARTIDAS AGENDADAS */}
-            <div>
+            <div className="mt-8">
               <div
                 className="flex items-center justify-between mb-4 cursor-pointer p-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm hover:shadow-md transition-shadow"
                 onClick={() => setSecaoAgendadasExpandida(!secaoAgendadasExpandida)}
@@ -544,7 +544,7 @@ export const Dashboard = () => {
             </div>
 
             {/* SEÇÃO: PARTIDAS FINALIZADAS (SÚMULAS) */}
-            <div>
+            <div className="mt-8">
               <div
                 className="flex items-center justify-between mb-4 cursor-pointer p-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm hover:shadow-md transition-shadow"
                 onClick={() => setSecaoFinalizadasExpandida(!secaoFinalizadasExpandida)}
