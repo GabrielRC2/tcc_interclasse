@@ -29,6 +29,11 @@ export const Dashboard = () => {
   const [partidasFinalizadas, setPartidasFinalizadas] = useState([]);
   const [carregandoFinalizadas, setCarregandoFinalizadas] = useState(false);
 
+  // Estados para partidas em andamento
+  const [partidasEmAndamento, setPartidasEmAndamento] = useState([]);
+  const [carregandoAndamento, setCarregandoAndamento] = useState(false);
+  const [ultimaAtualizacao, setUltimaAtualizacao] = useState(null);
+
   // Estados para controlar seções expandidas/minimizadas
   const [secaoAgendadasExpandida, setSecaoAgendadasExpandida] = useState(false);
   const [secaoFinalizadasExpandida, setSecaoFinalizadasExpandida] = useState(false);
@@ -53,12 +58,14 @@ export const Dashboard = () => {
     if (selectedTournament) {
       carregarProximasPartidas();
       carregarJogadoresDestaque();
+      carregarPartidasEmAndamento();
       carregarOpcoesFiltragem();
     } else {
       setProximasPartidas([]);
       setJogadoresDestaque({});
       setPartidasFinalizadas([]);
       setPartidasAgendadas([]);
+      setPartidasEmAndamento([]);
       setModalidades([]);
       setLocais([]);
     }
