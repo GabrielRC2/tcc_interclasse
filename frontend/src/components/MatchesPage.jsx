@@ -198,11 +198,11 @@ export const MatchesPage = () => {
       const data = await response.json();
 
       setModalidadesDisponiveis(data.modalidades);
-
-      // Configuração padrão
+      
+      // Configuração padrão baseada nos locais padrão do banco
       const configPadrao = {};
       data.modalidades.forEach(modalidade => {
-        configPadrao[modalidade.nome] = modalidade.localPadrao;
+          configPadrao[modalidade.nome] = modalidade.localAtual || '';
       });
       setConfiguracaoLocais(configPadrao);
       console.log('📍 Configuração de locais carregada:', configPadrao);
@@ -596,18 +596,19 @@ export const MatchesPage = () => {
   // Função para determinar a próxima ação do torneio
   const proximaAcao = (() => {
     if (!selectedTournament) return '';
-
-    // Se não há partidas, pode gerar grupos ou eliminatórias
+    
+    // Se não há partidas em todo o torneio, pode gerar grupos
     if (!partidas.length) {
       return 'GERAR_GRUPOS';
     }
-
-    // Verificar se há partidas de grupos pendentes
+    
+    // Verificar se há partidas de grupos
     const partidasGrupos = partidas.filter(p => p.fase === 'Grupos' || p.fase === 'Fase de Grupos' || !p.fase);
-    const partidasGruposPendentes = partidasGrupos.filter(p => p.status !== 'FINALIZADA');
-
-    if (partidasGruposPendentes.length > 0) {
-      return 'AGUARDAR_GRUPOS';
+    
+    // Se já existem partidas de grupos, verificar se todas estão finalizadas para possivelmente gerar eliminatórias
+    if (partidasGrupos.length > 0) {
+      const todasPartidasGruposFinalizadas = partidasGrupos.every(p => p.status === 'FINALIZADA');
+      return todasPartidasGruposFinalizadas ? 'GERAR_ELIMINATORIAS' : '';
     }
 
     // Verificar se já existem eliminatórias
@@ -714,7 +715,9 @@ export const MatchesPage = () => {
     } finally {
       setGenerating(false);
     }
-  }; if (carregando) {
+  };
+
+  if (carregando) {
     return <div className="flex justify-center items-center h-64 text-gray-600 dark:text-gray-400">Carregando...</div>;
   }
 
@@ -956,54 +959,87 @@ export const MatchesPage = () => {
             />
           )}
 
-          <Modal
-            isOpen={showConfigModal}
-            onClose={() => setShowConfigModal(false)}
-            title="Configurar Locais por Modalidade"
-            size="max-w-md"
-          >
-            <div className="space-y-4">
-              <div className="space-y-4">
-                {modalidadesDisponiveis.map(modalidade => (
-                  <div key={modalidade.id}>
-                    <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">
-                      {modalidade.nome}
-                    </label>
-                    <select
-                      className="w-full p-2 border rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600"
-                      value={configuracaoLocais[modalidade.nome] || modalidade.localPadrao}
-                      onChange={(e) => setConfiguracaoLocais(prev => ({
-                        ...prev,
-                        [modalidade.nome]: e.target.value
-                      }))}
-                    >
-                      <option value="Quadra de Baixo">Quadra de Baixo</option>
-                      <option value="Quadra de Cima">Quadra de Cima</option>
-                    </select>
-                  </div>
-                ))}
-              </div>
+          {showConfigModal && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+              <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md">
+                <h3 className="text-lg font-bold mb-4 text-gray-900 dark:text-gray-100">Configurar Locais por Modalidade</h3>
+                
+                <div className="space-y-4">
+                  {modalidadesDisponiveis.map(modalidade => (
+                    <div key={modalidade.id} className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
+                      <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
+                        {modalidade.nome}
+                        <span className="text-xs text-gray-500 dark:text-gray-400 ml-2">
+                          ({modalidade.categorias?.length || 0} categorias)
+                        </span>
+                      </label>
+                      <select 
+                        className="w-full p-2 border rounded bg-white dark:bg-gray-600 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-500"
+                        value={configuracaoLocais[modalidade.nome] || ''}
+                        onChange={(e) => setConfiguracaoLocais(prev => ({
+                            ...prev,
+                            [modalidade.nome]: e.target.value
+                        }))}
+                      >
+                        <option value="">Selecione um local</option>
+                        {modalidade.locaisDisponiveis?.map(local => (
+                          <option key={local} value={local}>
+                            {local} {local === modalidade.localAtual ? '(Local atual)' : ''}
+                          </option>
+                        ))}
+                      </select>
+                      {configuracaoLocais[modalidade.nome] && modalidade.localAtual && 
+                        configuracaoLocais[modalidade.nome] !== modalidade.localAtual && (
+                        <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                          Alterando de {modalidade.localAtual} para {configuracaoLocais[modalidade.nome]}
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
 
-              <div className="flex gap-2">
-                <Button
-                  onClick={() => setShowConfigModal(false)}
-                  variant="outline"
-                  className="flex-1"
-                >
-                  Cancelar
-                </Button>
-                <Button
-                  onClick={() => {
-                    setShowConfigModal(false);
-                    // Salvar configurações se necessário
-                  }}
-                  className="flex-1"
-                >
-                  Salvar
-                </Button>
+                <div className="flex gap-2 mt-6">
+                  <Button 
+                    onClick={() => setShowConfigModal(false)}
+                    variant="outline"
+                    className="flex-1"
+                  >
+                    Cancelar
+                  </Button>
+                  <Button 
+                    onClick={async () => {
+                      try {
+                        const configuracoes = Object.entries(configuracaoLocais).map(([modalidade, local]) => ({
+                          modalidade,
+                          local
+                        })).filter(config => config.local); // Remove empty selections
+                        
+                        const response = await fetch('/api/modalidades-locais', {
+                          method: 'POST',
+                          headers: {
+                            'Content-Type': 'application/json',
+                          },
+                          body: JSON.stringify({ configuracoes }),
+                        });
+
+                        if (!response.ok) throw new Error('Falha ao salvar configurações');
+                        
+                        // Recarregar configurações após salvar
+                        await loadConfiguracaoLocais();
+                        setShowConfigModal(false);
+                      } catch (error) {
+                        console.error('Erro ao salvar configurações:', error);
+                        alert('Erro ao salvar configurações. Tente novamente.');
+                      }
+                    }}
+                    className="flex-1"
+                  >
+                    Salvar
+                  </Button>
+                </div>
               </div>
             </div>
-          </Modal>
+          )}
         </>
       )}
     </div>

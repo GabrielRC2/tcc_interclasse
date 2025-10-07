@@ -209,13 +209,108 @@ export const Dashboard = () => {
     }
   };
 
-  // quando a súmula for enviada a partir do modal, recarrega as listas
+  // busca partidas em andamento
+  const carregarPartidasEmAndamento = async () => {
+    if (!selectedTournament) return;
+    setCarregandoAndamento(true);
+    try {
+      const res = await fetch(`/api/partidas?torneioId=${selectedTournament.id}`);
+      const data = res.ok ? await res.json() : [];
+      // filtrar por status em andamento
+      const emAndamento = (data || []).filter(p => {
+        const s = (p.status || '').toLowerCase();
+        return s === 'em andamento' || s === 'andamento' || s === 'jogando' || s === 'iniciada';
+      });
+      
+      // Para cada partida em andamento, carregar os eventos/pontuação
+      const partidasComPontuacao = await Promise.all(
+        emAndamento.map(async (partida) => {
+          try {
+            const eventosRes = await fetch(`/api/partidas/${partida.id}/eventos`);
+            const eventos = eventosRes.ok ? await eventosRes.json() : [];
+            
+            // Debug: log dos eventos para verificar estrutura
+            console.log(`Eventos da partida ${partida.id}:`, eventos);
+            console.log(`Team1ID: ${partida.team1Id}, Team2ID: ${partida.team2Id}`);
+            
+            // Calcular pontuação por time baseado nos eventos
+            const eventosTime1 = eventos.filter(evento => {
+              // Verificar se o jogador pertence ao time 1
+              const pertenceTime1 = evento.jogador?.times?.some(timeJogador => timeJogador.timeId === partida.team1Id);
+              const ehGol = evento.tipo === 'GOL';
+              console.log(`Evento ${evento.id}: Jogador ${evento.jogador?.nome}, Times: ${evento.jogador?.times?.map(t => t.timeId)}, Pertence Time1: ${pertenceTime1}, É Gol: ${ehGol}, Pontos: ${evento.pontosGerados}`);
+              return pertenceTime1 && ehGol;
+            });
+            
+            const eventosTime2 = eventos.filter(evento => {
+              // Verificar se o jogador pertence ao time 2
+              const pertenceTime2 = evento.jogador?.times?.some(timeJogador => timeJogador.timeId === partida.team2Id);
+              const ehGol = evento.tipo === 'GOL';
+              return pertenceTime2 && ehGol;
+            });
+            
+            const pontuacaoTime1 = eventosTime1.reduce((total, evento) => total + (evento.pontosGerados || 0), 0);
+            const pontuacaoTime2 = eventosTime2.reduce((total, evento) => total + (evento.pontosGerados || 0), 0);
+            
+            console.log(`Pontuação calculada - Time1: ${pontuacaoTime1}, Time2: ${pontuacaoTime2}`);
+
+            return {
+              ...partida,
+              pontuacaoTime1,
+              pontuacaoTime2,
+              eventos
+            };
+          } catch (err) {
+            console.error(`Erro ao carregar eventos da partida ${partida.id}:`, err);
+            return {
+              ...partida,
+              pontuacaoTime1: 0,
+              pontuacaoTime2: 0,
+              eventos: []
+            };
+          }
+        })
+      );
+      
+      setPartidasEmAndamento(partidasComPontuacao);
+      setUltimaAtualizacao(new Date());
+    } catch (err) {
+      console.error('Erro ao carregar partidas em andamento:', err);
+      setPartidasEmAndamento([]);
+    } finally {
+      setCarregandoAndamento(false);
+    }
+  };
+
+  // useEffect para atualizar partidas em andamento em tempo real
+  useEffect(() => {
+    if (!selectedTournament) return;
+
+    // Atualizar imediatamente se há partidas em andamento
+    if (partidasEmAndamento.length > 0) {
+      const interval = setInterval(() => {
+        carregarPartidasEmAndamento();
+      }, 3000); // Atualizar a cada 3 segundos para partidas em andamento
+
+      return () => clearInterval(interval);
+    } else {
+      // Se não há partidas em andamento, verificar menos frequentemente
+      const interval = setInterval(() => {
+        carregarPartidasEmAndamento();
+      }, 15000); // Atualizar a cada 15 segundos para verificar novas partidas
+
+      return () => clearInterval(interval);
+    }
+  }, [selectedTournament, partidasEmAndamento.length]);
+
+  // quando a súmula for enviada a partir do modal, recarrega as finalizadas e próximas
   const tratarSumulaEnviada = async (partidaId) => {
     // recarregar listas (a súmula acabou de ser criada e a partida deve aparecer como finalizada)
     if (secaoFinalizadasExpandida) await carregarPartidasFinalizadas();
     if (secaoAgendadasExpandida) await carregarPartidasAgendadas();
     await carregarProximasPartidas(); // Atualizar próximas partidas também
     await carregarJogadoresDestaque(); // Atualizar jogadores em destaque
+    await carregarPartidasEmAndamento(); // Atualizar partidas em andamento
   };
 
   // funções para limpar filtros
@@ -273,23 +368,47 @@ export const Dashboard = () => {
           </h1>
 
           <div className="space-y-8">
-            {/* PARTIDAS ATUAIS (próximas partidas do banco de dados) */}
+            {/* PARTIDAS ATUAIS (partidas em andamento com pontuação em tempo real) */}
             <div>
-              <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">PARTIDAS ATUAIS</h2>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">PARTIDAS ATUAIS</h2>
+                {ultimaAtualizacao && partidasEmAndamento.length > 0 && (
+                  <div className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-2">
+                    <div className={`w-2 h-2 rounded-full ${carregandoAndamento ? 'bg-yellow-500 animate-pulse' : 'bg-green-500'}`}></div>
+                    <span>Última atualização: {ultimaAtualizacao.toLocaleTimeString()}</span>
+                  </div>
+                )}
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {carregandoProximas ? (
-                  <div className="col-span-2 text-center py-8 text-gray-600 dark:text-gray-400">Carregando próximas partidas...</div>
-                ) : proximasPartidas.length === 0 ? (
-                  <div className="col-span-2 text-center py-8 text-gray-500 dark:text-gray-400">Nenhuma partida agendada encontrada.</div>
+                {carregandoAndamento ? (
+                  <div className="col-span-2 text-center py-8">Carregando partidas em andamento...</div>
+                ) : partidasEmAndamento.length === 0 ? (
+                  <div className="col-span-2 text-center py-8 text-gray-500">
+                    Nenhuma partida em andamento no momento.
+                    <br />
+                    <span className="text-xs text-gray-400">As partidas aparecerão aqui quando iniciadas</span>
+                  </div>
                 ) : (
-                  proximasPartidas.slice(0, 2).map((match) => (
+                  partidasEmAndamento.slice(0, 2).map((match) => (
                     <div key={match.id} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm p-4 relative overflow-hidden">
                       <div className="relative z-10">
                         <div className="flex items-center justify-between mb-2">
-                          <p className="text-sm text-red-600 dark:text-red-400 font-semibold uppercase">PRÓXIMA</p>
+                          <p className="text-sm text-green-600 dark:text-green-400 font-semibold uppercase flex items-center gap-2">
+                            <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                            AO VIVO
+                          </p>
+                          <div className="text-xs text-gray-500 dark:text-gray-400">
+                            Atualizado em tempo real
+                          </div>
                         </div>
                         <p className="text-2xl font-bold my-2 text-gray-900 dark:text-gray-100">{match.team1} VS {match.team2}</p>
-                        <p className="text-xl font-bold text-red-600 dark:text-red-400 mb-2">{match.result}</p>
+                        <div className="text-3xl font-bold text-green-600 dark:text-green-400 mb-2 text-center">
+                          {match.pontuacaoTime1 || 0} - {match.pontuacaoTime2 || 0}
+                        </div>
+                        {/* Debug: mostrar número de eventos encontrados */}
+                        <div className="text-xs text-gray-400 text-center mb-2">
+                          {match.eventos?.length || 0} eventos • Team1ID: {match.team1Id} • Team2ID: {match.team2Id}
+                        </div>
                         <div className="space-y-1">
                           <p className="text-sm text-gray-600 dark:text-gray-300">Esporte: {match.modality}</p>
                           <p className="text-sm text-gray-600 dark:text-gray-300">Modalidade: {match.category}</p>
@@ -302,6 +421,32 @@ export const Dashboard = () => {
                   ))
                 )}
               </div>
+              
+              {/* Mostrar próximas partidas abaixo se não houver partidas em andamento */}
+              {partidasEmAndamento.length === 0 && proximasPartidas.length > 0 && (
+                <>
+                  <h3 className="text-lg font-medium text-gray-700 dark:text-gray-300 mt-6 mb-4">Próximas Partidas</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {proximasPartidas.slice(0, 2).map((match) => (
+                      <div key={match.id} className="bg-gray-50 dark:bg-gray-750 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm p-4 relative overflow-hidden opacity-75">
+                        <div className="relative z-10">
+                          <div className="flex items-center justify-between mb-2">
+                            <p className="text-sm text-blue-600 dark:text-blue-400 font-semibold uppercase">PRÓXIMA</p>
+                          </div>
+                          <p className="text-xl font-bold my-2 text-gray-700 dark:text-gray-300">{match.team1} VS {match.team2}</p>
+                          <p className="text-lg font-bold text-blue-600 dark:text-blue-400 mb-2">{match.result || 'Aguardando'}</p>
+                          <div className="space-y-1">
+                            <p className="text-sm text-gray-600 dark:text-gray-400">Esporte: {match.modality}</p>
+                            <p className="text-sm text-gray-600 dark:text-gray-400">Modalidade: {match.category}</p>
+                            <p className="text-sm text-gray-600 dark:text-gray-400">Local: {match.location}</p>
+                            {match.fase && <p className="text-sm text-gray-600 dark:text-gray-400">Fase: {match.fase}</p>}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
             </div>
 
             {/* JOGADORES EM DESTAQUE (dados reais do banco) */}
