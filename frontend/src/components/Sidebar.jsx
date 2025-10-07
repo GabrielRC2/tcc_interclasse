@@ -146,20 +146,6 @@ export const Sidebar = ({
                           </>
                         )}
 
-                        {/* Tournament Selector Button */}
-                        {selectedTournament && onTournamentSelectorClick && (
-                          <button 
-                            onClick={onTournamentSelectorClick}
-                            className={`flex items-center w-full p-2 mt-2 rounded-md text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-800 ${!isSidebarOpen && 'justify-center'}`}
-                          >
-                            <div className={`flex items-center ${isSidebarOpen ? '' : 'justify-center w-full'}`}>
-                              <Calendar size={20} />
-                              <span className={`ml-3 font-medium transition-all duration-200 whitespace-nowrap ${isSidebarOpen ? 'opacity-100 w-auto' : 'opacity-0 w-0 absolute'}`}>
-                                {selectedTournament?.nome || 'Selecionar Torneio'}
-                              </span>
-                            </div>
-                          </button>
-                        )}
                     </ul >
                 </nav >
     <div className="p-2 border-t border-gray-200 dark:border-gray-700 flex-shrink-0">

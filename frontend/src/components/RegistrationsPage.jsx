@@ -2,19 +2,9 @@
 import React, { useState, useEffect } from 'react';
 import { Trash2 } from 'lucide-react';
 import { Modal } from '@/components/Modal';
-import { Button, Input, Select, CardSplat } from '@/components/common';
+import { Button, Input, Select, Textarea, CardSplat } from '@/components/common';
 import { useToast } from '@/components/Toast';
 import { useConfirm } from '@/components/Confirm';
-
-export const RegistrationsPage = () => {
-    const toast = useToast();
-    const confirm = useConfirm();
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const [editingItem, setEditingItem] = useState(null);
-    const [category, setCategory] = useState('');
-
-import { Button, Input, Select, Textarea, CardSplat } from '@/components/common';
-// import { TournamentContext } from '@/contexts/TournamentContext';
 
 export const RegistrationsPage = () => {
     // Estados de controle

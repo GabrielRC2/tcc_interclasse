@@ -12,7 +12,7 @@ import { BracketsPage } from '@/components/BracketsPage';
 import { MatchesPage } from '@/components/MatchesPage';
 import { GroupsPage } from '@/components/GroupsPage';
 import { TournamentSelector } from '@/components/TournamentSelector';
-import { TournamentProvider, useTournament } from '@/contexts/TournamentContext';
+import { useTournament } from '@/contexts/TournamentContext';
 
 // Função utilitária centralizada para verificar permissões
 const checkUserAccess = (userType, pageName) => {
@@ -65,8 +65,14 @@ function AppContent() {
 
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
-  if (!isLoggedIn) {
-    return <LoginPage onLogin={() => setIsLoggedIn(true)} />;
+  // Show loading while checking session
+  if (status === "loading") {
+    return <div className="flex items-center justify-center min-h-screen">Carregando...</div>;
+  }
+
+  // Show login page if not authenticated
+  if (status === "unauthenticated" || !session) {
+    return <LoginPage onLogin={() => window.location.reload()} />;
   }
 
   // Verifica se o usuário tem permissão para acessar a página usando função centralizada
@@ -164,9 +170,5 @@ function AppContent() {
 }
 
 export default function Home() {
-  return (
-    <TournamentProvider>
-      <AppContent />
-    </TournamentProvider>
-  );
+  return <AppContent />;
 }
