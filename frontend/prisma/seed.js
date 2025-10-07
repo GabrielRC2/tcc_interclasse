@@ -1,4 +1,3 @@
-
 const { PrismaClient } = require('@prisma/client');
 
 const prisma = new PrismaClient();
@@ -23,24 +22,24 @@ async function main() {
 
   // 1. Limpeza do banco de dados
   console.log('Limpando dados antigos...');
-  await prisma.timeJogador.deleteMany({});
-  await prisma.partidaTime.deleteMany({});
-  await prisma.eventoPartida.deleteMany({});
-  await prisma.partida.deleteMany({});
-  await prisma.grupoTime.deleteMany({});
-  await prisma.grupo.deleteMany({});
-  await prisma.time.deleteMany({});
-  await prisma.torneioModalidade.deleteMany({});
-  await prisma.categoria.deleteMany({});
-  await prisma.jogador.deleteMany({});
-  await prisma.local.deleteMany({});
-  await prisma.curso.deleteMany({});
-  await prisma.modalidade.deleteMany({});
-  await prisma.torneio.deleteMany({});
+  await prisma.TimeJogador.deleteMany({});
+  await prisma.PartidaTime.deleteMany({});
+  await prisma.EventoPartida.deleteMany({});
+  await prisma.Partida.deleteMany({});
+  await prisma.GrupoTime.deleteMany({});
+  await prisma.Grupo.deleteMany({});
+  await prisma.Time.deleteMany({});
+  await prisma.TorneioModalidade.deleteMany({});
+  await prisma.Categoria.deleteMany({});
+  await prisma.Jogador.deleteMany({});
+  await prisma.Local.deleteMany({});
+  await prisma.Curso.deleteMany({});
+  await prisma.Modalidade.deleteMany({});
+  await prisma.Torneio.deleteMany({});
   
   // 2. Inserir Locais
   console.log('Criando Locais...');
-  await prisma.local.createMany({
+  await prisma.Local.createMany({
     data: [
         { nome: 'Quadra de Cima' },
         { nome: 'Quadra de Baixo' },
@@ -49,7 +48,7 @@ async function main() {
 
   // 3. Inserir Cursos
   console.log('Criando Cursos...');
-  await prisma.curso.createMany({
+  await prisma.Curso.createMany({
     data: [
       { nome: 'Desenvolvimento de Sistemas', sigla: 'DS' },
       { nome: 'Eletrônica', sigla: 'ETEL' },
@@ -60,25 +59,25 @@ async function main() {
       { nome: 'Administração', sigla: 'ADA' },
     ],
   });
-  const cursos = await prisma.curso.findMany();
+  const cursos = await prisma.Curso.findMany();
 
   // 4. Inserir Modalidades
   console.log('Criando Modalidades...');
-  await prisma.modalidade.createMany({
+  await prisma.Modalidade.createMany({
     data: [{ nome: 'Futsal' }, { nome: 'Vôlei' }, { nome: 'Basquete' }, { nome: 'Handebol' }],
   });
-  const modalidades = await prisma.modalidade.findMany();
+  const modalidades = await prisma.Modalidade.findMany();
 
   // 5. Inserir Torneios
   console.log('Criando Torneios...');
-  await prisma.torneio.createMany({
+  await prisma.Torneio.createMany({
     data: [
       { nome: 'Meio do Ano 2024', status: 'EM ANDAMENTO', inicio: new Date('2024-05-15T08:00:00'), fim: new Date('2024-06-15T18:00:00') },
       { nome: 'Fim de Ano 2024', status: 'PLANEJAMENTO', inicio: new Date('2024-11-10T08:00:00'), fim: new Date('2024-12-10T18:00:00') },
 
     ],
   });
-  const torneioPrincipal = await prisma.torneio.findFirst({ where: { nome: 'Meio do Ano 2024' }});
+  const torneioPrincipal = await prisma.Torneio.findFirst({ where: { nome: 'Meio do Ano 2024' }});
   if (!torneioPrincipal) throw new Error("Torneio principal não encontrado!");
 
   // 6. Inserir Categorias
@@ -87,7 +86,7 @@ async function main() {
   const handebol = modalidades.find(m => m.nome === 'Handebol');
   if (!volei || !handebol) throw new Error("Modalidades de Vôlei ou Handebol não encontradas!");
 
-  await prisma.categoria.createMany({
+  await prisma.Categoria.createMany({
     data: [
       { nome: 'Vôlei Masculino', genero: 'Masculino', modalidadeId: volei.id },
       { nome: 'Vôlei Feminino', genero: 'Feminino', modalidadeId: volei.id },
@@ -95,7 +94,7 @@ async function main() {
       { nome: 'Handebol Feminino', genero: 'Feminino', modalidadeId: handebol.id },
     ],
   });
-  const categorias = await prisma.categoria.findMany();
+  const categorias = await prisma.Categoria.findMany();
   
   // 7. Geração de Jogadores com Nomes Realistas
   console.log('Gerando jogadores com nomes realistas...');
@@ -127,8 +126,8 @@ async function main() {
       }
     }
   }
-  await prisma.jogador.createMany({ data: todosJogadoresParaCriar });
-  const jogadoresDoBanco = await prisma.jogador.findMany();
+  await prisma.Jogador.createMany({ data: todosJogadoresParaCriar });
+  const jogadoresDoBanco = await prisma.Jogador.findMany();
 
   // 8. Geração de Times e associação de jogadores
   console.log('Criando times e associando jogadores...');
@@ -147,8 +146,8 @@ async function main() {
           }
       }
   }
-  await prisma.time.createMany({ data: timesParaCriar });
-  const timesDoBanco = await prisma.time.findMany({ include: { categoria: true } });
+  await prisma.Time.createMany({ data: timesParaCriar });
+  const timesDoBanco = await prisma.Time.findMany({ include: { categoria: true } });
 
   let escalacoes = [];
   for (const time of timesDoBanco) {
@@ -170,7 +169,7 @@ async function main() {
     }
   }
 
-  await prisma.timeJogador.createMany({ data: escalacoes });
+  await prisma.TimeJogador.createMany({ data: escalacoes });
 
   console.log('Seeding concluído com sucesso!');
 }

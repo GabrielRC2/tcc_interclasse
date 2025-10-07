@@ -64,9 +64,13 @@ export const TournamentProvider = ({ children }) => {
             localStorage.setItem('selectedTournament', JSON.stringify(updatedSelectedTournament));
           }
         }
+      } else {
+        console.error('Erro na resposta da API:', response.status);
+        setTournaments([]);
       }
     } catch (error) {
       console.error('Erro ao carregar torneios:', error);
+      setTournaments([]); // Garantir que seja sempre um array
     } finally {
       setLoading(false);
     }
@@ -74,14 +78,35 @@ export const TournamentProvider = ({ children }) => {
 
   const selectTournament = (tournament) => {
     setSelectedTournament(tournament);
-    localStorage.setItem('selectedTournament', JSON.stringify(tournament));
+    
+    // Só armazena no localStorage se o torneio for válido
+    if (tournament && typeof tournament === 'object') {
+      try {
+        localStorage.setItem('selectedTournament', JSON.stringify(tournament));
+      } catch (error) {
+        console.error('Erro ao salvar torneio no localStorage:', error);
+      }
+    } else {
+      // Remove do localStorage se o torneio for null/undefined
+      localStorage.removeItem('selectedTournament');
+    }
   };
 
-  // Recuperar torneio do localStorage
+  // Recuperar torneio do localStorage com validação
   useEffect(() => {
     const saved = localStorage.getItem('selectedTournament');
-    if (saved) {
-      setSelectedTournament(JSON.parse(saved));
+    if (saved && saved !== 'undefined' && saved !== 'null') {
+      try {
+        const parsedTournament = JSON.parse(saved);
+        // Verifica se o objeto parseado é válido (não é null ou undefined)
+        if (parsedTournament && typeof parsedTournament === 'object') {
+          setSelectedTournament(parsedTournament);
+        }
+      } catch (error) {
+        console.error('Erro ao fazer parse do torneio salvo:', error);
+        // Remove item inválido do localStorage
+        localStorage.removeItem('selectedTournament');
+      }
     }
   }, []);
 

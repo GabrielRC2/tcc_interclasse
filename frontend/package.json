@@ -2,22 +2,18 @@
   "name": "icm-telas",
   "version": "0.1.0",
   "private": true,
-  "prisma": {
-    "seed": "node prisma/seed.js"
-  },
   "scripts": {
-    "dev": "next dev --turbopack",
+    "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
-    "db:seed": "prisma db seed"
+    "lint": "next lint"
   },
   "dependencies": {
     "@prisma/client": "^6.16.3",
     "@react-pdf/renderer": "^4.3.0",
     "bcryptjs": "^3.0.2",
     "lucide-react": "^0.525.0",
-    "next": "15.3.4",
+    "next": "14.0.3",
     "next-auth": "^4.24.11",
     "node-fetch": "^3.3.2",
     "react": "^19.0.0",

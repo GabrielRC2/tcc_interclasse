@@ -39,6 +39,9 @@ export async function POST(request) {
     const locais = await prisma.local.findMany();
     const localMap = {};
     locais.forEach(local => localMap[local.nome] = local.id);
+    
+    console.log('🏟️ Locais cadastrados no banco de dados:', locais.map(l => l.nome));
+    console.log('🗺️ LocalMap criado:', localMap);
 
     // 3. Limpar partidas existentes
     await prisma.partidaTime.deleteMany({
@@ -80,18 +83,24 @@ export async function POST(request) {
     for (let i = 0; i < partidasOtimizadas.length; i++) {
       const partida = partidasOtimizadas[i];
       
-      // Verificação de segurança para garantir que o localId não é nulo/undefined
-      if (!partida.localId) {
-        throw new Error(`Partida para a modalidade ${partida.modalidade} não pôde ser associada a um local válido.`);
+      // Garantir que localId seja válido
+      let localIdFinal = partida.localId;
+      if (!localIdFinal) {
+        console.warn(`⚠️ Partida ${i+1} sem localId válido. Usando primeiro local disponível.`);
+        const primeiroLocal = locais[0];
+        localIdFinal = primeiroLocal?.id;
+        if (!localIdFinal) {
+          throw new Error('Nenhum local disponível no sistema');
+        }
       }
-
+      
       // Criar partida
       const novaPartida = await prisma.partida.create({
         data: {
           dataHora: new Date(Date.now() + (partida.slot * 30 * 60 * 1000)), // Slots de 30min
           statusPartida: 'AGENDADA',
           grupoId: partida.grupoId,
-          localId: partida.localId,
+          localId: localIdFinal,
           torneioId: parseInt(torneioId),
           modalidadeId: partida.modalidadeId,
           genero: partida.genero,
@@ -296,8 +305,15 @@ function otimizarPartidasGlobalmente(partidas, configuracaoLocais, localMap) {
 
     // Configurar locais para as partidas
     if (primeiraPartida) {
-      const { localId: localId1, localNome: localNome1 } = obterLocalParaModalidade(primeiraPartida.modalidade, configuracaoLocais, localMap);
-
+      const localNome1 = obterLocalParaModalidade(primeiraPartida.modalidade, configuracaoLocais, localMap);
+      const localId1 = localMap[localNome1];
+      
+      console.log(`🎯 Modalidade: ${primeiraPartida.modalidade} -> Local: ${localNome1} -> ID: ${localId1}`);
+      
+      if (!localId1) {
+        console.error(`❌ LocalId não encontrado para local: "${localNome1}"`);
+        console.error(`📋 Locais disponíveis no mapa:`, Object.keys(localMap));
+      }
       
       slot.partidas.push({
         ...primeiraPartida,
@@ -627,6 +643,19 @@ function obterLocalParaModalidade(modalidade, configuracaoLocais, localMap, loca
     'Basquete': 'Quadra de Baixo',
     'Futsal': 'Quadra de Cima'
   };
-  const localPadrao = configuracaoPadrao[modalidade] || Object.keys(localMap)[0]; // Pega o primeiro local disponível se não houver padrão
-  return { localId: localMap[localPadrao], localNome: localPadrao };
+  
+  let localDesejado = configuracaoLocais?.[modalidade] || configuracaoPadrao[modalidade] || 'Quadra de Baixo';
+  
+  // Verificar se o local existe no mapa
+  if (localMap && !localMap[localDesejado]) {
+    console.warn(`⚠️ Local "${localDesejado}" não encontrado no banco. Usando primeiro local disponível.`);
+    // Usar o primeiro local disponível
+    const locaisDisponiveis = Object.keys(localMap);
+    if (locaisDisponiveis.length > 0) {
+      localDesejado = locaisDisponiveis[0];
+      console.log(`✅ Usando local alternativo: "${localDesejado}"`);
+    }
+  }
+  
+  return localDesejado;
 }
