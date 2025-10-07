@@ -233,7 +233,7 @@ function TeamsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           jogadorId: newPlayer.jogadorId,
-          numeroCamisa: newPlayer.numeroCamisa
+          numero: newPlayer.numeroCamisa ? parseInt(newPlayer.numeroCamisa) : null
         })
       });
 
@@ -243,8 +243,21 @@ function TeamsPage() {
         return;
       }
 
-      // Recarregar dados do time
-      await loadTeams();
+      const novoJogador = await response.json();
+
+      // Atualizar estados localmente para resposta instantânea
+      setSelectedTeam(prevTeam => ({
+        ...prevTeam,
+        players: [...(prevTeam.players || []), novoJogador]
+      }));
+
+      setTeams(prevTeams => 
+        prevTeams.map(team => 
+          team.id === selectedTeam.id 
+            ? { ...team, players: [...(team.players || []), novoJogador] }
+            : team
+        )
+      );
 
       // Limpar formulário e fechar modal
       setNewPlayer({ name: '', numeroCamisa: '', jogadorId: null });
@@ -331,8 +344,29 @@ function TeamsPage() {
         return;
       }
 
-      // Recarregar dados do time
-      await reloadSelectedTeam();
+      const jogadorAtualizado = await response.json();
+
+      // Atualizar estados localmente para resposta instantânea
+      setSelectedTeam(prevTeam => ({
+        ...prevTeam,
+        players: (prevTeam.players || []).map(player => 
+          player.id === editingPlayer.id ? jogadorAtualizado : player
+        )
+      }));
+
+      setTeams(prevTeams => 
+        prevTeams.map(team => 
+          team.id === selectedTeam.id 
+            ? { 
+                ...team, 
+                players: (team.players || []).map(player => 
+                  player.id === editingPlayer.id ? jogadorAtualizado : player
+                )
+              }
+            : team
+        )
+      );
+
       setShowEditPlayer(false);
       setEditingPlayer(null);
 
@@ -356,8 +390,22 @@ function TeamsPage() {
         return;
       }
 
-      // Recarregar dados do time
-      await reloadSelectedTeam();
+      // Atualizar estados localmente para resposta instantânea
+      setSelectedTeam(prevTeam => ({
+        ...prevTeam,
+        players: (prevTeam.players || []).filter(player => player.id !== playerId)
+      }));
+
+      setTeams(prevTeams => 
+        prevTeams.map(team => 
+          team.id === selectedTeam.id 
+            ? { 
+                ...team, 
+                players: (team.players || []).filter(player => player.id !== playerId)
+              }
+            : team
+        )
+      );
 
       toast.success('Jogador excluído com sucesso!');
     } catch (error) {
@@ -436,6 +484,7 @@ function TeamsPage() {
 
   // Estados para menu de 3 pontinhos e edição de jogadores
   const [openDropdownId, setOpenDropdownId] = useState(null);
+  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, right: 0 });
   const [showEditPlayer, setShowEditPlayer] = useState(false);
   const [editingPlayer, setEditingPlayer] = useState(null);
 
@@ -779,48 +828,18 @@ function TeamsPage() {
                         </div>
                         <div className="relative">
                           <button
-                            onClick={() => setOpenDropdownId(openDropdownId === player.id ? null : player.id)}
+                            onClick={(e) => {
+                              const rect = e.currentTarget.getBoundingClientRect();
+                              setDropdownPosition({
+                                top: rect.bottom + 5,
+                                right: window.innerWidth - rect.right
+                              });
+                              setOpenDropdownId(openDropdownId === player.id ? null : player.id);
+                            }}
                             className="p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded"
                           >
                             <MoreVertical size={16} className="text-gray-500 dark:text-gray-400" />
                           </button>
-                          {openDropdownId === player.id && (
-                            <div className="absolute right-0 top-8 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-10 min-w-[120px]">
-                              <button
-                                onClick={() => {
-                                  setEditingPlayer({
-                                    id: player.id,
-                                    name: player.name,
-                                    numero: player.numero || ''
-                                  });
-                                  setShowEditPlayer(true);
-                                  setOpenDropdownId(null);
-                                }}
-                                className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
-                              >
-                                <Edit size={14} />
-                                Editar
-                              </button>
-                              <button
-                                onClick={async () => {
-                                  const confirmed = await confirm.danger(`Tem certeza que deseja excluir o jogador ${player.name}?`, {
-                                    title: 'Confirmar Exclusão',
-                                    confirmText: 'Excluir',
-                                    cancelText: 'Cancelar'
-                                  });
-
-                                  if (confirmed) {
-                                    deletePlayer(player.id);
-                                  }
-                                  setOpenDropdownId(null);
-                                }}
-                                className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 text-red-600 dark:text-red-400 flex items-center gap-2"
-                              >
-                                <Trash2 size={14} />
-                                Excluir
-                              </button>
-                            </div>
-                          )}
                         </div>
                       </div>
                     ))}
@@ -1167,6 +1186,57 @@ function TeamsPage() {
             </div>
           </form>
         </Modal>
+      )}
+
+      {/* Dropdown fixo para ações dos jogadores */}
+      {openDropdownId && (
+        <div 
+          className="fixed bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50 min-w-[120px]"
+          style={{
+            top: `${dropdownPosition.top}px`,
+            right: `${dropdownPosition.right}px`
+          }}
+        >
+          <button
+            onClick={() => {
+              const player = selectedTeam?.players?.find(p => p.id === openDropdownId);
+              if (player) {
+                setEditingPlayer({
+                  id: player.id,
+                  name: player.name,
+                  numero: player.numero || ''
+                });
+                setShowEditPlayer(true);
+              }
+              setOpenDropdownId(null);
+            }}
+            className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-900 dark:text-gray-100 flex items-center gap-2"
+          >
+            <Edit size={14} />
+            Editar
+          </button>
+          <button
+            onClick={async () => {
+              const player = selectedTeam?.players?.find(p => p.id === openDropdownId);
+              if (player) {
+                const confirmed = await confirm.danger(`Tem certeza que deseja excluir o jogador ${player.name}?`, {
+                  title: 'Confirmar Exclusão',
+                  confirmText: 'Excluir',
+                  cancelText: 'Cancelar'
+                });
+
+                if (confirmed) {
+                  deletePlayer(player.id);
+                }
+              }
+              setOpenDropdownId(null);
+            }}
+            className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 text-red-600 dark:text-red-400 flex items-center gap-2"
+          >
+            <Trash2 size={14} />
+            Excluir
+          </button>
+        </div>
       )}
     </>
   );
