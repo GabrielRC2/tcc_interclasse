@@ -198,16 +198,38 @@ export const MatchesPage = () => {
       const data = await response.json();
 
       setModalidadesDisponiveis(data.modalidades);
-      
-      // Configuração padrão baseada nos locais padrão do banco
+
+      // Configuração padrão pré-determinada
+      const locaisPadrao = {
+        'Futsal': 'Quadra de Cima',
+        'Handebol': 'Quadra de Cima',
+        'Vôlei': 'Quadra de Baixo',
+        'Basquete': 'Quadra de Baixo'
+      };
+
+      // Configuração baseada nos dados do banco ou padrões pré-determinados
       const configPadrao = {};
       data.modalidades.forEach(modalidade => {
-          configPadrao[modalidade.nome] = modalidade.localAtual || '';
+          // Prioridade: 1) Configuração já salva, 2) Local atual do banco, 3) Padrão pré-determinado
+          configPadrao[modalidade.nome] = 
+            configuracaoLocais[modalidade.nome] || 
+            modalidade.localAtual || 
+            locaisPadrao[modalidade.nome] || 
+            'Quadra de Baixo';
       });
       setConfiguracaoLocais(configPadrao);
       console.log('📍 Configuração de locais carregada:', configPadrao);
     } catch (error) {
       console.error('Erro ao carregar configuração de locais:', error);
+      // Fallback com configuração padrão se a API falhar
+      const configFallback = {
+        'Futsal': 'Quadra de Cima',
+        'Handebol': 'Quadra de Cima',
+        'Vôlei': 'Quadra de Baixo',
+        'Basquete': 'Quadra de Baixo'
+      };
+      setConfiguracaoLocais(configFallback);
+      console.log('📍 Usando configuração padrão (fallback):', configFallback);
     }
   };
 
@@ -256,7 +278,9 @@ export const MatchesPage = () => {
 
   // refazer sorteio de partidas com as mesmas regras otimizadas
   const refazerSorteioPartidas = async () => {
+    console.log('🔄 Função refazerSorteioPartidas chamada!');
     if (!selectedTournament) {
+      console.log('❌ Nenhum torneio selecionado');
       toast.warning('❌ Selecione um torneio primeiro');
       return;
     }
@@ -293,7 +317,10 @@ export const MatchesPage = () => {
         `📋 REGRAS APLICADAS:\n` +
         `⚽ Regra 1: Sempre um jogo masculino e um feminino simultâneos\n` +
         `🔄 Regra 2: Priorizar modalidades diferentes no mesmo slot\n` +
-        `🔀 Regra 3: Cada modalidade faz 5 consecutivas de um gênero, depois 5 do outro\n`,
+        `🔀 Regra 3: Cada modalidade faz 5 consecutivas de um gênero, depois 5 do outro\n` +
+        `🏟️ Regra 4: Um jogo em cada quadra conforme configuração\n` +
+        `⏱️ Regra 5: Maximizar tempo de descanso dos times\n\n` +
+        `Continuar?`,
         {
           title: 'Confirmar Refazer Sorteio',
           confirmText: 'Refazer Sorteio',
@@ -975,13 +1002,12 @@ export const MatchesPage = () => {
                       </label>
                       <select 
                         className="w-full p-2 border rounded bg-white dark:bg-gray-600 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-500"
-                        value={configuracaoLocais[modalidade.nome] || ''}
+                        value={configuracaoLocais[modalidade.nome] || modalidade.localAtual || 'Quadra de Baixo'}
                         onChange={(e) => setConfiguracaoLocais(prev => ({
                             ...prev,
                             [modalidade.nome]: e.target.value
                         }))}
                       >
-                        <option value="">Selecione um local</option>
                         {modalidade.locaisDisponiveis?.map(local => (
                           <option key={local} value={local}>
                             {local} {local === modalidade.localAtual ? '(Local atual)' : ''}

@@ -305,8 +305,7 @@ function otimizarPartidasGlobalmente(partidas, configuracaoLocais, localMap) {
 
     // Configurar locais para as partidas
     if (primeiraPartida) {
-      const localNome1 = obterLocalParaModalidade(primeiraPartida.modalidade, configuracaoLocais, localMap);
-      const localId1 = localMap[localNome1];
+      const { localId: localId1, localNome: localNome1 } = obterLocalParaModalidade(primeiraPartida.modalidade, configuracaoLocais, localMap);
       
       console.log(`🎯 Modalidade: ${primeiraPartida.modalidade} -> Local: ${localNome1} -> ID: ${localId1}`);
       
@@ -330,11 +329,10 @@ function otimizarPartidasGlobalmente(partidas, configuracaoLocais, localMap) {
     }
 
     if (segundaPartida) {
-      // Para a segunda partida, usar a quadra oposta
-      const localUsado = slot.partidas[0]?.localNome;
-      const localOposto = Object.keys(localMap).find(nome => nome !== localUsado) || localUsado; // Fallback para o mesmo local se só houver um
-
-      const { localId: localId2, localNome: localNome2 } = obterLocalParaModalidade(segundaPartida.modalidade, configuracaoLocais, localMap, localOposto);
+      // Para a segunda partida, sempre usar a configuração da modalidade
+      // Se a configuração permitir quadras diferentes, será diferente
+      // Se a configuração forçar mesma quadra, será a mesma
+      const { localId: localId2, localNome: localNome2 } = obterLocalParaModalidade(segundaPartida.modalidade, configuracaoLocais, localMap);
       
       slot.partidas.push({
         ...segundaPartida,
@@ -636,12 +634,12 @@ function obterLocalParaModalidade(modalidade, configuracaoLocais, localMap, loca
     return { localId: localMap[localConfigurado], localNome: localConfigurado };
   }
 
-  // 3. Usa uma configuração padrão inteligente como fallback
+  // 3. Usa uma configuração padrão pré-determinada como fallback
   const configuracaoPadrao = {
+    'Futsal': 'Quadra de Cima',
+    'Handebol': 'Quadra de Cima',
     'Vôlei': 'Quadra de Baixo',
-    'Handebol': 'Quadra de Cima', 
-    'Basquete': 'Quadra de Baixo',
-    'Futsal': 'Quadra de Cima'
+    'Basquete': 'Quadra de Baixo'
   };
   
   let localDesejado = configuracaoLocais?.[modalidade] || configuracaoPadrao[modalidade] || 'Quadra de Baixo';
@@ -657,5 +655,6 @@ function obterLocalParaModalidade(modalidade, configuracaoLocais, localMap, loca
     }
   }
   
-  return localDesejado;
+  // SEMPRE retornar um objeto consistente
+  return { localId: localMap[localDesejado], localNome: localDesejado };
 }
