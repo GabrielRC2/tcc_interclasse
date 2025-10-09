@@ -12,7 +12,7 @@ interface ExtendedUser {
     tipo_usuario: string;
 }
 
-const authOptions: NextAuthOptions = {
+export const authOptions: NextAuthOptions = {
     providers: [
         CredentialsProvider({
             credentials: {
