@@ -32,6 +32,7 @@ export const Dashboard = () => {
   // Estados para partidas em andamento
   const [partidasEmAndamento, setPartidasEmAndamento] = useState([]);
   const [carregandoAndamento, setCarregandoAndamento] = useState(false);
+  const [primeiraCarregaAndamento, setPrimeiraCarregaAndamento] = useState(true);
   const [ultimaAtualizacao, setUltimaAtualizacao] = useState(null);
 
   // Estados para controlar seções expandidas/minimizadas
@@ -68,6 +69,7 @@ export const Dashboard = () => {
       setPartidasEmAndamento([]);
       setModalidades([]);
       setLocais([]);
+      setPrimeiraCarregaAndamento(true); // Reset para mostrar loading na próxima seleção
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedTournament]);
@@ -219,7 +221,11 @@ export const Dashboard = () => {
   // busca partidas em andamento
   const carregarPartidasEmAndamento = async () => {
     if (!selectedTournament) return;
-    setCarregandoAndamento(true);
+    
+    // Só mostrar loading se for primeira carga ou não tiver dados
+    if (primeiraCarregaAndamento || partidasEmAndamento.length === 0) {
+      setCarregandoAndamento(true);
+    }
     try {
       const res = await fetch(`/api/partidas?torneioId=${selectedTournament.id}`);
       const data = res.ok ? await res.json() : [];
@@ -281,6 +287,11 @@ export const Dashboard = () => {
       
       setPartidasEmAndamento(partidasComPontuacao);
       setUltimaAtualizacao(new Date());
+      
+      // Marcar que a primeira carga foi concluída
+      if (primeiraCarregaAndamento) {
+        setPrimeiraCarregaAndamento(false);
+      }
     } catch (err) {
       console.error('Erro ao carregar partidas em andamento:', err);
       setPartidasEmAndamento([]);
@@ -387,13 +398,20 @@ export const Dashboard = () => {
                 )}
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {carregandoAndamento ? (
-                  <div className="col-span-2 text-center py-8">Carregando partidas em andamento...</div>
-                ) : partidasEmAndamento.length === 0 ? (
+                {partidasEmAndamento.length === 0 ? (
                   <div className="col-span-2 text-center py-8 text-gray-500">
-                    Nenhuma partida em andamento no momento.
-                    <br />
-                    <span className="text-xs text-gray-400">As partidas aparecerão aqui quando iniciadas</span>
+                    {carregandoAndamento && primeiraCarregaAndamento ? (
+                      <div className="flex items-center justify-center gap-2">
+                        <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                        <span>Carregando partidas em andamento...</span>
+                      </div>
+                    ) : (
+                      <>
+                        Nenhuma partida em andamento no momento.
+                        <br />
+                        <span className="text-xs text-gray-400">As partidas aparecerão aqui quando iniciadas</span>
+                      </>
+                    )}
                   </div>
                 ) : (
                   partidasEmAndamento.slice(0, 2).map((match) => (
