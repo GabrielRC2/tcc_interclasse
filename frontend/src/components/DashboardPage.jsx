@@ -486,10 +486,9 @@ export const Dashboard = () => {
                       <div key={match.id} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm p-4 relative overflow-hidden">
                         <div className="relative z-10">
                           <div className="flex items-center justify-between mb-2">
-                            <p className="text-sm text-blue-600 dark:text-blue-400 font-semibold uppercase">PRÓXIMA</p>
+                            <p className="text-sm text-red-600 dark:text-red-400 font-semibold uppercase">PRÓXIMA</p>
                           </div>
                           <p className="text-xl font-bold my-2 text-gray-900 dark:text-gray-100">{match.team1} VS {match.team2}</p>
-                          <p className="text-lg font-bold text-blue-600 dark:text-blue-400 mb-2">{match.result || 'Aguardando'}</p>
                           <div className="space-y-1">
                             <p className="text-sm text-gray-600 dark:text-gray-300">Esporte: {match.modality}</p>
                             <p className="text-sm text-gray-600 dark:text-gray-300">Modalidade: {match.category}</p>
