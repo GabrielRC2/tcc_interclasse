@@ -429,24 +429,24 @@ export const Dashboard = () => {
                 )}
               </div>
               
-              {/* Mostrar próximas partidas abaixo se não houver partidas em andamento */}
-              {partidasEmAndamento.length === 0 && proximasPartidas.length > 0 && (
+              {/* Mostrar próximas partidas sempre que existirem */}
+              {proximasPartidas.length > 0 && (
                 <>
                   <h3 className="text-lg font-medium text-gray-700 dark:text-gray-300 mt-6 mb-4">Próximas Partidas</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {proximasPartidas.slice(0, 2).map((match) => (
-                      <div key={match.id} className="bg-gray-50 dark:bg-gray-750 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm p-4 relative overflow-hidden opacity-75">
+                      <div key={match.id} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm p-4 relative overflow-hidden">
                         <div className="relative z-10">
                           <div className="flex items-center justify-between mb-2">
                             <p className="text-sm text-blue-600 dark:text-blue-400 font-semibold uppercase">PRÓXIMA</p>
                           </div>
-                          <p className="text-xl font-bold my-2 text-gray-700 dark:text-gray-300">{match.team1} VS {match.team2}</p>
+                          <p className="text-xl font-bold my-2 text-gray-900 dark:text-gray-100">{match.team1} VS {match.team2}</p>
                           <p className="text-lg font-bold text-blue-600 dark:text-blue-400 mb-2">{match.result || 'Aguardando'}</p>
                           <div className="space-y-1">
-                            <p className="text-sm text-gray-600 dark:text-gray-400">Esporte: {match.modality}</p>
-                            <p className="text-sm text-gray-600 dark:text-gray-400">Modalidade: {match.category}</p>
-                            <p className="text-sm text-gray-600 dark:text-gray-400">Local: {match.location}</p>
-                            {match.fase && <p className="text-sm text-gray-600 dark:text-gray-400">Fase: {match.fase}</p>}
+                            <p className="text-sm text-gray-600 dark:text-gray-300">Esporte: {match.modality}</p>
+                            <p className="text-sm text-gray-600 dark:text-gray-300">Modalidade: {match.category}</p>
+                            <p className="text-sm text-gray-600 dark:text-gray-300">Local: {match.location}</p>
+                            {match.fase && <p className="text-sm text-gray-600 dark:text-gray-300">Fase: {match.fase}</p>}
                           </div>
                         </div>
                       </div>
