@@ -417,22 +417,52 @@ export const Dashboard = () => {
                   partidasEmAndamento.slice(0, 2).map((match) => (
                     <div key={match.id} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm p-4 relative overflow-hidden">
                       <div className="relative z-10">
-                        <div className="flex items-center justify-between mb-2">
-                          <p className="text-sm text-green-600 dark:text-green-400 font-semibold uppercase flex items-center gap-2">
-                            <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                        {/* AO VIVO no canto superior esquerdo */}
+                        <div className="mb-4">
+                          <p className="text-sm text-red-600 dark:text-red-400 font-semibold uppercase flex items-center gap-2">
+                            <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
                             AO VIVO
                           </p>
-                          <div className="text-xs text-gray-500 dark:text-gray-400">
-                            Atualizado em tempo real
-                          </div>
                         </div>
-                        <p className="text-2xl font-bold my-2 text-gray-900 dark:text-gray-100">{match.team1} VS {match.team2}</p>
-                        <div className="text-3xl font-bold text-green-600 dark:text-green-400 mb-2 text-center">
-                          {match.pontuacaoTime1 || 0} - {match.pontuacaoTime2 || 0}
-                        </div>
-                        {/* Debug: mostrar número de eventos encontrados */}
-                        <div className="text-xs text-gray-400 text-center mb-2">
-                          {match.eventos?.length || 0} eventos • Team1ID: {match.team1Id} • Team2ID: {match.team2Id}
+                        
+                        {/* Layout com colunas proporcionais */}
+                        <div className="mb-4 w-full text-center">
+                          {(() => {
+                            // Calcular a largura baseada no maior nome
+                            const maxLength = Math.max(match.team1.length, match.team2.length);
+                            // Definir largura mínima de 80px e máxima de 160px, baseada no comprimento
+                            const columnWidth = Math.max(80, Math.min(160, maxLength * 12));
+                            
+                            return (
+                              <div className="grid grid-cols-3 gap-2 items-center justify-center max-w-fit mx-auto">
+                                {/* Coluna Time 1 */}
+                                <div className="text-center" style={{minWidth: `${columnWidth}px`}}>
+                                  <p className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-1">
+                                    {match.team1}
+                                  </p>
+                                  <span className="text-3xl font-bold text-red-600 dark:text-red-400">
+                                    {match.pontuacaoTime1 || 0}
+                                  </span>
+                                </div>
+                                
+                                {/* Coluna separador VS */}
+                                <div className="text-center px-3">
+                                  <div className="mb-1 h-6"></div>
+                                  <span className="text-2xl font-bold text-red-600 dark:text-red-400">x</span>
+                                </div>
+                                
+                                {/* Coluna Time 2 */}
+                                <div className="text-center" style={{minWidth: `${columnWidth}px`}}>
+                                  <p className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-1">
+                                    {match.team2}
+                                  </p>
+                                  <span className="text-3xl font-bold text-red-600 dark:text-red-400">
+                                    {match.pontuacaoTime2 || 0}
+                                  </span>
+                                </div>
+                              </div>
+                            );
+                          })()}
                         </div>
                         <div className="space-y-1">
                           <p className="text-sm text-gray-600 dark:text-gray-300">Esporte: {match.modality}</p>

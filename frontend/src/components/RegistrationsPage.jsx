@@ -7,6 +7,10 @@ import { useToast } from '@/components/Toast';
 import { useConfirm } from '@/components/Confirm';
 
 export const RegistrationsPage = () => {
+    // Hooks
+    const toast = useToast();
+    const { confirm } = useConfirm();
+
     // Estados de controle
     const [currentUser, setCurrentUser] = useState(null);
     const [userLoading, setUserLoading] = useState(true);

@@ -4,7 +4,8 @@ const prisma = new PrismaClient();
 
 export async function GET(request, { params }) {
   try {
-    const timeId = parseInt(params.id);
+    const resolvedParams = await params;
+    const timeId = parseInt(resolvedParams.id);
 
     const time = await prisma.time.findUnique({
       where: { id: timeId },
@@ -97,7 +98,8 @@ export async function DELETE(request, { params }) {
 
 export async function PUT(request, { params }) {
   try {
-    const timeId = parseInt(params.id);
+    const resolvedParams = await params;
+    const timeId = parseInt(resolvedParams.id);
     const data = await request.json();
 
     console.log('Editando time:', { timeId, data });
@@ -139,6 +141,7 @@ export async function PUT(request, { params }) {
       categoria = await prisma.categoria.create({
         data: {
           nome: data.gender,
+          genero: data.gender,
           modalidadeId: modalidade.id
         }
       });

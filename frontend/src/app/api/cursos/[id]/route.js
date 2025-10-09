@@ -5,7 +5,8 @@ const prisma = new PrismaClient();
 export async function PUT(request, { params }) {
   try {
     const { name, sigla } = await request.json();
-    const id = parseInt(params.id);
+    const resolvedParams = await params;
+    const id = parseInt(resolvedParams.id);
     
     const curso = await prisma.curso.update({
       where: { id },

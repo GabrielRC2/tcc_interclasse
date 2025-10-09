@@ -5,7 +5,8 @@ import bcrypt from "bcryptjs";
 // GET: Busca um usuário específico
 export async function GET(request, { params }) {
   try {
-    const { id } = params;
+    const resolvedParams = await params;
+    const { id } = resolvedParams;
     const idUsuario = parseInt(id, 10);
 
     if (isNaN(idUsuario)) {
@@ -45,7 +46,8 @@ export async function GET(request, { params }) {
 // PUT: Atualiza um usuário
 export async function PUT(request, { params }) {
   try {
-    const { id } = params;
+    const resolvedParams = await params;
+    const { id } = resolvedParams;
     const idUsuario = parseInt(id, 10);
     const body = await request.json();
     const { nome_usuario, email_usuario, senha, tipo_usuario } = body;
@@ -109,7 +111,8 @@ export async function PUT(request, { params }) {
 // DELETE: Remove um usuário
 export async function DELETE(request, { params }) {
   try {
-    const { id } = params;
+    const resolvedParams = await params;
+    const { id } = resolvedParams;
     const idUsuario = parseInt(id, 10);
 
     if (isNaN(idUsuario)) {

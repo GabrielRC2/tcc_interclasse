@@ -5,7 +5,8 @@ const prisma = new PrismaClient();
 
 export async function GET(request, { params }) {
   try {
-    const torneioId = parseInt(params.torneioId);
+    const resolvedParams = await params;
+    const torneioId = parseInt(resolvedParams.torneioId);
     
     const torneio = await prisma.torneio.findUnique({
       where: { id: torneioId },
