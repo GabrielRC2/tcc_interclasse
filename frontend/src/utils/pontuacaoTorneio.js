@@ -298,7 +298,8 @@ export async function obterClassificacao(prisma, torneioId, filtro = null) {
         derrotas: 0,
         golsPro: 0,
         golsContra: 0,
-        saldoGols: 0
+        saldoGols: 0,
+        temWO: false // Adicionar flag para WO
       };
     }
 
@@ -315,8 +316,11 @@ export async function obterClassificacao(prisma, torneioId, filtro = null) {
         team.empates += 1;
         break;
       case 'PERDEDOR':
+        team.derrotas += 1;
+        break;
       case 'WO':
         team.derrotas += 1;
+        team.temWO = true; // Marcar que o time teve WO
         break;
     }
 
@@ -339,6 +343,11 @@ export async function obterClassificacao(prisma, torneioId, filtro = null) {
 
   // Converter para array e ordenar
   const classificacaoArray = Object.values(classificacao).sort((a, b) => {
+    // Times com WO sempre vão para o final
+    if (a.temWO && !b.temWO) return 1;
+    if (!a.temWO && b.temWO) return -1;
+    
+    // Se ambos têm WO ou ambos não têm, ordenar normalmente
     // Ordenar por: pontos desc, saldo de gols desc, gols pró desc
     if (b.pontos !== a.pontos) return b.pontos - a.pontos;
     if (b.saldoGols !== a.saldoGols) return b.saldoGols - a.saldoGols;

@@ -163,7 +163,8 @@ async function obterClassificacaoGeral(prisma, torneioId) {
           derrotas: 0,
           golsPro: 0,
           golsContra: 0,
-          saldoGols: 0
+          saldoGols: 0,
+          temWO: false // Adicionar flag para WO
         };
       }
 
@@ -180,8 +181,11 @@ async function obterClassificacaoGeral(prisma, torneioId) {
           team.empates += 1;
           break;
         case 'PERDEDOR':
+          team.derrotas += 1;
+          break;
         case 'WO':
           team.derrotas += 1;
+          team.temWO = true; // Marcar que o time teve WO
           break;
       }
 
@@ -204,6 +208,11 @@ async function obterClassificacaoGeral(prisma, torneioId) {
 
     // Converter para array e ordenar
     const classificacaoArray = Object.values(classificacao).sort((a, b) => {
+      // Times com WO sempre vão para o final
+      if (a.temWO && !b.temWO) return 1;
+      if (!a.temWO && b.temWO) return -1;
+      
+      // Se ambos têm WO ou ambos não têm, ordenar normalmente
       // Ordenar por: pontos desc, saldo de gols desc, gols pró desc
       if (b.pontos !== a.pontos) return b.pontos - a.pontos;
       if (b.saldoGols !== a.saldoGols) return b.saldoGols - a.saldoGols;
@@ -270,8 +279,13 @@ async function obterClassificacaoGeralModalidade(prisma, torneioId, modalidadeId
     const resultados = await Promise.all(classificacaoPromises);
     const classificacao = resultados.filter(r => r !== null);
 
-    // Ordenar por pontos, depois saldo de gols
+    // Ordenar por pontos, depois saldo de gols (times com WO vão para o final)
     classificacao.sort((a, b) => {
+      // Times com WO sempre vão para o final
+      if (a.temWO && !b.temWO) return 1;
+      if (!a.temWO && b.temWO) return -1;
+      
+      // Se ambos têm WO ou ambos não têm, ordenar normalmente
       if (b.pontos !== a.pontos) {
         return b.pontos - a.pontos;
       }

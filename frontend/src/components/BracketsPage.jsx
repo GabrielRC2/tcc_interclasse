@@ -362,9 +362,21 @@ export const BracketsPage = () => {
                             </tr>
                         </thead>
                         <tbody>
-                            {dados.map((time, index) => (
+                            {dados.map((time, index) => {
+                                // Calcular posição real (excluindo times com WO anteriores)
+                                const timesAntes = dados.slice(0, index);
+                                const timesComWOAntes = timesAntes.filter(t => t.temWO).length;
+                                const posicaoReal = index + 1 - timesComWOAntes;
+                                
+                                return (
                                 <tr key={time.timeId} className="border-b border-gray-100 dark:border-gray-700">
-                                    <td className="py-2 px-2 font-bold text-gray-900 dark:text-gray-100">{index + 1}°</td>
+                                    <td className="py-2 px-2 font-bold text-center">
+                                        {time.temWO ? (
+                                            <span className="text-red-700 dark:text-red-500 font-bold">WO</span>
+                                        ) : (
+                                            <span className="text-gray-900 dark:text-gray-100">{posicaoReal}°</span>
+                                        )}
+                                    </td>
                                     <td className="py-2 px-2 font-medium text-gray-900 dark:text-gray-100">{time.nome}</td>
                                     {classificacaoGeral && (
                                         <td className="py-2 px-2 text-center">
@@ -382,7 +394,8 @@ export const BracketsPage = () => {
                                     <td className="py-2 px-2 text-center text-gray-900 dark:text-gray-100">{time.golsContra}</td>
                                     <td className="py-2 px-2 text-center font-semibold text-gray-900 dark:text-gray-100">{time.saldoGols > 0 ? '+' : ''}{time.saldoGols}</td>
                                 </tr>
-                            ))}
+                                );
+                            })}
                         </tbody>
                     </table>
                 </div>
