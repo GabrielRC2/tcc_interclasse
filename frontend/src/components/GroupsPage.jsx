@@ -312,7 +312,7 @@ export const GroupsPage = () => {
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     {modalidadesDisponiveis.map(modalidade => (
                                         <button
-                                            key={`${modalidade.modalidadeId}-${modalidade.genero}`}
+                                            key={modalidade.categoriaId}
                                             type="button"
                                             onClick={() => selecionarModalidade(modalidade)}
                                             className={`p-6 rounded-lg border transition-all text-left ${modalidadeSelecionada &&
