@@ -1,9 +1,10 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { Calendar, MapPin, Trophy, Filter, Play, Settings, Shuffle, RefreshCcw } from 'lucide-react';
+import { Calendar, MapPin, Trophy, Filter, Play, Settings, Shuffle, RefreshCcw, AlertTriangle } from 'lucide-react';
 import { Button, Select } from '@/components/common';
 import { useTournament } from '@/contexts/TournamentContext';
 import { SumulaModal } from '@/components/SumulaModal';
+import { WOModal } from '@/components/WOModal';
 import { Modal } from '@/components/Modal';
 import { useToast } from '@/components/Toast';
 import { useConfirm } from '@/components/Confirm';
@@ -28,6 +29,8 @@ export const MatchesPage = () => {
   const [modalidadesDisponiveis, setModalidadesDisponiveis] = useState([]);
   const [showConfigModal, setShowConfigModal] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const [showWOModal, setShowWOModal] = useState(false);
+  const [partidaWO, setPartidaWO] = useState(null);
 
   useEffect(() => {
     carregarDadosIniciais();
@@ -190,6 +193,24 @@ export const MatchesPage = () => {
     // Apenas recarrega as partidas para garantir consistência.
     // A API de finalização já atualizou o status e os pontos.
     await carregarPartidas();
+  };
+
+  // Função para abrir modal de WO
+  const abrirModalWO = (partida) => {
+    setPartidaWO(partida);
+    setShowWOModal(true);
+  };
+
+  // Função para fechar modal de WO
+  const fecharModalWO = () => {
+    setPartidaWO(null);
+    setShowWOModal(false);
+  };
+
+  // Função para tratar confirmação de WO
+  const tratarWOConfirmado = async () => {
+    await carregarPartidas(); // Recarregar partidas para ver as mudanças
+    fecharModalWO();
   };
 
   const loadConfiguracaoLocais = async () => {
@@ -893,13 +914,26 @@ export const MatchesPage = () => {
                           </span>
                         </div>
 
-                        <span
-                          onClick={() => tratarCliqueStatus(p)}
-                          className={`px-2 py-1 rounded-full text-xs font-medium cursor-pointer self-start sm:self-center ${obterCorStatus(p.status)}`}
-                          title="Clique para alternar Agendada / Em andamento"
-                        >
-                          {p.status || 'Agendada'}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span
+                            onClick={() => tratarCliqueStatus(p)}
+                            className={`px-2 py-1 rounded-full text-xs font-medium cursor-pointer self-start sm:self-center ${obterCorStatus(p.status)}`}
+                            title="Clique para alternar Agendada / Em andamento"
+                          >
+                            {p.status || 'Agendada'}
+                          </span>
+                          
+                          {/* Botão WO - apenas para partidas não finalizadas */}
+                          {p.status !== 'Finalizada' && p.status !== 'FINALIZADA' && (
+                            <button
+                              onClick={() => abrirModalWO(p)}
+                              className="p-1.5 rounded-full bg-red-100 hover:bg-red-200 dark:bg-red-900/30 dark:hover:bg-red-900/50 transition-all duration-200 hover:scale-110 active:scale-95"
+                              title="Registrar WO (Walk Over)"
+                            >
+                              <AlertTriangle size={16} className="text-red-600 dark:text-red-400" />
+                            </button>
+                          )}
+                        </div>
                       </div>
 
                       <div className="flex items-center justify-center gap-4 mb-4">
@@ -911,16 +945,26 @@ export const MatchesPage = () => {
                         <div className="text-center px-3 md:px-4 flex-shrink-0">
                           {p.result ? (
                             <div className="text-center mb-1">
-                              {formatarResultado(p.result)}
-                              {(() => {
-                                const resultado = obterVencedor(p);
-                                if (resultado?.tipo === 'empate') {
-                                  return <div className="text-xs md:text-sm font-semibold text-yellow-600 dark:text-yellow-400 mt-2">EMPATE</div>;
-                                } else if (resultado?.vencedor) {
-                                  return <div className="text-xs md:text-sm font-semibold text-green-600 dark:text-green-400 mt-2">🏆 {resultado.vencedor}</div>;
-                                }
-                                return null;
-                              })()}
+                              {/* Detectar WO quando resultado é 0:0 e partida está finalizada */}
+                              {p.result === '0:0' && (p.status === 'Finalizada' || p.status === 'FINALIZADA') ? (
+                                <div className="text-center">
+                                  <div className="text-lg md:text-xl font-bold text-red-600 dark:text-red-400">WO</div>
+                                  <div className="text-xs md:text-sm font-semibold text-gray-600 dark:text-gray-400 mt-1">Walk Over</div>
+                                </div>
+                              ) : (
+                                <>
+                                  {formatarResultado(p.result)}
+                                  {(() => {
+                                    const resultado = obterVencedor(p);
+                                    if (resultado?.tipo === 'empate') {
+                                      return <div className="text-xs md:text-sm font-semibold text-yellow-600 dark:text-yellow-400 mt-2">EMPATE</div>;
+                                    } else if (resultado?.vencedor) {
+                                      return <div className="text-xs md:text-sm font-semibold text-green-600 dark:text-green-400 mt-2">🏆 {resultado.vencedor}</div>;
+                                    }
+                                    return null;
+                                  })()}
+                                </>
+                              )}
                             </div>
                           ) : (
                             <div className="text-lg md:text-xl font-bold text-gray-400">VS</div>
@@ -983,6 +1027,15 @@ export const MatchesPage = () => {
               match={partidaSelecionada}
               mode={partidaSelecionada?.status === 'Em andamento' ? 'live' : 'final'}
               onSumulaEnviada={(id) => tratarSumulaEnviada(id)}
+            />
+          )}
+
+          {showWOModal && partidaWO && (
+            <WOModal
+              isOpen={showWOModal}
+              onClose={fecharModalWO}
+              match={partidaWO}
+              onWOConfirmed={tratarWOConfirmado}
             />
           )}
 
