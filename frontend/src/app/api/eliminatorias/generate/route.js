@@ -264,6 +264,14 @@ async function obterVencedoresDaFase(torneioId, modalidadeId, genero, faseAnteri
     const timeVencedor = partida.times.find(pt => pt.resultado === 'VENCEDOR');
     
     if (timeVencedor) {
+      // Verificar se o time vencedor não tem WO em nenhuma partida
+      const temWO = await verificarSeTimeTemWO(timeVencedor.timeId, torneioId);
+      
+      if (temWO) {
+        console.log(`❌ Time ${timeVencedor.time.nome} tem WO - DESCLASSIFICADO e não pode avançar`);
+        continue; // Pular este time - não pode avançar
+      }
+      
       vencedores.push({
         timeId: timeVencedor.timeId,
         nome: timeVencedor.time.nome,
@@ -277,6 +285,21 @@ async function obterVencedoresDaFase(torneioId, modalidadeId, genero, faseAnteri
   return vencedores;
 }
 
+// Função para verificar se um time tem WO em qualquer partida do torneio
+async function verificarSeTimeTemWO(timeId, torneioId) {
+  const partidasComWO = await prisma.partidaTime.findFirst({
+    where: {
+      timeId: timeId,
+      resultado: 'WO',
+      partida: {
+        torneioId: torneioId
+      }
+    }
+  });
+  
+  return partidasComWO !== null;
+}
+
 // Função para selecionar times baseado na posição nos grupos
 function selecionarTimesPorPosicao(timesClassificadosPorGrupo) {
   const timesClassificados = [];
@@ -287,6 +310,13 @@ function selecionarTimesPorPosicao(timesClassificadosPorGrupo) {
     for (const grupoData of timesClassificadosPorGrupo) {
       if (grupoData.classificacao[posicao]) {
         const time = grupoData.classificacao[posicao];
+        
+        // REGRA CRÍTICA: Times com WO não podem avançar para próximas fases
+        if (time.temWO) {
+          console.log(`❌ Time ${time.nome} tem WO - DESCLASSIFICADO e não pode avançar`);
+          continue; // Pular este time completamente
+        }
+        
         timesClassificados.push({
           ...time,
           posicaoGrupo: posicao + 1,
@@ -296,7 +326,7 @@ function selecionarTimesPorPosicao(timesClassificadosPorGrupo) {
     }
   }
 
-  console.log('Times selecionados por posição:', timesClassificados.map(t => `${t.nome} (${t.posicaoGrupo}º do ${t.nomeGrupo})`));
+  console.log('Times selecionados por posição (sem WO):', timesClassificados.map(t => `${t.nome} (${t.posicaoGrupo}º do ${t.nomeGrupo})`));
   return timesClassificados;
 }
 

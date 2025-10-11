@@ -20,6 +20,7 @@ export const BracketsPage = () => {
     const [modalidadeSelecionada, setModalidadeSelecionada] = useState(null);
     
     const [loading, setLoading] = useState(true);
+    const [loadingData, setLoadingData] = useState(false); // Loading específico para atualizações
     const [classificacaoGeralExpandida, setClassificacaoGeralExpandida] = useState(false);
 
     useEffect(() => {
@@ -31,7 +32,15 @@ export const BracketsPage = () => {
     }, [selectedTournament]);
 
     useEffect(() => {
-        loadData();
+        if (selectedTournament && modalidadeSelecionada) {
+            loadData();
+        } else if (!selectedTournament) {
+            // Limpar apenas quando não há torneio selecionado
+            setGruposData([]);
+            setClassificacao([]);
+            setClassificacoesPorGrupo({});
+            setEliminatorias([]);
+        }
     }, [modalidadeSelecionada, selectedTournament]);
 
     const carregarGruposDisponiveis = async () => {
@@ -57,18 +66,21 @@ export const BracketsPage = () => {
 
     const loadData = async () => {
         if (!selectedTournament || !modalidadeSelecionada) {
-            setGruposData([]);
-            setClassificacao([]);
-            setClassificacoesPorGrupo({});
-            setEliminatorias([]);
+            // Não limpar os dados imediatamente para evitar flash
+            // Apenas não recarregar se não há seleção
             return;
         }
 
-        await Promise.all([
-            loadGrupos(),
-            loadClassificacao(),
-            loadEliminatorias()
-        ]);
+        setLoadingData(true);
+        try {
+            await Promise.all([
+                loadGrupos(),
+                loadClassificacao(),
+                loadEliminatorias()
+            ]);
+        } finally {
+            setLoadingData(false);
+        }
     };
 
     const loadGrupos = async () => {
@@ -228,8 +240,17 @@ export const BracketsPage = () => {
                 }
                 
                 toast.success(mensagem);
-                await loadEliminatorias();
-                await loadClassificacao(); // Recarregar classificação
+                
+                // Recarregar dados sem mostrar loading global
+                setLoadingData(true);
+                try {
+                    await Promise.all([
+                        loadEliminatorias(),
+                        loadClassificacao()
+                    ]);
+                } finally {
+                    setLoadingData(false);
+                }
             } else {
                 const error = await response.json();
                 toast.error(error.error || 'Erro ao gerar eliminatórias');
@@ -412,7 +433,15 @@ export const BracketsPage = () => {
         <div className="space-y-6">
             <div className="flex flex-wrap justify-between items-center gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">CHAVEAMENTO</h1>
+                    <div className="flex items-center gap-3">
+                        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">CHAVEAMENTO</h1>
+                        {loadingData && (
+                            <div className="flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400">
+                                <div className="animate-spin h-4 w-4 border-2 border-blue-600 dark:border-blue-400 border-t-transparent rounded-full"></div>
+                                Atualizando...
+                            </div>
+                        )}
+                    </div>
                     {selectedTournament && (
                         <p className="text-gray-500 dark:text-gray-400">
                             Torneio: {selectedTournament.name}
