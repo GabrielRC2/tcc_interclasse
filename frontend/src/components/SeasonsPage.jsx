@@ -87,6 +87,17 @@ export const SeasonsPage = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
 
+        // Validação: Data de fim deve ser posterior à data de início
+        if (formData.startDate && formData.endDate) {
+            const dataInicio = new Date(formData.startDate);
+            const dataFim = new Date(formData.endDate);
+            
+            if (dataFim < dataInicio) {
+                toast.error('A data de fim não pode ser anterior à data de início!');
+                return;
+            }
+        }
+
         try {
             let endpoint = '/api/torneios';
             let method = 'POST';
@@ -412,6 +423,7 @@ export const SeasonsPage = () => {
                             label="Data de Fim"
                             type="date"
                             value={formData.endDate}
+                            min={formData.startDate} // Impede selecionar data anterior à data de início
                             onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
                             required
                         />
