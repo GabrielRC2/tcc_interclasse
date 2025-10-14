@@ -70,8 +70,18 @@ export const MatchesPage = () => {
       let url = `/api/partidas?torneioId=${selectedTournament.id}`;
       if (modalidadeSelecionada) url += `&modalidadeId=${modalidadeSelecionada}`;
       if (generoSelecionado) url += `&genero=${generoSelecionado}`;
+      
+      console.log('🔍 Carregando partidas com URL:', url);
+      console.log('📊 Filtros aplicados:', { 
+        modalidadeSelecionada, 
+        generoSelecionado,
+        torneioId: selectedTournament.id 
+      });
+      
       const res = await fetch(url);
       const data = res.ok ? await res.json() : [];
+      
+      console.log('📋 Partidas carregadas:', data.length);
       setPartidas(data);
     } catch (err) {
       console.error('Erro ao carregar partidas:', err);
@@ -822,7 +832,12 @@ export const MatchesPage = () => {
               <Select
                 label="Modalidade"
                 value={modalidadeSelecionada}
-                onChange={(e) => { setModalidadeSelecionada(e.target.value); setGeneroSelecionado(''); }}
+                onChange={(e) => { 
+                  const novaModalidade = e.target.value;
+                  setModalidadeSelecionada(novaModalidade); 
+                  // Se estava com gênero selecionado, manter; senão manter vazio
+                  // Isso permite filtrar só por modalidade sem precisar de gênero
+                }}
               >
                 <option value="">Todas as modalidades</option>
                 {modalidades.map(m => <option key={m.id} value={m.id}>{m.nome}</option>)}
@@ -832,7 +847,6 @@ export const MatchesPage = () => {
                 label="Gênero"
                 value={generoSelecionado}
                 onChange={(e) => setGeneroSelecionado(e.target.value)}
-                disabled={!modalidadeSelecionada}
               >
                 <option value="">Todos os gêneros</option>
                 {generos.map(g => <option key={g} value={g}>{g}</option>)}

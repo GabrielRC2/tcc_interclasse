@@ -17,11 +17,18 @@ export async function GET(request) {
       torneioId: parseInt(torneioId)
     };
 
-    // Filtros opcionais
-    if (modalidadeId && genero) {
-      whereClause.grupo = {
-        modalidadeId: parseInt(modalidadeId)
-      };
+    // Filtro de modalidade (funciona independente do gênero)
+    if (modalidadeId) {
+      whereClause.OR = [
+        {
+          grupo: {
+            modalidadeId: parseInt(modalidadeId)
+          }
+        },
+        {
+          modalidadeId: parseInt(modalidadeId) // Para eliminatórias
+        }
+      ];
     }
 
     const partidas = await prisma.partida.findMany({
