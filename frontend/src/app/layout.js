@@ -3,6 +3,7 @@ import './globals.css';
 import { ToastProvider } from '@/components/Toast';
 import { ConfirmProvider } from '@/components/Confirm';
 import { Providers } from '@/components/Providers';
+import { GlobalErrorMonitor } from '@/components/GlobalErrorMonitor';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -17,6 +18,7 @@ export default function RootLayout({ children }) {
       <body className={inter.className}>
         <Providers>
           <ToastProvider>
+            <GlobalErrorMonitor />
             <ConfirmProvider>
               {children}
             </ConfirmProvider>

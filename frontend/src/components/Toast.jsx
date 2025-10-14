@@ -107,7 +107,7 @@ const ToastContainer = ({ toasts, removeToast }) => {
     if (!toasts.length) return null;
 
     return (
-        <div className="fixed top-4 right-4 z-[9999] space-y-3 max-w-sm w-full pr-4 md:pr-0">
+        <div className="fixed bottom-10 right-4 z-[9999] space-y-3 max-w-sm w-full pr-4 md:pr-0">
             {toasts.map((toast) => (
                 <Toast
                     key={toast.id}

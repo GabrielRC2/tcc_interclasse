@@ -18,7 +18,7 @@ export const TournamentProvider = ({ children }) => {
 
   useEffect(() => {
     loadTournaments();
-    
+
     // Polling para atualizar a lista de torneios a cada 2 minutos
     const interval = setInterval(() => {
       loadTournaments();
@@ -31,7 +31,7 @@ export const TournamentProvider = ({ children }) => {
     try {
       const response = await fetch('/api/torneios');
       const data = await response.json();
-      
+
       // Só atualiza se os dados realmente mudaram (para evitar re-renders desnecessários)
       setTournaments(prev => {
         if (JSON.stringify(prev) === JSON.stringify(data)) {
@@ -39,16 +39,16 @@ export const TournamentProvider = ({ children }) => {
         }
         return data;
       });
-      
+
       // Prioridade para seleção automática:
       // 1. Torneio "Em Andamento" ou "EM_ANDAMENTO"
       // 2. Torneio "ATIVO"
       // 3. Primeiro da lista
-      const priorityTournament = 
+      const priorityTournament =
         data.find(t => t.status.toLowerCase() === 'em andamento' || t.status === 'EM_ANDAMENTO') ||
         data.find(t => t.status === 'ATIVO') ||
         data[0];
-        
+
       // Só seleciona automaticamente se não há torneio selecionado
       if (priorityTournament && !selectedTournament) {
         setSelectedTournament(priorityTournament);
@@ -65,7 +65,8 @@ export const TournamentProvider = ({ children }) => {
           }
         }
       } else {
-        console.error('Erro na resposta da API:', response.status);
+        const errorText = await response.text();
+        console.error('Erro na resposta da API:', response.status, errorText);
         setTournaments([]);
       }
     } catch (error) {
@@ -78,7 +79,7 @@ export const TournamentProvider = ({ children }) => {
 
   const selectTournament = (tournament) => {
     setSelectedTournament(tournament);
-    
+
     // Só armazena no localStorage se o torneio for válido
     if (tournament && typeof tournament === 'object') {
       try {
