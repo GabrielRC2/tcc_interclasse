@@ -35,6 +35,9 @@ export const Dashboard = () => {
   const [primeiraCarregaAndamento, setPrimeiraCarregaAndamento] = useState(true);
   const [ultimaAtualizacao, setUltimaAtualizacao] = useState(null);
 
+  // Estado para armazenar pênaltis temporários (enquanto súmula está aberta)
+  const [penaltisTemporarios, setPenaltisTemporarios] = useState({});
+
   // Estados para controlar seções expandidas/minimizadas
   const [secaoAgendadasExpandida, setSecaoAgendadasExpandida] = useState(false);
   const [secaoFinalizadasExpandida, setSecaoFinalizadasExpandida] = useState(false);
@@ -242,16 +245,11 @@ export const Dashboard = () => {
             const eventosRes = await fetch(`/api/partidas/${partida.id}/eventos`);
             const eventos = eventosRes.ok ? await eventosRes.json() : [];
             
-            // Debug: log dos eventos para verificar estrutura
-            console.log(`Eventos da partida ${partida.id}:`, eventos);
-            console.log(`Team1ID: ${partida.team1Id}, Team2ID: ${partida.team2Id}`);
-            
             // Calcular pontuação por time baseado nos eventos
             const eventosTime1 = eventos.filter(evento => {
               // Verificar se o jogador pertence ao time 1
               const pertenceTime1 = evento.jogador?.times?.some(timeJogador => timeJogador.timeId === partida.team1Id);
               const ehGol = evento.tipo === 'GOL';
-              console.log(`Evento ${evento.id}: Jogador ${evento.jogador?.nome}, Times: ${evento.jogador?.times?.map(t => t.timeId)}, Pertence Time1: ${pertenceTime1}, É Gol: ${ehGol}, Pontos: ${evento.pontosGerados}`);
               return pertenceTime1 && ehGol;
             });
             
@@ -264,8 +262,6 @@ export const Dashboard = () => {
             
             const pontuacaoTime1 = eventosTime1.reduce((total, evento) => total + (evento.pontosGerados || 0), 0);
             const pontuacaoTime2 = eventosTime2.reduce((total, evento) => total + (evento.pontosGerados || 0), 0);
-            
-            console.log(`Pontuação calculada - Time1: ${pontuacaoTime1}, Time2: ${pontuacaoTime2}`);
 
             return {
               ...partida,
@@ -348,6 +344,27 @@ export const Dashboard = () => {
     });
   };
 
+  // Função para atualizar pênaltis temporários em tempo real
+  const atualizarPenaltisTemporarios = (partidaId, penaltisCasa, penaltisVisitante, temPenaltis) => {
+    setPenaltisTemporarios(prev => ({
+      ...prev,
+      [partidaId]: {
+        penaltisCasa,
+        penaltisVisitante,
+        temPenaltis
+      }
+    }));
+  };
+
+  // Função para limpar pênaltis temporários quando súmula é fechada/enviada
+  const limparPenaltisTemporarios = (partidaId) => {
+    setPenaltisTemporarios(prev => {
+      const nova = { ...prev };
+      delete nova[partidaId];
+      return nova;
+    });
+  };
+
   return (
     <div className="space-y-6">
       {/* Seletor de Torneio Global */}
@@ -414,7 +431,14 @@ export const Dashboard = () => {
                     )}
                   </div>
                 ) : (
-                  partidasEmAndamento.slice(0, 2).map((match) => (
+                  partidasEmAndamento.slice(0, 2).map((match) => {
+                    // Buscar pênaltis temporários ou usar do banco
+                    const penaltisTemp = penaltisTemporarios[match.id];
+                    const temPenaltis = penaltisTemp?.temPenaltis ?? match.temPenaltis;
+                    const penaltisCasa = penaltisTemp?.penaltisCasa ?? match.penaltisCasa;
+                    const penaltisVisitante = penaltisTemp?.penaltisVisitante ?? match.penaltisVisitante;
+                    
+                    return (
                     <div key={match.id} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm p-4 relative overflow-hidden">
                       <div className="relative z-10">
                         {/* AO VIVO no canto superior esquerdo */}
@@ -440,9 +464,16 @@ export const Dashboard = () => {
                                   <p className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-1">
                                     {match.team1}
                                   </p>
-                                  <span className="text-3xl font-bold text-red-600 dark:text-red-400">
-                                    {match.pontuacaoTime1 || 0}
-                                  </span>
+                                  <div className="flex flex-col items-center">
+                                    <span className="text-3xl font-bold text-red-600 dark:text-red-400">
+                                      {match.pontuacaoTime1 || 0}
+                                    </span>
+                                    {temPenaltis && penaltisCasa !== null && (
+                                      <span className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                                        ({penaltisCasa})
+                                      </span>
+                                    )}
+                                  </div>
                                 </div>
                                 
                                 {/* Coluna separador VS */}
@@ -456,9 +487,16 @@ export const Dashboard = () => {
                                   <p className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-1">
                                     {match.team2}
                                   </p>
-                                  <span className="text-3xl font-bold text-red-600 dark:text-red-400">
-                                    {match.pontuacaoTime2 || 0}
-                                  </span>
+                                  <div className="flex flex-col items-center">
+                                    <span className="text-3xl font-bold text-red-600 dark:text-red-400">
+                                      {match.pontuacaoTime2 || 0}
+                                    </span>
+                                    {temPenaltis && penaltisVisitante !== null && (
+                                      <span className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                                        ({penaltisVisitante})
+                                      </span>
+                                    )}
+                                  </div>
                                 </div>
                               </div>
                             );
@@ -473,7 +511,8 @@ export const Dashboard = () => {
                       </div>
                       <CardSplat />
                     </div>
-                  ))
+                    );
+                  })
                 )}
               </div>
               
@@ -908,6 +947,7 @@ export const Dashboard = () => {
               isOpen={true}
               onClose={() => {
                 setPartidaSelecionada(null);
+                limparPenaltisTemporarios(partidaSelecionada.id);
                 if (secaoFinalizadasExpandida) carregarPartidasFinalizadas();
                 if (secaoAgendadasExpandida) carregarPartidasAgendadas();
                 carregarProximasPartidas();
@@ -915,7 +955,13 @@ export const Dashboard = () => {
               }}
               match={partidaSelecionada}
               mode="final"
-              onSumulaEnviada={(id) => tratarSumulaEnviada(id)}
+              onSumulaEnviada={(id) => {
+                tratarSumulaEnviada(id);
+                limparPenaltisTemporarios(id);
+              }}
+              onPenaltisChange={(penaltisCasa, penaltisVisitante, temPenaltis) => {
+                atualizarPenaltisTemporarios(partidaSelecionada.id, penaltisCasa, penaltisVisitante, temPenaltis);
+              }}
             />
           )}
 

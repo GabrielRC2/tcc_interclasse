@@ -35,14 +35,11 @@ export async function POST(request, { params }) {
       statusPartida: 'FINALIZADA',
       pontosCasa: parseInt(pontosCasa),
       pontosVisitante: parseInt(pontosVisitante),
+      // SEMPRE salvar dados de pênaltis, independente do tipo de partida
+      penaltisCasa: penaltisCasa !== undefined && penaltisCasa !== null ? parseInt(penaltisCasa) : null,
+      penaltisVisitante: penaltisVisitante !== undefined && penaltisVisitante !== null ? parseInt(penaltisVisitante) : null,
+      temPenaltis: Boolean(temPenaltis)
     };
-
-    // Adicionar dados de pênaltis se fornecidos
-    if (temPenaltis) {
-      updateData.penaltisCasa = parseInt(penaltisCasa || 0);
-      updateData.penaltisVisitante = parseInt(penaltisVisitante || 0);
-      updateData.temPenaltis = true;
-    }
 
     // Atualizar o status da partida
     const partidaAtualizada = await prisma.partida.update({
