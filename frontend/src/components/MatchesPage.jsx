@@ -153,7 +153,15 @@ export const MatchesPage = () => {
   // clique no badge de status: alterna entre Agendada <-> Em andamento (ou escolhe)
   const tratarCliqueStatus = async (partida) => {
     if (!partida) return;
+    
     const atual = partida.status || 'Agendada';
+    
+    // Bloquear alteração se a partida já estiver finalizada
+    if (atual === 'Finalizada' || atual === 'FINALIZADA') {
+      toast.warning('Não é possível alterar o status de uma partida já finalizada.');
+      return;
+    }
+    
     let desejado = atual === 'Agendada' ? 'Em andamento' : (atual === 'Em andamento' ? 'Agendada' : null);
 
     if (!desejado) {
@@ -908,9 +916,22 @@ export const MatchesPage = () => {
                         </div>
 
                         <span
-                          onClick={() => tratarCliqueStatus(p)}
-                          className={`px-2 py-1 rounded-full text-xs font-medium cursor-pointer self-start sm:self-center ${obterCorStatus(p.status)}`}
-                          title="Clique para alternar Agendada / Em andamento"
+                          onClick={() => {
+                            const statusFinalizado = p.status === 'Finalizada' || p.status === 'FINALIZADA';
+                            if (!statusFinalizado) {
+                              tratarCliqueStatus(p);
+                            }
+                          }}
+                          className={`px-2 py-1 rounded-full text-xs font-medium self-start sm:self-center ${obterCorStatus(p.status)} ${
+                            p.status === 'Finalizada' || p.status === 'FINALIZADA' 
+                              ? 'cursor-not-allowed opacity-75' 
+                              : 'cursor-pointer hover:opacity-80'
+                          }`}
+                          title={
+                            p.status === 'Finalizada' || p.status === 'FINALIZADA'
+                              ? 'Partida finalizada - não é possível alterar o status'
+                              : 'Clique para alternar Agendada / Em andamento'
+                          }
                         >
                           {p.status || 'Agendada'}
                         </span>
