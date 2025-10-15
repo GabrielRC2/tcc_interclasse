@@ -61,7 +61,7 @@ const PDFDownloadButton = ({ className, fileName, matchData, tournamentData, tea
   );
 };
 
-export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEnviada = () => { } }) => {
+export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', readOnly = false, onSumulaEnviada = () => { } }) => {
   const estaAoVivo = mode === 'live';
   const { selectedTournament } = useTournament();
   const toast = useToast();
@@ -894,8 +894,8 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEn
               </Button>
             )}
 
-            {/* Botão para permitir edição mesmo quando não está ao vivo */}
-            {!estaAoVivo && (
+            {/* Botão para permitir edição mesmo quando não está ao vivo (escondido em modo readOnly) */}
+            {!estaAoVivo && !readOnly && (
               <Button
                 onClick={() => {
                   const novo = !permitirEdicao;

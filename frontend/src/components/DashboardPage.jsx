@@ -915,6 +915,7 @@ export const Dashboard = () => {
               }}
               match={partidaSelecionada}
               mode="final"
+              readOnly={true}
               onSumulaEnviada={(id) => tratarSumulaEnviada(id)}
             />
           )}
