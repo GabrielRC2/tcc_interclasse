@@ -267,7 +267,8 @@ function TeamsPage() {
     const cursoObj = cursos.find(c => c.nome === course);
     const sigla = cursoObj ? cursoObj.sigla : course.substring(0, 4).toUpperCase();
 
-    return `${year}${sigla}`;
+    // Se for time Misto, retorna apenas a sigla
+    return year === 'Misto' ? sigla : `${year}${sigla}`;
   };
 
   // Adicionar novos estados

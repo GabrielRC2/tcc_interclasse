@@ -118,7 +118,8 @@ export async function POST(request) {
     }
 
     // Gerar nome do time
-    const teamName = `${year}${curso.sigla}`;
+    // Se for "Misto", não incluir no nome do time
+    const teamName = year === 'Misto' ? curso.sigla : `${year}${curso.sigla}`;
 
     // Verificar se time já existe neste torneio
     const existingTeam = await prisma.time.findFirst({
