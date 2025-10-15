@@ -9,7 +9,7 @@ import { useConfirm } from '@/components/Confirm';
 export const RegistrationsPage = () => {
     // Hooks
     const toast = useToast();
-    const { confirm } = useConfirm();
+    const confirm = useConfirm();
 
     // Estados de controle
     const [currentUser, setCurrentUser] = useState(null);
@@ -236,7 +236,7 @@ export const RegistrationsPage = () => {
                 toast.success(`${category.slice(0, -1)} ${editingItem ? 'editado' : 'criado'} com sucesso!`);
             } else {
                 const error = await response.json();
-                alert(error.message || `Erro ao ${editingItem ? 'editar' : 'criar'} cadastro`);
+                toast.error(error.message || `Erro ao ${editingItem ? 'editar' : 'criar'} cadastro`);
             }
         } catch (error) {
             console.error('Erro ao salvar:', error);
@@ -285,10 +285,10 @@ export const RegistrationsPage = () => {
                 } else {
                     await loadAllData(); // Recarregar outros dados
                 }
-                alert(`${type.slice(0, -1)} excluído com sucesso!`);
+                toast.success(`${type.slice(0, -1)} excluído com sucesso!`);
             } else {
                 const error = await response.json();
-                alert(error.message || 'Erro ao excluir cadastro');
+                toast.error(error.message || 'Erro ao excluir cadastro');
             }
         } catch (error) {
             console.error('Erro ao excluir:', error);
