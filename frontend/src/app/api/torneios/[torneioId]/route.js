@@ -3,52 +3,6 @@ import { NextResponse } from 'next/server';
 
 const prisma = new PrismaClient();
 
-export async function GET(request, { params }) {
-  try {
-    const resolvedParams = await params;
-    const torneioId = parseInt(resolvedParams.torneioId);
-    
-    const torneio = await prisma.torneio.findUnique({
-      where: { id: torneioId },
-      include: {
-        torneioModalidades: {
-          include: {
-            modalidade: true
-          }
-        },
-        grupos: {
-          include: {
-            modalidade: true
-          }
-        }
-      }
-    });
-
-    if (!torneio) {
-      return new Response('Torneio não encontrado', { status: 404 });
-    }
-
-    // Formatar resposta
-    return Response.json({
-      id: torneio.id,
-      name: torneio.nome,
-      status: torneio.status,
-      startDate: torneio.inicio.toISOString().split('T')[0],
-      endDate: torneio.fim.toISOString().split('T')[0],
-      modalities: torneio.torneioModalidades.map(tm => tm.modalidade.nome).join(' e '),
-      grupos: torneio.grupos.map(g => ({
-        nome: g.nome,
-        modalidadeId: g.modalidadeId,
-        modalidadeNome: g.modalidade.nome
-      }))
-    });
-
-  } catch (error) {
-    console.error('Erro ao buscar torneio:', error);
-    return new Response('Erro interno do servidor', { status: 500 });
-  }
-}
-
 export async function PUT(request, { params }) {
   try {
     const { name, location, startDate, endDate, modalities, status } = await request.json();
