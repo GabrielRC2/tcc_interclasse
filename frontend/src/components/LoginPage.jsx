@@ -23,6 +23,11 @@ export const LoginPage = ({ onLogin }) => {
     }
   };
 
+  // Nova função para acesso como visitante
+  const handleGuestAccess = () => {
+    onLogin({ isGuest: true });
+  };
+
   return (
     <div className="min-h-screen bg-gray-100 flex justify-center items-center">
       <div className="w-full max-w-sm bg-white rounded-lg shadow-md p-8">
@@ -32,6 +37,29 @@ export const LoginPage = ({ onLogin }) => {
           <Input label="Senha" type="password" name="senha" />
           <Button type="submit" className="w-full">Entrar</Button>
         </form>
+        
+        {/* Divisor */}
+        <div className="relative my-6">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-gray-300"></div>
+          </div>
+          <div className="relative flex justify-center text-sm">
+            <span className="px-2 bg-white text-gray-500">ou</span>
+          </div>
+        </div>
+
+        {/* Botão de Visitante */}
+        <Button 
+          type="button" 
+          onClick={handleGuestAccess}
+          className="w-full bg-gray-500 hover:bg-gray-600"
+        >
+          Continuar como Visitante
+        </Button>
+        
+        <p className="text-xs text-gray-500 text-center mt-3">
+          Como visitante você terá acesso apenas para visualização
+        </p>
       </div>
     </div>
   );

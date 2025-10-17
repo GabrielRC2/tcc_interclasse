@@ -7,7 +7,7 @@ import { TournamentSelector } from '@/components/TournamentSelector';
 import { Button, CardSplat, Select } from '@/components/common';
 import { mockData } from '@/data';
 
-export const Dashboard = () => {
+export const Dashboard = ({ isGuest = false }) => {
   const { selectedTournament, tournaments, selectTournament, loading } = useTournament();
 
   const [partidaSelecionada, setPartidaSelecionada] = useState(null);

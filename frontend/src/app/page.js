@@ -54,6 +54,7 @@ function AppContent() {
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [showTournamentSelector, setShowTournamentSelector] = useState(false);
+  const [isGuest, setIsGuest] = useState(false);
 
   const { selectedTournament, tournaments, selectTournament } = useTournament();
 
@@ -70,13 +71,23 @@ function AppContent() {
     return <div className="flex items-center justify-center min-h-screen">Carregando...</div>;
   }
 
-  // Show login page if not authenticated
-  if (status === "unauthenticated" || !session) {
-    return <LoginPage onLogin={() => window.location.reload()} />;
+  // Show login page if not authenticated AND not guest
+  if ((status === "unauthenticated" || !session) && !isGuest) {
+    return <LoginPage onLogin={(options = {}) => {
+      if (options.isGuest) {
+        setIsGuest(true);
+      } else {
+        window.location.reload();
+      }
+    }} />;
   }
 
   // Verifica se o usuário tem permissão para acessar a página usando função centralizada
   const hasPageAccess = (pageName) => {
+    // Se for visitante, só pode acessar dashboard
+    if (isGuest) {
+      return pageName === 'dashboard';
+    }
     const userType = session?.user?.tipo_usuario;
     return checkUserAccess(userType, pageName);
   };
@@ -90,6 +101,11 @@ function AppContent() {
 
   // Lógica principal de renderização de conteúdo
   const renderPage = () => {
+    // Se o usuário é visitante, só mostra o Dashboard
+    if (isGuest) {
+      return <Dashboard isGuest={true} />;
+    }
+
     // Se o usuário NÃO está logado:
     if (!session) {
       // Permite apenas Dashboard e Login
@@ -128,6 +144,7 @@ function AppContent() {
 
   const handleLogout = async () => {
     await signOut({ redirect: false });
+    setIsGuest(false);
     setCurrentPage('dashboard'); // Redireciona para dashboard após logout
   };
 
@@ -145,8 +162,8 @@ function AppContent() {
         isDarkMode={isDarkMode}
         toggleDarkMode={toggleDarkMode}
         isLoggedIn={!!session}
-        userType={session?.user?.tipo_usuario}
-        allowedPages={getAllowedPages(session?.user?.tipo_usuario)}
+        userType={isGuest ? 'guest' : session?.user?.tipo_usuario}
+        allowedPages={isGuest ? ['dashboard'] : getAllowedPages(session?.user?.tipo_usuario)}
         onLogout={handleLogout}
         onLoginClick={handleLoginClick}
         selectedTournament={selectedTournament}

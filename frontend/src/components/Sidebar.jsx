@@ -1,6 +1,6 @@
 'use client';
 
-import { Home, Users, Plus, Shield, Calendar, FileText, LogOut, Moon, Sun, ChevronsLeft, Trophy, ChevronDown, Layers } from 'lucide-react';
+import { Home, Users, Plus, Shield, Calendar, FileText, LogOut, LogIn, Moon, Sun, ChevronsLeft, Trophy, ChevronDown, Layers } from 'lucide-react';
 
 const NavLink = ({ icon, label, pageName, isSidebarOpen, currentPage, setCurrentPage, toggleSidebar }) => (
     <li>
@@ -46,6 +46,8 @@ export const Sidebar = ({
     selectedTournament,
     onTournamentSelectorClick
 }) => {
+    const isGuest = userType === 'guest';
+    
     // Lógica para escolher a logo baseada no tema e estado da sidebar
     const getLogoUrl = () => {
         if (isDarkMode) {
@@ -121,8 +123,8 @@ export const Sidebar = ({
                         {/* Dashboard: SEMPRE visível */}
                         <NavLink icon={<Home size={20} />} label="Home" pageName="dashboard" isSidebarOpen={isSidebarOpen} currentPage={currentPage} setCurrentPage={setCurrentPage} toggleSidebar={toggleSidebar} />
 
-                        {/* Links de navegação RESTRICTED (APENAS SE LOGADO) */}
-                        {isLoggedIn && (
+                        {/* Links de navegação RESTRICTED (APENAS SE LOGADO e NÃO for visitante) */}
+                        {isLoggedIn && !isGuest && (
                             <>
                                 {/* Renderização baseada em páginas permitidas */}
                                 {allowedPages?.includes('teams') && (
@@ -161,10 +163,10 @@ export const Sidebar = ({
                     </button>
 
                     {/* Lógica Condicional para Botão de Login/Logout */}
-                    {isLoggedIn ? (
-                        // Se o usuário está LOGADO, mostra o botão "Sair"
+                    {isLoggedIn && !isGuest ? (
+                        // Se o usuário está LOGADO e NÃO é visitante, mostra o botão "Sair"
                         <button
-                            onClick={onLogout} // Chama a função onLogout passada do componente pai
+                            onClick={onLogout}
                             className={`flex items-center w-full p-2 mt-1 rounded-md text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-800 ${!isSidebarOpen && 'justify-center'}`}
                         >
                             <div className={`flex items-center ${isSidebarOpen ? '' : 'justify-center w-full'}`}>
@@ -173,13 +175,13 @@ export const Sidebar = ({
                             </div>
                         </button>
                     ) : (
-                        // Se o usuário NÃO está LOGADO, mostra o botão "Entrar"
+                        // Se o usuário NÃO está LOGADO ou é VISITANTE, mostra o botão "Entrar"
                         <button
-                            onClick={onLoginClick} // Chama a função onLoginClick passada do componente pai
+                            onClick={isGuest ? () => window.location.reload() : onLoginClick}
                             className={`flex items-center w-full p-2 mt-1 rounded-md text-green-600 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-800 ${!isSidebarOpen && 'justify-center'}`}
                         >
                             <div className={`flex items-center ${isSidebarOpen ? '' : 'justify-center w-full'}`}>
-                                <LogIn size={20} /> {/* Usando o ícone LogIn que importamos */}
+                                <LogIn size={20} />
                                 <span className={`ml-3 font-medium transition-all duration-200 whitespace-nowrap ${isSidebarOpen ? 'opacity-100 w-auto' : 'opacity-0 w-0 absolute'}`}>Entrar</span>
                             </div>
                         </button>
