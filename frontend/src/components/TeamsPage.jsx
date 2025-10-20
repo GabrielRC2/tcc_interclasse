@@ -764,79 +764,82 @@ function TeamsPage() {
                   <h4 className="text-md font-semibold text-gray-900 dark:text-gray-100">
                     Jogadores ({selectedTeam.players?.length || 0})
                   </h4>
-                    <Button
-                      onClick={() => {
-                        loadAvailablePlayers();
-                        setShowAddPlayer(true);
-                      }}
-                      className="text-sm"
-                    >
-                      <Plus size={16} className="mr-1" />
-                      Adicionar Jogador
-                    </Button>
-                  
+                  <Button
+                    onClick={() => {
+                      loadAvailablePlayers();
+                      setShowAddPlayer(true);
+                    }}
+                    className="text-sm"
+                  >
+                    <Plus size={16} className="mr-1" />
+                    Adicionar Jogador
+                  </Button>
+
                 </div>
 
                 {selectedTeam.players && selectedTeam.players.length > 0 ? (
-                  <div className="space-y-2 max-h-60 overflow-y-auto">
-                    {selectedTeam.players.map((player, index) => (
-                      <div key={player.id} className="flex items-center gap-3 p-2 bg-gray-50 dark:bg-gray-700 rounded relative">
-                        <div className="w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold">
-                          {player.numero || index + 1}
-                        </div>
-                        <div className="flex-1">
-                          <p className="font-medium text-gray-900 dark:text-gray-100">{player.name}</p>
-                          <p className="text-xs text-gray-500 dark:text-gray-400">
-                            {player.sala} • {player.genero}
-                          </p>
-                        </div>
-                        <div className="relative">
-                          <button
-                            onClick={() => setOpenDropdownId(openDropdownId === player.id ? null : player.id)}
-                            className="p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded"
-                          >
-                            <MoreVertical size={16} className="text-gray-500 dark:text-gray-400" />
-                          </button>
-                          {openDropdownId === player.id && (
-                            <div className="absolute right-0 top-8 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-10 min-w-[120px]">
-                              <button
-                                onClick={() => {
-                                  setEditingPlayer({
-                                    id: player.id,
-                                    name: player.name,
-                                    numero: player.numero || ''
-                                  });
-                                  setShowEditPlayer(true);
-                                  setOpenDropdownId(null);
-                                }}
-                                className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
-                              >
-                                <Edit size={14} />
-                                Editar
-                              </button>
-                              <button
-                                onClick={async () => {
-                                  const confirmed = await confirm.danger(`Tem certeza que deseja excluir o jogador ${player.name}?`, {
-                                    title: 'Confirmar Exclusão',
-                                    confirmText: 'Excluir',
-                                    cancelText: 'Cancelar'
-                                  });
+                  <div className="space-y-2 max-h-60 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-gray-100 dark:scrollbar-track-gray-800">
+                    {selectedTeam.players.map((player, index) => {
+                      const isLastPlayer = index === selectedTeam.players.length - 1;
+                      return (
+                        <div key={player.id} className="flex items-center gap-3 p-2 bg-gray-50 dark:bg-gray-700 rounded relative">
+                          <div className="w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold">
+                            {player.numero || index + 1}
+                          </div>
+                          <div className="flex-1">
+                            <p className="font-medium text-gray-900 dark:text-gray-100">{player.name}</p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">
+                              {player.sala} • {player.genero}
+                            </p>
+                          </div>
+                          <div className="relative">
+                            <button
+                              onClick={() => setOpenDropdownId(openDropdownId === player.id ? null : player.id)}
+                              className="p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded transition-colors"
+                            >
+                              <MoreVertical size={16} className="text-gray-500 dark:text-gray-400" />
+                            </button>
+                            {openDropdownId === player.id && (
+                              <div className={`absolute right-0 ${isLastPlayer ? 'bottom-8' : 'top-8'} bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl z-50 min-w-[140px] overflow-hidden`}>
+                                <button
+                                  onClick={() => {
+                                    setEditingPlayer({
+                                      id: player.id,
+                                      name: player.name,
+                                      numero: player.numero || ''
+                                    });
+                                    setShowEditPlayer(true);
+                                    setOpenDropdownId(null);
+                                  }}
+                                  className="w-full px-4 py-2.5 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 flex items-center gap-2 transition-colors"
+                                >
+                                  <Edit size={14} className="text-blue-600 dark:text-blue-400" />
+                                  Editar
+                                </button>
+                                <button
+                                  onClick={async () => {
+                                    const confirmed = await confirm.danger(`Tem certeza que deseja excluir o jogador ${player.name}?`, {
+                                      title: 'Confirmar Exclusão',
+                                      confirmText: 'Excluir',
+                                      cancelText: 'Cancelar'
+                                    });
 
-                                  if (confirmed) {
-                                    deletePlayer(player.id);
-                                  }
-                                  setOpenDropdownId(null);
-                                }}
-                                className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 text-red-600 dark:text-red-400 flex items-center gap-2"
-                              >
-                                <Trash2 size={14} />
-                                Excluir
-                              </button>
-                            </div>
-                          )}
+                                    if (confirmed) {
+                                      deletePlayer(player.id);
+                                    }
+                                    setOpenDropdownId(null);
+                                  }}
+                                  className="w-full px-4 py-2.5 text-left text-sm hover:bg-red-50 dark:hover:bg-red-950/30 text-red-600 dark:text-red-400 flex items-center gap-2 transition-colors border-t border-gray-200 dark:border-gray-700"
+                                >
+                                  <Trash2 size={14} />
+                                  Excluir
+                                </button>
+                              </div>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 ) : (
                   <div className="text-center py-8 text-gray-500 dark:text-gray-400">

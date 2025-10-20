@@ -61,7 +61,7 @@ const PDFDownloadButton = ({ className, fileName, matchData, tournamentData, tea
   );
 };
 
-export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', readOnly = false, onSumulaEnviada = () => { } }) => {
+export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEnviada = () => { } }) => {
   const estaAoVivo = mode === 'live';
   const { selectedTournament } = useTournament();
   const toast = useToast();
@@ -99,7 +99,18 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', readOnly =
   // Verifica se há empate (necessário pênaltis em eliminatórias)
   const hahEmpate = placarA === placarB;
 
-
+  // Initialize scores safely
+  useEffect(() => {
+    if (match?.result) {
+      const resultStr = String(match.result);
+      const parts = resultStr.split(':');
+      setPlacarA(parseInt(parts[0]) || 0);
+      setPlacarB(parseInt(parts[1]) || 0);
+    } else {
+      setPlacarA(0);
+      setPlacarB(0);
+    }
+  }, [match?.result, match?.id]);
 
   useEffect(() => {
     const carregarDados = async () => {
@@ -143,21 +154,9 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', readOnly =
         const statsA = montarEstatisticas(mappedT1, dataEv);
         const statsB = montarEstatisticas(mappedT2, dataEv);
 
-        // Inicializa edições garantindo que todos os jogadores estejam presentes
-        const inicializarEdicao = (jogadores, stats) => {
-          return jogadores.map(jogador => {
-            const stat = stats.find(s => s.id === jogador.id) || { pontos: 0, amarelos: 0, vermelhos: 0 };
-            return {
-              id: jogador.id,
-              points: stat.pontos,
-              yellow: stat.amarelos,
-              red: stat.vermelhos
-            };
-          });
-        };
-
-        setEdicaoTimeA(inicializarEdicao(mappedT1, statsA));
-        setEdicaoTimeB(inicializarEdicao(mappedT2, statsB));
+        // inicializa edições a partir das estatísticas atuais
+        setEdicaoTimeA(statsA.map(s => ({ id: s.id, points: s.pontos, yellow: s.amarelos, red: s.vermelhos })));
+        setEdicaoTimeB(statsB.map(s => ({ id: s.id, points: s.pontos, yellow: s.amarelos, red: s.vermelhos })));
 
         // atualiza exibição (modo final) com estatísticas
         setJogadoresTimeA(mappedT1.map(j => {
@@ -199,30 +198,6 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', readOnly =
     if (match?.id && isOpen) {
       carregarDados();
     }
-
-    // Atualiza o status da partida para "Em andamento" se estiver ao vivo
-    const atualizarStatusParaEmAndamento = async () => {
-      if (isOpen && estaAoVivo && match?.status === 'Agendada') {
-        try {
-          const response = await fetch(`/api/partidas/${match.id}/iniciar`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-          });
-          
-          if (response.ok) {
-            // Notificar o componente pai sobre a mudança de status para que a UI seja atualizada.
-            // Esta é a correção principal para o status não atualizar na tela.
-            if (onSumulaEnviada) {
-              onSumulaEnviada(match.id, 'Em andamento');
-            }
-          }
-        } catch (error) {
-          console.error('Falha ao atualizar status da partida:', error);
-        }
-      }
-    };
-
-    atualizarStatusParaEmAndamento();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [match?.id, isOpen]);
 
@@ -235,146 +210,19 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', readOnly =
     setPlacarB(gB);
   }, [edicaoTimeA, edicaoTimeB, estaAoVivo, permitirEdicao]);
 
-  // Estados para controle de salvamento assíncrono
-  const [debounceTimer, setDebounceTimer] = useState(null);
-  const [salvamentoPendente, setSalvamentoPendente] = useState(false);
-  
-  // Refs para capturar estados mais recentes
-  const edicaoTimeARef = useRef(edicaoTimeA);
-  const edicaoTimeBRef = useRef(edicaoTimeB);
-
-  // Atualizar refs sempre que os estados mudarem
-  useEffect(() => {
-    edicaoTimeARef.current = edicaoTimeA;
-  }, [edicaoTimeA]);
-
-  useEffect(() => {
-    edicaoTimeBRef.current = edicaoTimeB;
-  }, [edicaoTimeB]);
-
-  // Limpar timer quando componente desmontar ou modal fechar
-  useEffect(() => {
-    return () => {
-      if (debounceTimer) {
-        clearTimeout(debounceTimer);
-      }
-    };
-  }, [debounceTimer]);
-
   // Early return for better React consistency - AFTER all hooks
   if (!match || !isOpen) return null;
 
-  // Função para salvar eventos de forma assíncrona - corrigida para capturar estado mais recente
-  const salvarEventosAssincronos = async (estadoTimeA = null, estadoTimeB = null) => {
-    if (!match?.id || salvamentoPendente) return;
-
-    setSalvamentoPendente(true);
-    
-    try {
-      // Usar estados passados como parâmetro ou refs com estado mais recente
-      const estadoA = estadoTimeA || edicaoTimeARef.current;
-      const estadoB = estadoTimeB || edicaoTimeBRef.current;
-
-      // Construir eventos baseado no estado atual de edição
-      const eventosParaSalvar = [];
-      const todasEdicoes = [
-        ...estadoA.map(e => ({ ...e, time: 1 })),
-        ...estadoB.map(e => ({ ...e, time: 2 }))
-      ];
-
-      todasEdicoes.forEach(edicao => {
-        // GOLS: 1 evento por jogador com a quantidade total
-        if (edicao.points > 0) {
-          eventosParaSalvar.push({
-            jogadorId: edicao.id,
-            tipo: 'GOL',
-            pontosGerados: edicao.points
-          });
-        }
-
-        // CARTÕES AMARELOS: múltiplos eventos por jogador
-        for (let i = 0; i < (edicao.yellow || 0); i++) {
-          eventosParaSalvar.push({
-            jogadorId: edicao.id,
-            tipo: 'CARTAO_AMARELO',
-            pontosGerados: 0
-          });
-        }
-
-        // CARTÕES VERMELHOS: múltiplos eventos por jogador
-        for (let i = 0; i < (edicao.red || 0); i++) {
-          eventosParaSalvar.push({
-            jogadorId: edicao.id,
-            tipo: 'CARTAO_VERMELHO',
-            pontosGerados: 0
-          });
-        }
-      });
-
-      // Preparar dados para envio
-      const dadosParaEnvio = eventosParaSalvar.map(e => ({
-        tipo: e.tipo,
-        ponto: e.pontosGerados,
-        jogador: e.jogadorId
-      }));
-
-      console.log('Enviando eventos para o backend:', JSON.stringify(dadosParaEnvio, null, 2));
-      console.log('Estado TimeA usado:', JSON.stringify(estadoA, null, 2));
-      console.log('Estado TimeB usado:', JSON.stringify(estadoB, null, 2));
-
-      // Substituir todos os eventos da partida (DELETE + CREATE)
-      const response = await fetch(`/api/partidas/${match.id}/eventos`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(dadosParaEnvio),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(`Erro ao salvar eventos: ${error.error}`);
-      }
-
-      console.log('Eventos salvos assíncronamente com sucesso');
-    } catch (error) {
-      console.error('Erro ao salvar eventos:', error);
-    } finally {
-      setSalvamentoPendente(false);
-    }
-  };
-
   const tratarMudancaInput = (time, jogadorId, campo, valor) => {
     const v = Math.max(0, parseInt(valor || '0', 10));
-    
-    console.log(`Mudança detectada - Time: ${time}, Jogador: ${jogadorId}, Campo: ${campo}, Valor: ${valor} -> ${v}`);
-    
-    // Atualizar estado local
     if (time === 1) {
-      setEdicaoTimeA(prev => {
-        const novoEstado = prev.map(p => p.id === jogadorId ? { ...p, [campo]: v } : p);
-        console.log('Novo estado edicaoTimeA:', novoEstado);
-        return novoEstado;
-      });
+      setEdicaoTimeA(prev => prev.map(p => p.id === jogadorId ? { ...p, [campo]: v } : p));
     } else {
-      setEdicaoTimeB(prev => {
-        const novoEstado = prev.map(p => p.id === jogadorId ? { ...p, [campo]: v } : p);
-        console.log('Novo estado edicaoTimeB:', novoEstado);
-        return novoEstado;
-      });
+      setEdicaoTimeB(prev => prev.map(p => p.id === jogadorId ? { ...p, [campo]: v } : p));
     }
-
-    // Debounce para salvar no banco
-    if (debounceTimer) {
-      clearTimeout(debounceTimer);
-    }
-    
-    const timer = setTimeout(() => {
-      // Usar refs para capturar estado mais recente
-      salvarEventosAssincronos(edicaoTimeARef.current, edicaoTimeBRef.current);
-    }, 800);
-    
-    setDebounceTimer(timer);
   };
 
+  // envia eventos ao backend e atualiza pontos finais; permite envio quando ao vivo ou quando permitirEdicao=true
   const enviarSumula = async () => {
     if (!(estaAoVivo || permitirEdicao)) return;
 
@@ -386,65 +234,30 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', readOnly =
 
     setSalvando(true);
     try {
-      const pontosCasaCalc = (edicaoTimeA || []).reduce((s, p) => s + (p.points || 0), 0);
-      const pontosVisitanteCalc = (edicaoTimeB || []).reduce((s, p) => s + (p.points || 0), 0);
+      // Reconcile events instead of blindly creating duplicates.
+      // 1) Load existing events for this match
+      const existingRes = await fetch(`/api/partidas/${match.id}/eventos`);
+      const existingEvents = existingRes.ok ? await existingRes.json() : [];
 
-      // 1. Construir eventos simplificados (apenas 1 por tipo por jogador)
-      const eventosParaSalvar = [];
-      const todasEdicoes = [
-        ...edicaoTimeA.map(e => ({ ...e, time: 1 })),
-        ...edicaoTimeB.map(e => ({ ...e, time: 2 }))
-      ];
-
-      todasEdicoes.forEach(edicao => {
-        // GOLS: 1 evento com total de gols
-        if (edicao.points > 0) {
-          eventosParaSalvar.push({ 
-            tipo: 'GOL', 
-            ponto: edicao.points, 
-            jogador: edicao.id 
-          });
-        }
-        
-        // CARTÕES AMARELOS: múltiplos eventos por jogador
-        for (let i = 0; i < (edicao.yellow || 0); i++) {
-          eventosParaSalvar.push({ 
-            tipo: 'CARTAO_AMARELO', 
-            ponto: 0, 
-            jogador: edicao.id 
-          });
-        }
-
-        // CARTÕES VERMELHOS: múltiplos eventos por jogador
-        for (let i = 0; i < (edicao.red || 0); i++) {
-          eventosParaSalvar.push({ 
-            tipo: 'CARTAO_VERMELHO', 
-            ponto: 0, 
-            jogador: edicao.id 
-          });
+      // Build lookup maps
+      const golMap = new Map(); // jogadorId -> event
+      const cardMap = new Map(); // `${jogadorId}:${tipo}` -> array of events
+      existingEvents.forEach(ev => {
+        const jid = parseInt(ev.jogadorId ?? ev.jogador ?? ev.jogador?.id, 10);
+        if (!jid) return;
+        if (ev.tipo === 'GOL') {
+          golMap.set(jid, ev);
+        } else if (ev.tipo === 'CARTAO_AMARELO' || ev.tipo === 'CARTAO_VERMELHO') {
+          const key = `${jid}:${ev.tipo}`;
+          const arr = cardMap.get(key) || [];
+          arr.push(ev);
+          cardMap.set(key, arr);
         }
       });
 
       const postsToCreate = [];
       const patchesToDo = [];
       const warnings = [];
-
-      // Criar mapas dos eventos existentes para reconciliação
-      const golMap = new Map();
-      const cardMap = new Map();
-
-      eventos.forEach(evento => {
-        const jogadorId = parseInt(evento.jogadorId ?? evento.jogador ?? evento.jogador?.id);
-        if (!jogadorId) return;
-
-        if (evento.tipo === 'GOL') {
-          golMap.set(jogadorId, evento);
-        } else if (evento.tipo === 'CARTAO_AMARELO' || evento.tipo === 'CARTAO_VERMELHO') {
-          const key = `${jogadorId}:${evento.tipo}`;
-          if (!cardMap.has(key)) cardMap.set(key, []);
-          cardMap.get(key).push(evento);
-        }
-      });
 
       const reconciliarLista = (listaEdicao) => {
         listaEdicao.forEach(p => {
@@ -527,6 +340,10 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', readOnly =
         console.warn('Avisos ao reconciliar eventos:', warnings.join('\n'));
         toast.warning('Avisos: ' + warnings.join('\n'));
       }
+
+
+      const pontosCasaCalc = (edicaoTimeA || []).reduce((s, p) => s + (p.points || 0), 0);
+      const pontosVisitanteCalc = (edicaoTimeB || []).reduce((s, p) => s + (p.points || 0), 0);
 
       // Finalizar a partida usando o novo endpoint
       const finalizarResponse = await fetch(`/api/partidas/${match.id}/finalizar`, {
@@ -695,12 +512,15 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', readOnly =
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="INFORMAÇÕES DO TORNEIO" size="max-w-4xl max-h-[90vh]">
       <div className="flex flex-col h-[70vh]">
-        <div className="flex-1 overflow-y-auto pr-2 bg-white dark:bg-gray-800 p-4">
+        <div ref={sumulaRef} className="flex-1 overflow-y-auto pr-2 bg-white dark:bg-gray-800 p-4">
           <div className="text-center mb-6 border-b pb-4">
             <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
               SÚMULA DE PARTIDA {estaAoVivo && <span className="text-red-500">(AO VIVO)</span>}
             </h1>
             <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">{selectedTournament?.name || 'Torneio Interclasse'}</p>
+            <p className="text-xs text-gray-500 dark:text-gray-500">
+              Data: {new Date().toLocaleDateString('pt-BR')} | Horário: {match.time || '-'} | Local: {match.location || '-'}
+            </p>
           </div>
 
           {carregando ? (
@@ -853,6 +673,7 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', readOnly =
 
               <div className="text-center text-xs text-gray-500 dark:text-gray-400 border-t pt-4 mt-8">
                 <p>Documento gerado automaticamente pelo Sistema de Gerenciamento de Torneios</p>
+                <p>Gerado em: {new Date().toLocaleString('pt-BR')}</p>
               </div>
             </div>
           )}
@@ -894,8 +715,8 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', readOnly =
               </Button>
             )}
 
-            {/* Botão para permitir edição mesmo quando não está ao vivo (escondido em modo readOnly) */}
-            {!estaAoVivo && !readOnly && (
+            {/* Botão para permitir edição mesmo quando não está ao vivo */}
+            {!estaAoVivo && (
               <Button
                 onClick={() => {
                   const novo = !permitirEdicao;

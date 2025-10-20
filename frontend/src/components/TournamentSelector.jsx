@@ -5,12 +5,12 @@ import { Button } from '@/components/common';
 import { Modal } from '@/components/Modal';
 import { useTournament } from '@/contexts/TournamentContext';
 
-export const TournamentSelector = ({ 
-  isOpen, 
-  onClose, 
-  tournaments, 
-  selectedTournament, 
-  onSelectTournament 
+export const TournamentSelector = ({
+  isOpen,
+  onClose,
+  tournaments,
+  selectedTournament,
+  onSelectTournament
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -51,14 +51,14 @@ export const TournamentSelector = ({
       if (s === 'planejamento') return 2;
       return 3;
     };
-    
+
     const priorityA = statusPriority(a.status);
     const priorityB = statusPriority(b.status);
-    
+
     if (priorityA !== priorityB) {
       return priorityA - priorityB;
     }
-    
+
     // Se mesmo status, ordenar por nome
     return a.name.localeCompare(b.name);
   });
@@ -89,8 +89,8 @@ export const TournamentSelector = ({
   };
 
   return (
-    <Modal 
-      isOpen={isOpen} 
+    <Modal
+      isOpen={isOpen}
       onClose={onClose}
       title=""
       size="max-w-4xl"
@@ -140,7 +140,7 @@ export const TournamentSelector = ({
         </div>
 
         {/* Tournament List */}
-        <div className="flex-1 overflow-y-auto p-6">
+        <div className="flex-1 overflow-y-auto p-6 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-gray-100 dark:scrollbar-track-gray-800">
           {filteredTournaments.length === 0 ? (
             <div className="text-center py-12">
               <Trophy size={48} className="mx-auto text-gray-400 mb-4" />
