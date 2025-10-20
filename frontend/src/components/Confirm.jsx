@@ -40,35 +40,35 @@ const ConfirmModal = ({ isOpen, onClose, onConfirm, config, inputValue, selected
         switch (type) {
             case 'danger':
                 return {
-                    bg: 'bg-red-50 dark:bg-red-900',
+                    bg: 'bg-red-50 dark:bg-red-900/20',
                     border: 'border-red-200 dark:border-red-800',
                     confirmBtn: 'bg-red-600 hover:bg-red-700 text-white',
                     cancelBtn: 'bg-gray-500 hover:bg-gray-600 text-white'
                 };
             case 'warning':
                 return {
-                    bg: 'bg-yellow-50 dark:bg-yellow-900',
+                    bg: 'bg-yellow-50 dark:bg-yellow-900/20',
                     border: 'border-yellow-200 dark:border-yellow-800',
                     confirmBtn: 'bg-yellow-600 hover:bg-yellow-700 text-white',
                     cancelBtn: 'bg-gray-500 hover:bg-gray-600 text-white'
                 };
             case 'info':
                 return {
-                    bg: 'bg-blue-50 dark:bg-blue-900',
+                    bg: 'bg-blue-50 dark:bg-blue-900/20',
                     border: 'border-blue-200 dark:border-blue-800',
                     confirmBtn: 'bg-blue-600 hover:bg-blue-700 text-white',
                     cancelBtn: 'bg-gray-500 hover:bg-gray-600 text-white'
                 };
             case 'success':
                 return {
-                    bg: 'bg-green-50 dark:bg-green-900',
+                    bg: 'bg-green-50 dark:bg-green-900/20',
                     border: 'border-green-200 dark:border-green-800',
                     confirmBtn: 'bg-green-600 hover:bg-green-700 text-white',
                     cancelBtn: 'bg-gray-500 hover:bg-gray-600 text-white'
                 };
             default:
                 return {
-                    bg: 'bg-gray-50 dark:bg-gray-900',
+                    bg: 'bg-gray-50 dark:bg-gray-900/20',
                     border: 'border-gray-200 dark:border-gray-800',
                     confirmBtn: 'bg-gray-600 hover:bg-gray-700 text-white',
                     cancelBtn: 'bg-gray-500 hover:bg-gray-600 text-white'

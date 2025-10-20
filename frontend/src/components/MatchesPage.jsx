@@ -1,9 +1,10 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { Calendar, MapPin, Trophy, Filter, Play, Settings, Shuffle, RefreshCcw } from 'lucide-react';
+import { Calendar, MapPin, Trophy, Filter, Play, Settings, Shuffle, RefreshCcw, AlertTriangle } from 'lucide-react';
 import { Button, Select } from '@/components/common';
 import { useTournament } from '@/contexts/TournamentContext';
 import { SumulaModal } from '@/components/SumulaModal';
+import { WOModal } from '@/components/WOModal';
 import { Modal } from '@/components/Modal';
 import { useToast } from '@/components/Toast';
 import { useConfirm } from '@/components/Confirm';
@@ -28,6 +29,8 @@ export const MatchesPage = () => {
   const [modalidadesDisponiveis, setModalidadesDisponiveis] = useState([]);
   const [showConfigModal, setShowConfigModal] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const [showWOModal, setShowWOModal] = useState(false);
+  const [partidaWO, setPartidaWO] = useState(null);
 
   useEffect(() => {
     carregarDadosIniciais();
@@ -70,8 +73,18 @@ export const MatchesPage = () => {
       let url = `/api/partidas?torneioId=${selectedTournament.id}`;
       if (modalidadeSelecionada) url += `&modalidadeId=${modalidadeSelecionada}`;
       if (generoSelecionado) url += `&genero=${generoSelecionado}`;
+
+      console.log('🔍 Carregando partidas com URL:', url);
+      console.log('📊 Filtros aplicados:', {
+        modalidadeSelecionada,
+        generoSelecionado,
+        torneioId: selectedTournament.id
+      });
+
       const res = await fetch(url);
       const data = res.ok ? await res.json() : [];
+
+      console.log('📋 Partidas carregadas:', data.length);
       setPartidas(data);
     } catch (err) {
       console.error('Erro ao carregar partidas:', err);
@@ -143,7 +156,15 @@ export const MatchesPage = () => {
   // clique no badge de status: alterna entre Agendada <-> Em andamento (ou escolhe)
   const tratarCliqueStatus = async (partida) => {
     if (!partida) return;
+
     const atual = partida.status || 'Agendada';
+
+    // Bloquear alteração se a partida já estiver finalizada
+    if (atual === 'Finalizada' || atual === 'FINALIZADA') {
+      toast.warning('Não é possível alterar o status de uma partida já finalizada.');
+      return;
+    }
+
     let desejado = atual === 'Agendada' ? 'Em andamento' : (atual === 'Em andamento' ? 'Agendada' : null);
 
     if (!desejado) {
@@ -192,6 +213,24 @@ export const MatchesPage = () => {
     await carregarPartidas();
   };
 
+  // Função para abrir modal de WO
+  const abrirModalWO = (partida) => {
+    setPartidaWO(partida);
+    setShowWOModal(true);
+  };
+
+  // Função para fechar modal de WO
+  const fecharModalWO = () => {
+    setPartidaWO(null);
+    setShowWOModal(false);
+  };
+
+  // Função para tratar confirmação de WO
+  const tratarWOConfirmado = async () => {
+    await carregarPartidas(); // Recarregar partidas para ver as mudanças
+    fecharModalWO();
+  };
+
   const loadConfiguracaoLocais = async () => {
     try {
       const response = await fetch('/api/modalidades-locais');
@@ -210,12 +249,12 @@ export const MatchesPage = () => {
       // Configuração baseada nos dados do banco ou padrões pré-determinados
       const configPadrao = {};
       data.modalidades.forEach(modalidade => {
-          // Prioridade: 1) Configuração já salva, 2) Local atual do banco, 3) Padrão pré-determinado
-          configPadrao[modalidade.nome] = 
-            configuracaoLocais[modalidade.nome] || 
-            modalidade.localAtual || 
-            locaisPadrao[modalidade.nome] || 
-            'Quadra de Baixo';
+        // Prioridade: 1) Configuração já salva, 2) Local atual do banco, 3) Padrão pré-determinado
+        configPadrao[modalidade.nome] =
+          configuracaoLocais[modalidade.nome] ||
+          modalidade.localAtual ||
+          locaisPadrao[modalidade.nome] ||
+          'Quadra de Baixo';
       });
       setConfiguracaoLocais(configPadrao);
       console.log('📍 Configuração de locais carregada:', configPadrao);
@@ -623,15 +662,15 @@ export const MatchesPage = () => {
   // Função para determinar a próxima ação do torneio
   const proximaAcao = (() => {
     if (!selectedTournament) return '';
-    
+
     // Se não há partidas em todo o torneio, pode gerar grupos
     if (!partidas.length) {
       return 'GERAR_GRUPOS';
     }
-    
+
     // Verificar se há partidas de grupos
     const partidasGrupos = partidas.filter(p => p.fase === 'Grupos' || p.fase === 'Fase de Grupos' || !p.fase);
-    
+
     // Se já existem partidas de grupos, verificar se todas estão finalizadas para possivelmente gerar eliminatórias
     if (partidasGrupos.length > 0) {
       const todasPartidasGruposFinalizadas = partidasGrupos.every(p => p.status === 'FINALIZADA');
@@ -822,7 +861,12 @@ export const MatchesPage = () => {
               <Select
                 label="Modalidade"
                 value={modalidadeSelecionada}
-                onChange={(e) => { setModalidadeSelecionada(e.target.value); setGeneroSelecionado(''); }}
+                onChange={(e) => {
+                  const novaModalidade = e.target.value;
+                  setModalidadeSelecionada(novaModalidade);
+                  // Se estava com gênero selecionado, manter; senão manter vazio
+                  // Isso permite filtrar só por modalidade sem precisar de gênero
+                }}
               >
                 <option value="">Todas as modalidades</option>
                 {modalidades.map(m => <option key={m.id} value={m.id}>{m.nome}</option>)}
@@ -832,7 +876,6 @@ export const MatchesPage = () => {
                 label="Gênero"
                 value={generoSelecionado}
                 onChange={(e) => setGeneroSelecionado(e.target.value)}
-                disabled={!modalidadeSelecionada}
               >
                 <option value="">Todos os gêneros</option>
                 {generos.map(g => <option key={g} value={g}>{g}</option>)}
@@ -893,13 +936,39 @@ export const MatchesPage = () => {
                           </span>
                         </div>
 
-                        <span
-                          onClick={() => tratarCliqueStatus(p)}
-                          className={`px-2 py-1 rounded-full text-xs font-medium cursor-pointer self-start sm:self-center ${obterCorStatus(p.status)}`}
-                          title="Clique para alternar Agendada / Em andamento"
-                        >
-                          {p.status || 'Agendada'}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span
+                            onClick={() => {
+                              const statusFinalizado = p.status === 'Finalizada' || p.status === 'FINALIZADA';
+                              if (!statusFinalizado) {
+                                tratarCliqueStatus(p);
+                              }
+                            }}
+                            className={`px-2 py-1 rounded-full text-xs font-medium self-start sm:self-center ${obterCorStatus(p.status)} ${p.status === 'Finalizada' || p.status === 'FINALIZADA'
+                                ? 'cursor-not-allowed opacity-75'
+                                : 'cursor-pointer hover:opacity-80'
+                              }`}
+                            title={
+                              p.status === 'Finalizada' || p.status === 'FINALIZADA'
+                                ? 'Partida finalizada - não é possível alterar o status'
+                                : 'Clique para alternar Agendada / Em andamento'
+                            }
+                          >
+                            {p.status || 'Agendada'}
+                          </span>
+
+                          {/* Botão WO - apenas para partidas não finalizadas */}
+                          {p.status !== 'Finalizada' && p.status !== 'FINALIZADA' && (
+                            <button
+                              onClick={() => abrirModalWO(p)}
+                              className="p-1.5 rounded-full bg-red-100 hover:bg-red-200 dark:bg-red-900/30 dark:hover:bg-red-900/50 transition-all duration-200 hover:scale-110 active:scale-95"
+                              title="Registrar WO (Walk Over)"
+                            >
+                              <AlertTriangle size={16} className="text-red-600 dark:text-red-400" />
+                            </button>
+                          )}
+                        </div>
+
                       </div>
 
                       <div className="flex items-center justify-center gap-4 mb-4">
@@ -911,16 +980,26 @@ export const MatchesPage = () => {
                         <div className="text-center px-3 md:px-4 flex-shrink-0">
                           {p.result ? (
                             <div className="text-center mb-1">
-                              {formatarResultado(p.result)}
-                              {(() => {
-                                const resultado = obterVencedor(p);
-                                if (resultado?.tipo === 'empate') {
-                                  return <div className="text-xs md:text-sm font-semibold text-yellow-600 dark:text-yellow-400 mt-2">EMPATE</div>;
-                                } else if (resultado?.vencedor) {
-                                  return <div className="text-xs md:text-sm font-semibold text-green-600 dark:text-green-400 mt-2">🏆 {resultado.vencedor}</div>;
-                                }
-                                return null;
-                              })()}
+                              {/* Detectar WO quando resultado é 0:0 e partida está finalizada */}
+                              {p.result === '0:0' && (p.status === 'Finalizada' || p.status === 'FINALIZADA') ? (
+                                <div className="text-center">
+                                  <div className="text-lg md:text-xl font-bold text-red-600 dark:text-red-400">WO</div>
+                                  <div className="text-xs md:text-sm font-semibold text-gray-600 dark:text-gray-400 mt-1">Walk Over</div>
+                                </div>
+                              ) : (
+                                <>
+                                  {formatarResultado(p.result)}
+                                  {(() => {
+                                    const resultado = obterVencedor(p);
+                                    if (resultado?.tipo === 'empate') {
+                                      return <div className="text-xs md:text-sm font-semibold text-yellow-600 dark:text-yellow-400 mt-2">EMPATE</div>;
+                                    } else if (resultado?.vencedor) {
+                                      return <div className="text-xs md:text-sm font-semibold text-green-600 dark:text-green-400 mt-2">🏆 {resultado.vencedor}</div>;
+                                    }
+                                    return null;
+                                  })()}
+                                </>
+                              )}
                             </div>
                           ) : (
                             <div className="text-lg md:text-xl font-bold text-gray-400">VS</div>
@@ -986,11 +1065,20 @@ export const MatchesPage = () => {
             />
           )}
 
+          {showWOModal && partidaWO && (
+            <WOModal
+              isOpen={showWOModal}
+              onClose={fecharModalWO}
+              match={partidaWO}
+              onWOConfirmed={tratarWOConfirmado}
+            />
+          )}
+
           {showConfigModal && (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
               <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md">
                 <h3 className="text-lg font-bold mb-4 text-gray-900 dark:text-gray-100">Configurar Locais por Modalidade</h3>
-                
+
                 <div className="space-y-4">
                   {modalidadesDisponiveis.map(modalidade => (
                     <div key={modalidade.id} className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
@@ -1000,12 +1088,12 @@ export const MatchesPage = () => {
                           ({modalidade.categorias?.length || 0} categorias)
                         </span>
                       </label>
-                      <select 
+                      <select
                         className="w-full p-2 border rounded bg-white dark:bg-gray-600 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-500"
                         value={configuracaoLocais[modalidade.nome] || modalidade.localAtual || 'Quadra de Baixo'}
                         onChange={(e) => setConfiguracaoLocais(prev => ({
-                            ...prev,
-                            [modalidade.nome]: e.target.value
+                          ...prev,
+                          [modalidade.nome]: e.target.value
                         }))}
                       >
                         {modalidade.locaisDisponiveis?.map(local => (
@@ -1014,32 +1102,32 @@ export const MatchesPage = () => {
                           </option>
                         ))}
                       </select>
-                      {configuracaoLocais[modalidade.nome] && modalidade.localAtual && 
+                      {configuracaoLocais[modalidade.nome] && modalidade.localAtual &&
                         configuracaoLocais[modalidade.nome] !== modalidade.localAtual && (
-                        <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
-                          Alterando de {modalidade.localAtual} para {configuracaoLocais[modalidade.nome]}
-                        </p>
-                      )}
+                          <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                            Alterando de {modalidade.localAtual} para {configuracaoLocais[modalidade.nome]}
+                          </p>
+                        )}
                     </div>
                   ))}
                 </div>
 
                 <div className="flex gap-2 mt-6">
-                  <Button 
+                  <Button
                     onClick={() => setShowConfigModal(false)}
                     variant="outline"
                     className="flex-1"
                   >
                     Cancelar
                   </Button>
-                  <Button 
+                  <Button
                     onClick={async () => {
                       try {
                         const configuracoes = Object.entries(configuracaoLocais).map(([modalidade, local]) => ({
                           modalidade,
                           local
                         })).filter(config => config.local); // Remove empty selections
-                        
+
                         const response = await fetch('/api/modalidades-locais', {
                           method: 'POST',
                           headers: {
@@ -1049,7 +1137,7 @@ export const MatchesPage = () => {
                         });
 
                         if (!response.ok) throw new Error('Falha ao salvar configurações');
-                        
+
                         // Recarregar configurações após salvar
                         await loadConfiguracaoLocais();
                         setShowConfigModal(false);

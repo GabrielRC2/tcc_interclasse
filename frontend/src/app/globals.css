@@ -2,51 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Scrollbar global para toda a aplicação */
-* {
-  scrollbar-width: thin;
-  scrollbar-color: #9ca3af #e5e7eb;
-  /* thumb track para modo light - mais escuro */
-}
-
-/* Dark mode scrollbar */
-.dark * {
-  scrollbar-color: #4b5563 #1f2937;
-  /* thumb track para modo dark */
-}
-
-/* Webkit scrollbar customization */
-*::-webkit-scrollbar {
-  width: 12px;
-  height: 12px;
-}
-
-*::-webkit-scrollbar-track {
-  background: #e5e7eb;
-}
-
-*::-webkit-scrollbar-thumb {
-  background: #9ca3af;
-  border-radius: 6px;
-}
-
-*::-webkit-scrollbar-thumb:hover {
-  background: #6b7280;
-}
-
-/* Dark mode webkit scrollbar */
-.dark *::-webkit-scrollbar-track {
-  background: #1f2937;
-}
-
-.dark *::-webkit-scrollbar-thumb {
-  background: #4b5563;
-}
-
-.dark *::-webkit-scrollbar-thumb:hover {
-  background: #6b7280;
-}
-
 /* Scrollbar personalizada para tabelas responsivas */
 .scrollbar-thin {
   scrollbar-width: thin;
@@ -77,11 +32,11 @@
 
 /* Efeito de sombra nas bordas para indicar scroll */
 .scroll-shadow {
-  background:
-    linear-gradient(90deg, white 30%, rgba(255, 255, 255, 0)),
-    linear-gradient(90deg, rgba(255, 255, 255, 0), white 70%),
-    radial-gradient(farthest-side at 0% 50%, rgba(0, 0, 0, .2), rgba(0, 0, 0, 0)),
-    radial-gradient(farthest-side at 100% 50%, rgba(0, 0, 0, .2), rgba(0, 0, 0, 0));
+  background: 
+    linear-gradient(90deg, white 30%, rgba(255,255,255,0)),
+    linear-gradient(90deg, rgba(255,255,255,0), white 70%),
+    radial-gradient(farthest-side at 0% 50%, rgba(0,0,0,.2), rgba(0,0,0,0)),
+    radial-gradient(farthest-side at 100% 50%, rgba(0,0,0,.2), rgba(0,0,0,0));
   background-repeat: no-repeat;
   background-color: white;
   background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
