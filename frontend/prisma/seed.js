@@ -4,7 +4,7 @@ const prisma = new PrismaClient();
 
 // --- Listas de Nomes para Geração Aleatória ---
 const nomesMasculinos = [
-  'João', 'Pedro', 'Lucas', 'Gabriel', 'Mateus', 'Enzo', 'Miguel', 'Davi', 'Arthur', 'Heitor', 
+  'João', 'Pedro', 'Lucas', 'Gabriel', 'Mateus', 'Enzo', 'Miguel', 'Davi', 'Arthur', 'Heitor',
   'Bernardo', 'Guilherme', 'Rafael', 'Daniel', 'Felipe', 'Thiago', 'Leonardo', 'Vinícius', 'Eduardo', 'Caio'
 ];
 const nomesFemininos = [
@@ -32,17 +32,18 @@ async function main() {
   await prisma.TorneioModalidade.deleteMany({});
   await prisma.Categoria.deleteMany({});
   await prisma.Jogador.deleteMany({});
+  await prisma.LocalModalidade.deleteMany({}); // ADICIONAR ANTES DE Local
   await prisma.Local.deleteMany({});
   await prisma.Curso.deleteMany({});
   await prisma.Modalidade.deleteMany({});
   await prisma.Torneio.deleteMany({});
-  
+
   // 2. Inserir Locais
   console.log('Criando Locais...');
   await prisma.Local.createMany({
     data: [
-        { nome: 'Quadra de Cima' },
-        { nome: 'Quadra de Baixo' },
+      { nome: 'Quadra de Cima' },
+      { nome: 'Quadra de Baixo' },
     ],
   });
 
@@ -77,7 +78,7 @@ async function main() {
 
     ],
   });
-  const torneioPrincipal = await prisma.Torneio.findFirst({ where: { nome: 'Meio do Ano 2024' }});
+  const torneioPrincipal = await prisma.Torneio.findFirst({ where: { nome: 'Meio do Ano 2024' } });
   if (!torneioPrincipal) throw new Error("Torneio principal não encontrado!");
 
   // 6. Inserir Categorias
@@ -95,7 +96,7 @@ async function main() {
     ],
   });
   const categorias = await prisma.Categoria.findMany();
-  
+
   // 7. Geração de Jogadores com Nomes Realistas
   console.log('Gerando jogadores com nomes realistas...');
   const salas = ['1º', '2º', '3º'];
@@ -105,15 +106,15 @@ async function main() {
     for (const sala of salas) {
       for (const genero of ['Masculino', 'Feminino']) {
         for (let i = 0; i < 15; i++) { // Gerar 15 jogadores por grupo
-          
+
           // Lógica para gerar nome aleatório
           const primeiroNome = genero === 'Masculino'
             ? nomesMasculinos[Math.floor(Math.random() * nomesMasculinos.length)]
             : nomesFemininos[Math.floor(Math.random() * nomesFemininos.length)];
-          
+
           const sobrenome1 = sobrenomes[Math.floor(Math.random() * sobrenomes.length)];
           const sobrenome2 = sobrenomes[Math.floor(Math.random() * sobrenomes.length)];
-          
+
           const nomeCompleto = `${primeiroNome} ${sobrenome1} ${sobrenome2}`;
 
           todosJogadoresParaCriar.push({
@@ -132,40 +133,40 @@ async function main() {
   // 8. Geração de Times e associação de jogadores
   console.log('Criando times e associando jogadores...');
   let timesParaCriar = [];
-  
+
   for (const curso of cursos) {
-      for (const sala of salas) {
-          for (const categoria of categorias) {
-              timesParaCriar.push({
-                  nome: `${sala}${curso.sigla}`,
-                  sala,
-                  cursoId: curso.id,
-                  categoriaId: categoria.id,
-                  torneioId: torneioPrincipal.id,
-              });
-          }
+    for (const sala of salas) {
+      for (const categoria of categorias) {
+        timesParaCriar.push({
+          nome: `${sala}${curso.sigla}`,
+          sala,
+          cursoId: curso.id,
+          categoriaId: categoria.id,
+          torneioId: torneioPrincipal.id,
+        });
       }
+    }
   }
   await prisma.Time.createMany({ data: timesParaCriar });
   const timesDoBanco = await prisma.Time.findMany({ include: { categoria: true } });
 
   let escalacoes = [];
   for (const time of timesDoBanco) {
-    const jogadoresDisponiveis = jogadoresDoBanco.filter(j => 
-        j.cursoId === time.cursoId &&
-        j.sala === time.sala &&
-        j.genero === time.categoria.genero
+    const jogadoresDisponiveis = jogadoresDoBanco.filter(j =>
+      j.cursoId === time.cursoId &&
+      j.sala === time.sala &&
+      j.genero === time.categoria.genero
     );
 
     const numJogadoresParaEscalar = time.categoria.nome.includes('Vôlei') ? 6 : 7;
     const jogadoresParaEscalar = jogadoresDisponiveis.slice(0, numJogadoresParaEscalar);
 
     for (let i = 0; i < jogadoresParaEscalar.length; i++) {
-        escalacoes.push({
-            timeId: time.id,
-            jogadorId: jogadoresParaEscalar[i].id,
-            numeroCamisa: i + 1,
-        });
+      escalacoes.push({
+        timeId: time.id,
+        jogadorId: jogadoresParaEscalar[i].id,
+        numeroCamisa: i + 1,
+      });
     }
   }
 
