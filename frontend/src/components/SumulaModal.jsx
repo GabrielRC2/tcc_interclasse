@@ -102,15 +102,6 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEn
   // Verifica se há empate (necessário pênaltis em eliminatórias)
   const hahEmpate = placarA === placarB;
 
-  // Notificar mudanças nos pênaltis em tempo real (para Dashboard)
-  useEffect(() => {
-    if (onPenaltisChange && isOpen) {
-      onPenaltisChange(penaltisA, penaltisB, temPenaltis);
-    }
-  }, [penaltisA, penaltisB, temPenaltis, onPenaltisChange, isOpen]);
-
-
-
   useEffect(() => {
     const carregarDados = async () => {
       setCarregando(true);
@@ -238,6 +229,13 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEn
     atualizarStatusParaEmAndamento();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [match?.id, isOpen]);
+
+  // useEffect para notificar mudanças de pênaltis em tempo real
+  useEffect(() => {
+    if (onPenaltisChange && match?.id) {
+      onPenaltisChange(match.id, penaltisA, penaltisB, temPenaltis);
+    }
+  }, [penaltisA, penaltisB, temPenaltis, match?.id, onPenaltisChange]);
 
   // quando edições mudam em modo live OU quando estamos em edição manual, recalcula placar
   useEffect(() => {

@@ -22,12 +22,18 @@ export const BracketsPage = () => {
     const [loading, setLoading] = useState(true);
     const [loadingData, setLoadingData] = useState(false); // Loading específico para atualizações
     const [classificacaoGeralExpandida, setClassificacaoGeralExpandida] = useState(false);
+    const [previousData, setPreviousData] = useState({
+        grupos: [],
+        classificacao: [],
+        eliminatorias: []
+    });
 
     useEffect(() => {
         if (selectedTournament) {
             carregarGruposDisponiveis();
         } else {
             setModalidadesDisponiveis([]);
+            setLoading(false); // Se não há torneio, não precisamos mais do loading inicial
         }
     }, [selectedTournament]);
 
@@ -40,11 +46,13 @@ export const BracketsPage = () => {
             setClassificacao([]);
             setClassificacoesPorGrupo({});
             setEliminatorias([]);
+            setLoading(false); // Garantir que loading seja false
         }
     }, [modalidadeSelecionada, selectedTournament]);
 
     const carregarGruposDisponiveis = async () => {
-        setLoading(true);
+        // Usar loadingData em vez de loading para não esconder a página
+        setLoadingData(true);
         try {
             const response = await fetch(`/api/grupos-disponiveis?torneioId=${selectedTournament.id}`);
             if (response.ok) {
@@ -56,7 +64,8 @@ export const BracketsPage = () => {
         } catch (error) {
             console.error('Erro ao carregar grupos disponíveis:', error);
         }
-        setLoading(false);
+        setLoadingData(false);
+        setLoading(false); // Só definir loading false após primeira carga
     };
 
     // Função para selecionar modalidade+gênero combinados
@@ -72,6 +81,14 @@ export const BracketsPage = () => {
         }
 
         setLoadingData(true);
+        
+        // Preservar dados anteriores enquanto carrega
+        setPreviousData({
+            grupos: gruposData,
+            classificacao: classificacao,
+            eliminatorias: eliminatorias
+        });
+        
         try {
             await Promise.all([
                 loadGrupos(),
@@ -80,6 +97,7 @@ export const BracketsPage = () => {
             ]);
         } finally {
             setLoadingData(false);
+            setLoading(false); // Garantir que após primeiro carregamento, loading seja false
         }
     };
 
@@ -425,9 +443,17 @@ export const BracketsPage = () => {
         </div>
     );
 
-    if (loading) {
+    // Só mostrar carregamento inicial se não há torneio selecionado ou na primeira carga
+    if (loading && !selectedTournament) {
         return <div className="flex justify-center items-center h-64 text-gray-600 dark:text-gray-400">Carregando...</div>;
     }
+
+    // Usar dados preservados durante carregamento para evitar flash
+    const displayData = {
+        grupos: loadingData && previousData.grupos.length > 0 ? previousData.grupos : gruposData,
+        classificacao: loadingData && previousData.classificacao.length > 0 ? previousData.classificacao : classificacao,
+        eliminatorias: loadingData && previousData.eliminatorias.length > 0 ? previousData.eliminatorias : eliminatorias
+    };
 
     return (
         <div className="space-y-6">
@@ -451,7 +477,7 @@ export const BracketsPage = () => {
                 <div className="flex gap-2">
                     <Button 
                         onClick={mostrarOpcoesEliminatorias} 
-                        disabled={!selectedTournament?.id || !modalidadeSelecionada || classificacao.length === 0}
+                        disabled={!selectedTournament?.id || !modalidadeSelecionada || displayData.classificacao.length === 0}
                         className="bg-red-600 hover:bg-red-700"
                     >
                         <Target className="mr-2" size={16} />
@@ -523,7 +549,7 @@ export const BracketsPage = () => {
                     </div>
 
                     {/* Fase de Grupos */}
-                    {gruposData.length > 0 && (
+                    {displayData.grupos.length > 0 && (
                         <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm p-6 relative overflow-hidden">
                             <div className="relative z-10">
                                 <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-6 flex items-center gap-2">
@@ -532,7 +558,7 @@ export const BracketsPage = () => {
                                 </h2>
 
                                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                                    {gruposData.map(grupo => (
+                                    {displayData.grupos.map(grupo => (
                                         <div key={grupo.nome} className="space-y-4">
                                             {/* Classificação do grupo */}
                                             {classificacoesPorGrupo[grupo.nome] && classificacoesPorGrupo[grupo.nome].length > 0 && (
@@ -551,7 +577,7 @@ export const BracketsPage = () => {
                     )}
 
                     {/* Classificação */}
-                    {classificacao.length > 0 && (
+                    {displayData.classificacao.length > 0 && (
                         <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm p-6 relative overflow-hidden">
                             <div className="relative z-10">
                                 <div 
@@ -570,7 +596,7 @@ export const BracketsPage = () => {
                                 {classificacaoGeralExpandida && (
                                     <div className="mt-6">
                                         <TabelaClassificacao
-                                            dados={classificacao}
+                                            dados={displayData.classificacao}
                                             titulo=""
                                             grupoEspecifico={false}
                                             classificacaoGeral={true}
@@ -583,7 +609,7 @@ export const BracketsPage = () => {
                     )}
 
                     {/* Eliminatórias */}
-                    {eliminatorias.length > 0 && (
+                    {displayData.eliminatorias.length > 0 && (
                         <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm p-6 relative overflow-hidden">
                             <div className="relative z-10">
                                 <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-6 flex items-center gap-2">
@@ -592,7 +618,7 @@ export const BracketsPage = () => {
                                 </h2>
 
                                 <div className="space-y-6">
-                                    {eliminatorias.map(fase => (
+                                    {displayData.eliminatorias.map(fase => (
                                         <div key={fase.fase} className="border border-gray-200 dark:border-gray-600 rounded-lg p-4">
                                             <h3 className="text-lg font-bold text-gray-800 dark:text-gray-200 mb-4">
                                                 {fase.fase} - {fase.partidas[0].modalidade}
@@ -631,7 +657,7 @@ export const BracketsPage = () => {
                     )}
 
                     {/* Estado vazio */}
-                    {gruposData.length === 0 && classificacao.length === 0 && (
+                    {displayData.grupos.length === 0 && displayData.classificacao.length === 0 && (
                         <div className="text-center py-12">
                             <Calendar size={48} className="mx-auto text-gray-400 mb-4" />
                             <p className="text-gray-500 dark:text-gray-400 text-lg">

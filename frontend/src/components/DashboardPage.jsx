@@ -959,8 +959,8 @@ export const Dashboard = () => {
                 tratarSumulaEnviada(id);
                 limparPenaltisTemporarios(id);
               }}
-              onPenaltisChange={(penaltisCasa, penaltisVisitante, temPenaltis) => {
-                atualizarPenaltisTemporarios(partidaSelecionada.id, penaltisCasa, penaltisVisitante, temPenaltis);
+              onPenaltisChange={(partidaId, penaltisCasa, penaltisVisitante, temPenaltis) => {
+                atualizarPenaltisTemporarios(partidaId, penaltisCasa, penaltisVisitante, temPenaltis);
               }}
             />
           )}
