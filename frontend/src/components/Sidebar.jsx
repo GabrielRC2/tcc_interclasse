@@ -120,31 +120,31 @@ export const Sidebar = ({
 
                     <p className={`px-2 text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase transition-opacity duration-300 ${isSidebarOpen ? 'opacity-100' : 'opacity-0'}`}>GERAL</p>
                     <ul>
-                        {/* Dashboard: SEMPRE visível */}
+                        {/* Dashboard: SEMPRE visível para todos */}
                         <NavLink icon={<Home size={20} />} label="Home" pageName="dashboard" isSidebarOpen={isSidebarOpen} currentPage={currentPage} setCurrentPage={setCurrentPage} toggleSidebar={toggleSidebar} />
 
-                        {/* Links de navegação RESTRICTED (APENAS SE LOGADO e NÃO for visitante) */}
-                        {isLoggedIn && !isGuest && (
+                        {/* Links de navegação para usuários logados (incluindo visitantes) */}
+                        {isLoggedIn && (
                             <>
-                                {/* Renderização baseada em páginas permitidas */}
-                                {allowedPages?.includes('teams') && (
-                                    <NavLink icon={<Users size={20} />} label="Times" pageName="teams" isSidebarOpen={isSidebarOpen} currentPage={currentPage} setCurrentPage={setCurrentPage} toggleSidebar={toggleSidebar} />
-                                )}
-                                {allowedPages?.includes('seasons') && (
-                                    <NavLink icon={<Calendar size={20} />} label="Temporadas" pageName="seasons" isSidebarOpen={isSidebarOpen} currentPage={currentPage} setCurrentPage={setCurrentPage} toggleSidebar={toggleSidebar} />
-                                )}
-                                {allowedPages?.includes('registrations') && (
+                                {/* Times - acessível para todos (incluindo visitantes) */}
+                                <NavLink icon={<Users size={20} />} label="Times" pageName="teams" isSidebarOpen={isSidebarOpen} currentPage={currentPage} setCurrentPage={setCurrentPage} toggleSidebar={toggleSidebar} />
+                                
+                                {/* Temporadas - acessível para todos (incluindo visitantes) */}
+                                <NavLink icon={<Calendar size={20} />} label="Temporadas" pageName="seasons" isSidebarOpen={isSidebarOpen} currentPage={currentPage} setCurrentPage={setCurrentPage} toggleSidebar={toggleSidebar} />
+                                
+                                {/* Cadastros - EXCLUSIVO para ADMIN (visitantes NÃO veem) */}
+                                {!isGuest && allowedPages?.includes('registrations') && (
                                     <NavLink icon={<Plus size={20} />} label="Cadastros" pageName="registrations" isSidebarOpen={isSidebarOpen} currentPage={currentPage} setCurrentPage={setCurrentPage} toggleSidebar={toggleSidebar} />
                                 )}
-                                {allowedPages?.includes('groups') && (
-                                    <NavLink icon={<Layers size={20} />} label="Grupos" pageName="groups" isSidebarOpen={isSidebarOpen} currentPage={currentPage} setCurrentPage={setCurrentPage} toggleSidebar={toggleSidebar} />
-                                )}
-                                {allowedPages?.includes('matches') && (
-                                    <NavLink icon={<FileText size={20} />} label="Partidas" pageName="matches" isSidebarOpen={isSidebarOpen} currentPage={currentPage} setCurrentPage={setCurrentPage} toggleSidebar={toggleSidebar} />
-                                )}
-                                {allowedPages?.includes('brackets') && (
-                                    <NavLink icon={<Shield size={20} />} label="Chaveamento" pageName="brackets" isSidebarOpen={isSidebarOpen} currentPage={currentPage} setCurrentPage={setCurrentPage} toggleSidebar={toggleSidebar} />
-                                )}
+                                
+                                {/* Grupos - acessível para todos (incluindo visitantes) */}
+                                <NavLink icon={<Layers size={20} />} label="Grupos" pageName="groups" isSidebarOpen={isSidebarOpen} currentPage={currentPage} setCurrentPage={setCurrentPage} toggleSidebar={toggleSidebar} />
+                                
+                                {/* Partidas - acessível para todos (incluindo visitantes) */}
+                                <NavLink icon={<FileText size={20} />} label="Partidas" pageName="matches" isSidebarOpen={isSidebarOpen} currentPage={currentPage} setCurrentPage={setCurrentPage} toggleSidebar={toggleSidebar} />
+                                
+                                {/* Chaveamento - acessível para todos (incluindo visitantes) */}
+                                <NavLink icon={<Shield size={20} />} label="Chaveamento" pageName="brackets" isSidebarOpen={isSidebarOpen} currentPage={currentPage} setCurrentPage={setCurrentPage} toggleSidebar={toggleSidebar} />
                             </>
                         )}
 

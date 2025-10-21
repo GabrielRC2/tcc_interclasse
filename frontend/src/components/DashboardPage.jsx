@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Trophy, Users, Calendar, Target, Filter, X, Settings, ChevronDown, ChevronRight } from 'lucide-react';
 import { useTournament } from '@/contexts/TournamentContext';
 import { SumulaModal } from '@/components/SumulaModal';
@@ -324,14 +324,15 @@ export const Dashboard = ({ isGuest = false }) => {
   }, [selectedTournament, partidasEmAndamento.length]);
 
   // quando a súmula for enviada a partir do modal, recarrega as finalizadas e próximas
-  const tratarSumulaEnviada = async (partidaId) => {
+  const tratarSumulaEnviada = useCallback(async (partidaId) => {
     // recarregar listas (a súmula acabou de ser criada e a partida deve aparecer como finalizada)
     if (secaoFinalizadasExpandida) await carregarPartidasFinalizadas();
     if (secaoAgendadasExpandida) await carregarPartidasAgendadas();
     await carregarProximasPartidas(); // Atualizar próximas partidas também
     await carregarJogadoresDestaque(); // Atualizar jogadores em destaque
     await carregarPartidasEmAndamento(); // Atualizar partidas em andamento
-  };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [secaoFinalizadasExpandida, secaoAgendadasExpandida]);
 
   // funções para limpar filtros
   const limparFiltrosAgendadas = () => {
@@ -351,7 +352,7 @@ export const Dashboard = ({ isGuest = false }) => {
   };
 
   // Função para atualizar pênaltis temporários em tempo real
-  const atualizarPenaltisTemporarios = (partidaId, penaltisCasa, penaltisVisitante, temPenaltis) => {
+  const atualizarPenaltisTemporarios = useCallback((partidaId, penaltisCasa, penaltisVisitante, temPenaltis) => {
     setPenaltisTemporarios(prev => ({
       ...prev,
       [partidaId]: {
@@ -360,16 +361,16 @@ export const Dashboard = ({ isGuest = false }) => {
         temPenaltis
       }
     }));
-  };
+  }, []);
 
   // Função para limpar pênaltis temporários quando súmula é fechada/enviada
-  const limparPenaltisTemporarios = (partidaId) => {
+  const limparPenaltisTemporarios = useCallback((partidaId) => {
     setPenaltisTemporarios(prev => {
       const nova = { ...prev };
       delete nova[partidaId];
       return nova;
     });
-  };
+  }, []);
 
   return (
     <div className="flex flex-col gap-6">
@@ -961,13 +962,12 @@ export const Dashboard = ({ isGuest = false }) => {
               }}
               match={partidaSelecionada}
               mode="final"
+              readOnly={isGuest}
               onSumulaEnviada={(id) => {
                 tratarSumulaEnviada(id);
                 limparPenaltisTemporarios(id);
               }}
-              onPenaltisChange={(partidaId, penaltisCasa, penaltisVisitante, temPenaltis) => {
-                atualizarPenaltisTemporarios(partidaId, penaltisCasa, penaltisVisitante, temPenaltis);
-              }}
+              onPenaltisChange={atualizarPenaltisTemporarios}
             />
           )}
 

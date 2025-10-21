@@ -7,12 +7,12 @@ import { useTournament } from '@/contexts/TournamentContext';
 import { useToast } from '@/components/Toast';
 import { useConfirm } from '@/components/Confirm';
 
-export const SeasonsPage = () => {
+export const SeasonsPage = ({ isGuest = false }) => {
     const toast = useToast();
     const confirm = useConfirm();
     // Estados de controle de usuário
     const [currentUser, setCurrentUser] = useState(null);
-    const [userLoading, setUserLoading] = useState(true);
+    const [userLoading, setUserLoading] = useState(!isGuest); // Se for visitante, não precisa carregar
     
     const [seasons, setSeasons] = useState([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -39,8 +39,11 @@ export const SeasonsPage = () => {
 
     useEffect(() => {
         loadSeasons();
-        loadCurrentUser();
-    }, []);
+        // Apenas carregar dados do usuário se NÃO for visitante
+        if (!isGuest) {
+            loadCurrentUser();
+        }
+    }, [isGuest]);
 
     // Função para buscar dados do usuário logado
     const loadCurrentUser = async () => {
@@ -51,11 +54,14 @@ export const SeasonsPage = () => {
                 const userData = await response.json();
                 setCurrentUser(userData);
             } else {
-                console.error('Erro ao buscar dados do usuário');
+                // Para visitantes ou não autenticados, apenas define como null sem erro
                 setCurrentUser(null);
             }
         } catch (error) {
-            console.error('Erro ao buscar dados do usuário:', error);
+            // Silenciar erro para visitantes
+            if (!isGuest) {
+                console.error('Erro ao buscar dados do usuário:', error);
+            }
             setCurrentUser(null);
         } finally {
             setUserLoading(false);
@@ -264,23 +270,8 @@ export const SeasonsPage = () => {
         setExpandedYears(newExpanded);
     };
 
-    if (loading) {
+    if (loading || userLoading) {
         return <div className="flex justify-center items-center h-64 text-gray-600 dark:text-gray-400">Carregando...</div>;
-    }
-
-    // Bloquear acesso para usuários do tipo 'staff'
-    if (currentUser && currentUser.tipo_usuario === 'staff') {
-        return (
-            <div className="flex flex-col items-center justify-center h-64 text-center">
-                <h2 className="text-2xl font-bold text-red-600 mb-2">Acesso Negado</h2>
-                <p className="text-gray-700 dark:text-gray-300">
-                    Usuários do tipo <b>staff</b> não têm permissão para acessar a área de temporadas.
-                </p>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
-                    Entre em contato com um administrador se precisar de acesso.
-                </p>
-            </div>
-        );
     }
 
     const groupedSeasons = groupSeasonsByYear();
@@ -289,11 +280,20 @@ export const SeasonsPage = () => {
         <>
             <div className="space-y-6">
                 <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
-                    <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">TORNEIOS</h1>
-                    <Button onClick={() => setIsModalOpen(true)} className="w-full md:w-auto">
-                        <Plus size={20} className="mr-2" />
-                        Novo Torneio
-                    </Button>
+                    <div className="flex items-center gap-3">
+                        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">TORNEIOS</h1>
+                        {isGuest && (
+                            <span className="px-3 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full text-sm font-medium">
+                                Modo Visualização
+                            </span>
+                        )}
+                    </div>
+                    {!isGuest && (
+                        <Button onClick={() => setIsModalOpen(true)} className="w-full md:w-auto">
+                            <Plus size={20} className="mr-2" />
+                            Novo Torneio
+                        </Button>
+                    )}
                 </div>
 
                 <div className="space-y-4">
@@ -301,9 +301,11 @@ export const SeasonsPage = () => {
                         <div className="text-center py-12">
                             <Trophy size={48} className="mx-auto text-gray-400 mb-4" />
                             <p className="text-gray-500 dark:text-gray-400 text-lg">Nenhum torneio encontrado</p>
-                            <Button onClick={() => setIsModalOpen(true)} className="mt-4">
-                                Criar Primeiro Torneio
-                            </Button>
+                            {!isGuest && (
+                                <Button onClick={() => setIsModalOpen(true)} className="mt-4">
+                                    Criar Primeiro Torneio
+                                </Button>
+                            )}
                         </div>
                     ) : (
                         Object.entries(groupedSeasons).map(([year, yearSeasons]) => (
@@ -343,17 +345,19 @@ export const SeasonsPage = () => {
                                                                 {season.status}
                                                             </span>
                                                         </div>
-                                                        <div className="flex gap-2">
-                                                            <Button onClick={() => handleEdit(season)} className="text-sm">
-                                                                Editar
-                                                            </Button>
-                                                            <Button
-                                                                onClick={() => handleDelete(season)}
-                                                                className="bg-red-600 hover:bg-red-700 text-sm"
-                                                            >
-                                                                Excluir
-                                                            </Button>
-                                                        </div>
+                                                        {!isGuest && (
+                                                            <div className="flex gap-2">
+                                                                <Button onClick={() => handleEdit(season)} className="text-sm">
+                                                                    Editar
+                                                                </Button>
+                                                                <Button
+                                                                    onClick={() => handleDelete(season)}
+                                                                    className="bg-red-600 hover:bg-red-700 text-sm"
+                                                                >
+                                                                    Excluir
+                                                                </Button>
+                                                            </div>
+                                                        )}
                                                     </div>
 
                                                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">

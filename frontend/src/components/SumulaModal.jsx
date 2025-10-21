@@ -1,6 +1,6 @@
 
 'use client';
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Modal } from '@/components/Modal';
 import { Button } from '@/components/common';
 import { useTournament } from '@/contexts/TournamentContext';
@@ -8,7 +8,7 @@ import { useToast } from '@/components/Toast';
 import { useConfirm } from '@/components/Confirm';
 
 // PDF Download Component that only renders on client - MOVED OUTSIDE COMPONENT
-const PDFDownloadButton = ({ className, fileName, matchData, tournamentData, teamData1, teamData2 }) => {
+const PDFDownloadButton = React.memo(({ className, fileName, matchData, tournamentData, teamData1, teamData2 }) => {
   const [isClient, setIsClient] = useState(false);
   const [PDFComponent, setPDFComponent] = useState(null);
 
@@ -59,9 +59,11 @@ const PDFDownloadButton = ({ className, fileName, matchData, tournamentData, tea
       {({ loading }) => (loading ? 'Gerando PDF...' : 'Exportar PDF')}
     </PDFDownloadLink>
   );
-};
+});
 
-export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEnviada = () => { }, onPenaltisChange = null }) => {
+PDFDownloadButton.displayName = 'PDFDownloadButton';
+
+export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEnviada = () => { }, onPenaltisChange = null, readOnly = false }) => {
   const estaAoVivo = mode === 'live';
   const { selectedTournament } = useTournament();
   const toast = useToast();
@@ -614,6 +616,19 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEn
     return `${torneio}_${t1}_${t2}.pdf`;
   };
 
+  // Memorizar dados do PDF para evitar re-renderizações desnecessárias
+  const pdfFileName = useMemo(() => gerarNomeArquivo(), [selectedTournament?.name, match?.team1, match?.team2]);
+  
+  const pdfTeamData1 = useMemo(() => ({
+    name: match?.team1,
+    players: jogadoresTimeA
+  }), [match?.team1, jogadoresTimeA]);
+  
+  const pdfTeamData2 = useMemo(() => ({
+    name: match?.team2,
+    players: jogadoresTimeB
+  }), [match?.team2, jogadoresTimeB]);
+
   const renderTabelaJogadores = (jogadores, edicao, numTime) => (
     <table key={`tabela-time-${numTime}`} className="w-full border-collapse">
       <thead>
@@ -880,9 +895,9 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEn
               <PDFDownloadButton
                 matchData={match}
                 tournamentData={selectedTournament}
-                teamData1={{ name: match.team1, players: jogadoresTimeA }}
-                teamData2={{ name: match.team2, players: jogadoresTimeB }}
-                fileName={gerarNomeArquivo()}
+                teamData1={pdfTeamData1}
+                teamData2={pdfTeamData2}
+                fileName={pdfFileName}
                 className="inline-flex items-center px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white font-medium rounded-md transition-colors"
               />
             )}
@@ -895,9 +910,9 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEn
               <PDFDownloadButton
                 matchData={match}
                 tournamentData={selectedTournament}
-                teamData1={{ name: match.team1, players: jogadoresTimeA }}
-                teamData2={{ name: match.team2, players: jogadoresTimeB }}
-                fileName={gerarNomeArquivo()}
+                teamData1={pdfTeamData1}
+                teamData2={pdfTeamData2}
+                fileName={pdfFileName}
                 className="inline-flex items-center px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white font-medium rounded-md transition-colors"
               />
             )}

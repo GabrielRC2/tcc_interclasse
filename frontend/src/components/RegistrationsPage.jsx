@@ -307,13 +307,13 @@ export const RegistrationsPage = () => {
         return <div className="flex justify-center items-center h-64 text-gray-600 dark:text-gray-400">Carregando...</div>;
     }
 
-    // Bloquear acesso para usuários do tipo 'staff'
-    if (currentUser && currentUser.tipo_usuario === 'staff') {
+    // Bloquear acesso para usuários que NÃO são ADMIN
+    if (currentUser && currentUser.tipo_usuario !== 'ADMIN') {
         return (
             <div className="flex flex-col items-center justify-center h-64 text-center">
                 <h2 className="text-2xl font-bold text-red-600 mb-2">Acesso Negado</h2>
                 <p className="text-gray-700 dark:text-gray-300">
-                    Usuários do tipo <b>staff</b> não têm permissão para acessar a área de cadastros.
+                    Apenas <b>administradores</b> têm permissão para acessar a área de cadastros.
                 </p>
                 <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
                     Entre em contato com um administrador se precisar de acesso.
