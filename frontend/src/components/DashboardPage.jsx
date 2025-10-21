@@ -4,7 +4,7 @@ import { Trophy, Users, Calendar, Target, Filter, X, Settings, ChevronDown, Chev
 import { useTournament } from '@/contexts/TournamentContext';
 import { SumulaModal } from '@/components/SumulaModal';
 import { TournamentSelector } from '@/components/TournamentSelector';
-import { Button, CardSplat, Select } from '@/components/common';
+import { Button, CardSplat, Select, Loading } from '@/components/common';
 import { mockData } from '@/data';
 
 export const Dashboard = ({ isGuest = false }) => {
@@ -424,10 +424,7 @@ export const Dashboard = ({ isGuest = false }) => {
                 {partidasEmAndamento.length === 0 ? (
                   <div className="col-span-2 text-center py-8 text-gray-500">
                     {carregandoAndamento && primeiraCarregaAndamento ? (
-                      <div className="flex items-center justify-center gap-2">
-                        <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-                        <span>Carregando partidas em andamento...</span>
-                      </div>
+                      <Loading message="Carregando partidas em andamento..." />
                     ) : (
                       <>
                         Nenhuma partida em andamento no momento.
@@ -553,7 +550,7 @@ export const Dashboard = ({ isGuest = false }) => {
               <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">JOGADORES(AS) EM DESTAQUE</h2>
               <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm p-6">
                 {carregandoJogadores ? (
-                  <div className="text-center py-8 text-gray-600 dark:text-gray-400">Carregando jogadores em destaque...</div>
+                  <Loading message="Carregando jogadores em destaque..." />
                 ) : Object.keys(jogadoresDestaque).length === 0 ? (
                   <div className="text-center py-8 text-gray-500 dark:text-gray-400">Nenhum jogador encontrado para este torneio.</div>
                 ) : (
@@ -747,7 +744,9 @@ export const Dashboard = ({ isGuest = false }) => {
                         <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
                           {carregandoAgendadas ? (
                             <tr>
-                              <td colSpan="6" className="p-6 text-center text-gray-600 dark:text-gray-400">Carregando partidas agendadas...</td>
+                              <td colSpan="6" className="p-6">
+                                <Loading message="Carregando partidas agendadas..." />
+                              </td>
                             </tr>
                           ) : partidasAgendadas.length === 0 ? (
                             <tr>
@@ -880,7 +879,9 @@ export const Dashboard = ({ isGuest = false }) => {
                         <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
                           {carregandoFinalizadas ? (
                             <tr>
-                              <td colSpan="7" className="p-6 text-center text-gray-600 dark:text-gray-400">Carregando súmulas...</td>
+                              <td colSpan="7" className="p-6">
+                                <Loading message="Carregando súmulas..." />
+                              </td>
                             </tr>
                           ) : partidasFinalizadas.length === 0 ? (
                             <tr>

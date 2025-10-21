@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Calendar, MapPin, Trophy, Users, Clock, ChevronDown, ChevronRight } from 'lucide-react';
 import { Modal } from '@/components/Modal';
-import { Button, Input, Select, CardSplat } from '@/components/common';
+import { Button, Input, Select, CardSplat, Loading } from '@/components/common';
 import { useTournament } from '@/contexts/TournamentContext';
 import { useToast } from '@/components/Toast';
 import { useConfirm } from '@/components/Confirm';
@@ -20,7 +20,7 @@ export const SeasonsPage = () => {
     const [loading, setLoading] = useState(true);
     const [expandedYears, setExpandedYears] = useState(new Set());
 
-    const { refreshTournaments } = useTournament();
+    const { selectedTournament, refreshTournaments } = useTournament();
 
     const [formData, setFormData] = useState({
         name: '',
@@ -265,7 +265,7 @@ export const SeasonsPage = () => {
     };
 
     if (loading) {
-        return <div className="flex justify-center items-center h-64 text-gray-600 dark:text-gray-400">Carregando...</div>;
+        return <Loading message="Carregando..." />;
     }
 
     // Bloquear acesso para usuários do tipo 'staff'
@@ -288,8 +288,15 @@ export const SeasonsPage = () => {
     return (
         <>
             <div className="space-y-6">
-                <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
-                    <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">TORNEIOS</h1>
+                <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4">
+                    <div>
+                        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">TORNEIOS</h1>
+                        {selectedTournament && (
+                            <p className="text-gray-500 dark:text-gray-400">
+                                Torneio: {selectedTournament.name}
+                            </p>
+                        )}
+                    </div>
                     <Button onClick={() => setIsModalOpen(true)} className="w-full md:w-auto">
                         <Plus size={20} className="mr-2" />
                         Novo Torneio
@@ -349,7 +356,8 @@ export const SeasonsPage = () => {
                                                             </Button>
                                                             <Button
                                                                 onClick={() => handleDelete(season)}
-                                                                className="bg-red-600 hover:bg-red-700 text-sm"
+                                                                variant="outline"
+                                                                className="border-red-500 text-red-600 hover:bg-red-50 dark:border-red-400 dark:text-red-400 dark:hover:bg-red-900/20 text-sm"
                                                             >
                                                                 Excluir
                                                             </Button>

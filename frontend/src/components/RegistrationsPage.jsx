@@ -1,13 +1,15 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { Trash2 } from 'lucide-react';
+import { Trash2, Plus } from 'lucide-react';
 import { Modal } from '@/components/Modal';
-import { Button, Input, Select, Textarea, CardSplat } from '@/components/common';
+import { Button, Input, Select, Textarea, CardSplat, Loading } from '@/components/common';
+import { useTournament } from '@/contexts/TournamentContext';
 import { useToast } from '@/components/Toast';
 import { useConfirm } from '@/components/Confirm';
 
 export const RegistrationsPage = () => {
     // Hooks
+    const { selectedTournament } = useTournament();
     const toast = useToast();
     const confirm = useConfirm();
 
@@ -304,7 +306,7 @@ export const RegistrationsPage = () => {
     };
 
     if (loading) {
-        return <div className="flex justify-center items-center h-64 text-gray-600 dark:text-gray-400">Carregando...</div>;
+        return <Loading message="Carregando..." />;
     }
 
     // Bloquear acesso para usuários do tipo 'staff'
@@ -325,9 +327,19 @@ export const RegistrationsPage = () => {
     return (
         <>
             <div className="space-y-8">
-                <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
-                    <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">CADASTROS</h1>
-                    <Button onClick={handleCreate} className="w-full md:w-auto">Cadastrar Novo</Button>
+                <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4">
+                    <div>
+                        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">CADASTROS</h1>
+                        {selectedTournament && (
+                            <p className="text-gray-500 dark:text-gray-400">
+                                Torneio: {selectedTournament.name}
+                            </p>
+                        )}
+                    </div>
+                    <Button onClick={handleCreate} className="w-full md:w-auto">
+                        <Plus size={20} className="mr-2" />
+                        Cadastrar Novo
+                    </Button>
                 </div>
 
                 <div>
@@ -341,7 +353,8 @@ export const RegistrationsPage = () => {
                                         <Button onClick={() => handleEdit(item, 'Esportes')}>Editar</Button>
                                         <Button
                                             onClick={() => handleDelete(item, 'Esportes')}
-                                            className="bg-red-600 hover:bg-red-700"
+                                            variant="outline"
+                                            className="border-red-500 text-red-600 hover:bg-red-50 dark:border-red-400 dark:text-red-400 dark:hover:bg-red-900/20"
                                         >
                                             Excluir
                                         </Button>
@@ -364,7 +377,8 @@ export const RegistrationsPage = () => {
                                         <Button onClick={() => handleEdit(item, 'Locais')}>Editar</Button>
                                         <Button
                                             onClick={() => handleDelete(item, 'Locais')}
-                                            className="bg-red-600 hover:bg-red-700"
+                                            variant="outline"
+                                            className="border-red-500 text-red-600 hover:bg-red-50 dark:border-red-400 dark:text-red-400 dark:hover:bg-red-900/20"
                                         >
                                             Excluir
                                         </Button>
@@ -388,7 +402,8 @@ export const RegistrationsPage = () => {
                                         <Button onClick={() => handleEdit(item, 'Cursos')}>Editar</Button>
                                         <Button
                                             onClick={() => handleDelete(item, 'Cursos')}
-                                            className="bg-red-600 hover:bg-red-700"
+                                            variant="outline"
+                                            className="border-red-500 text-red-600 hover:bg-red-50 dark:border-red-400 dark:text-red-400 dark:hover:bg-red-900/20"
                                         >
                                             Excluir
                                         </Button>
@@ -466,7 +481,8 @@ export const RegistrationsPage = () => {
                                                 </Button>
                                                 <Button
                                                     size="sm"
-                                                    className="bg-red-600 hover:bg-red-700"
+                                                    variant="outline"
+                                                    className="border-red-500 text-red-600 hover:bg-red-50 dark:border-red-400 dark:text-red-400 dark:hover:bg-red-900/20"
                                                     onClick={() => handleDelete(user, 'Usuários')}
                                                 >
                                                     Excluir

@@ -1,4 +1,5 @@
 'use client';
+import { Loader2 } from 'lucide-react';
 
 export const CardSplat = () => (
     <svg width="80" height="60" viewBox="0 0 80 60" fill="none" xmlns="http://www.w3.org/2000/svg" className="absolute top-0 right-0">
@@ -75,21 +76,11 @@ export const Select = ({ label, children, ...props }) => (
     </div>
 );
 
-export const LoadingPage = ({ title, subtitle, message = "Carregando..." }) => (
-    <div className="space-y-6">
-        <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">{title}</h1>
-            {subtitle && (
-                <p className="text-gray-500 dark:text-gray-400">
-                    {subtitle}
-                </p>
-            )}
-        </div>
-        <div className="flex flex-col justify-center items-center h-64 space-y-4">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 dark:border-blue-400"></div>
-            <p className="text-gray-600 dark:text-gray-400 text-lg">
-                {message}
-            </p>
-        </div>
+export const Loading = ({ message = "Carregando..." }) => (
+    <div className="flex flex-col justify-center items-center h-64 space-y-3">
+        <Loader2 className="h-10 w-10 text-red-600 dark:text-red-500 animate-spin" />
+        <p className="text-gray-700 dark:text-gray-300 text-sm opacity-60">
+            {message}
+        </p>
     </div>
 );
