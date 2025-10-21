@@ -175,30 +175,42 @@ async function main() {
   console.log('🏆 Criando Torneios...');
   await prisma.Torneio.createMany({
     data: [
-      { nome: 'Meio do Ano 2024', status: 'EM ANDAMENTO', inicio: new Date('2024-05-15T08:00:00'), fim: new Date('2024-06-15T18:00:00') },
-      { nome: 'Fim de Ano 2024', status: 'PLANEJAMENTO', inicio: new Date('2024-11-10T08:00:00'), fim: new Date('2024-12-10T18:00:00') },
+      { nome: 'Meio do Ano 2025', status: 'EM ANDAMENTO', inicio: new Date('2025-05-15T08:00:00'), fim: new Date('2025-06-30T18:00:00') },
+      { nome: 'Fim de Ano 2025', status: 'PLANEJAMENTO', inicio: new Date('2025-10-15T08:00:00'), fim: new Date('2025-11-30T18:00:00') },
     ],
   });
-  const torneioPrincipal = await prisma.Torneio.findFirst({ where: { nome: 'Meio do Ano 2024' } });
-  if (!torneioPrincipal) throw new Error("Torneio principal não encontrado!");
-  console.log('✅ 2 torneios criados\n');
+  const torneios = await prisma.Torneio.findMany();
+  const torneioMeioAno = torneios.find(t => t.nome === 'Meio do Ano 2025');
+  const torneioFimAno = torneios.find(t => t.nome === 'Fim de Ano 2025');
+  if (!torneioMeioAno || !torneioFimAno) throw new Error("Torneios não encontrados!");
+  console.log('✅ 2 torneios criados (Meio e Fim de Ano 2025)\n');
 
   // ETAPA 7: Inserir Categorias
   console.log('🎯 Criando Categorias...');
   const volei = modalidades.find(m => m.nome === 'Vôlei');
   const handebol = modalidades.find(m => m.nome === 'Handebol');
-  if (!volei || !handebol) throw new Error("Modalidades de Vôlei ou Handebol não encontradas!");
+  const futsal = modalidades.find(m => m.nome === 'Futsal');
+  const basquete = modalidades.find(m => m.nome === 'Basquete');
+  if (!volei || !handebol || !futsal || !basquete) throw new Error("Modalidades não encontradas!");
 
   await prisma.Categoria.createMany({
     data: [
+      // Vôlei
       { nome: 'Vôlei Masculino', genero: 'Masculino', modalidadeId: volei.id },
       { nome: 'Vôlei Feminino', genero: 'Feminino', modalidadeId: volei.id },
+      // Handebol
       { nome: 'Handebol Masculino', genero: 'Masculino', modalidadeId: handebol.id },
       { nome: 'Handebol Feminino', genero: 'Feminino', modalidadeId: handebol.id },
+      // Futsal
+      { nome: 'Futsal Masculino', genero: 'Masculino', modalidadeId: futsal.id },
+      { nome: 'Futsal Feminino', genero: 'Feminino', modalidadeId: futsal.id },
+      // Basquete
+      { nome: 'Basquete Masculino', genero: 'Masculino', modalidadeId: basquete.id },
+      { nome: 'Basquete Feminino', genero: 'Feminino', modalidadeId: basquete.id },
     ],
   });
   const categorias = await prisma.Categoria.findMany();
-  console.log('✅ 4 categorias criadas\n');
+  console.log('✅ 8 categorias criadas (4 modalidades x 2 gêneros)\n');
 
   // ETAPA 8: Geração de Jogadores com Nomes Realistas
   console.log('👥 Gerando jogadores com nomes realistas...');
@@ -208,7 +220,8 @@ async function main() {
   for (const curso of cursos) {
     for (const sala of salas) {
       for (const genero of ['Masculino', 'Feminino']) {
-        for (let i = 0; i < 15; i++) { // Gerar 15 jogadores por grupo
+        // Aumentando para 20 jogadores por grupo para ter mais variedade
+        for (let i = 0; i < 20; i++) {
 
           // Lógica para gerar nome aleatório
           const primeiroNome = genero === 'Masculino'
@@ -234,23 +247,50 @@ async function main() {
   const jogadoresDoBanco = await prisma.Jogador.findMany();
   console.log(`✅ ${todosJogadoresParaCriar.length} jogadores criados\n`);
 
-  // ETAPA 9: Geração de Times e associação de jogadores
-  console.log('🏃 Criando times e associando jogadores...');
+  // ETAPA 9: Geração de Times e associação de jogadores para AMBOS os torneios
+  console.log('🏃 Criando times para os 2 torneios e associando jogadores...');
   let timesParaCriar = [];
 
+  // Categorias do Meio do Ano (Vôlei e Handebol)
+  const categoriasMeioAno = categorias.filter(c => 
+    c.nome.includes('Vôlei') || c.nome.includes('Handebol')
+  );
+
+  // Categorias do Fim de Ano (Futsal e Basquete)
+  const categoriasFimAno = categorias.filter(c => 
+    c.nome.includes('Futsal') || c.nome.includes('Basquete')
+  );
+
+  // Criar times para Meio do Ano 2025 (Vôlei e Handebol)
   for (const curso of cursos) {
     for (const sala of salas) {
-      for (const categoria of categorias) {
+      for (const categoria of categoriasMeioAno) {
         timesParaCriar.push({
           nome: `${sala}${curso.sigla}`,
           sala,
           cursoId: curso.id,
           categoriaId: categoria.id,
-          torneioId: torneioPrincipal.id,
+          torneioId: torneioMeioAno.id,
         });
       }
     }
   }
+
+  // Criar times para Fim de Ano 2025 (Futsal e Basquete)
+  for (const curso of cursos) {
+    for (const sala of salas) {
+      for (const categoria of categoriasFimAno) {
+        timesParaCriar.push({
+          nome: `${sala}${curso.sigla}`,
+          sala,
+          cursoId: curso.id,
+          categoriaId: categoria.id,
+          torneioId: torneioFimAno.id,
+        });
+      }
+    }
+  }
+  
   await prisma.Time.createMany({ data: timesParaCriar });
   const timesDoBanco = await prisma.Time.findMany({ include: { categoria: true } });
 
@@ -262,7 +302,18 @@ async function main() {
       j.genero === time.categoria.genero
     );
 
-    const numJogadoresParaEscalar = time.categoria.nome.includes('Vôlei') ? 6 : 7;
+    // Definir quantidade de jogadores por modalidade
+    let numJogadoresParaEscalar = 6; // padrão vôlei
+    if (time.categoria.nome.includes('Vôlei')) {
+      numJogadoresParaEscalar = 6;
+    } else if (time.categoria.nome.includes('Handebol')) {
+      numJogadoresParaEscalar = 7;
+    } else if (time.categoria.nome.includes('Futsal')) {
+      numJogadoresParaEscalar = 5;
+    } else if (time.categoria.nome.includes('Basquete')) {
+      numJogadoresParaEscalar = 5;
+    }
+
     const jogadoresParaEscalar = jogadoresDisponiveis.slice(0, numJogadoresParaEscalar);
 
     for (let i = 0; i < jogadoresParaEscalar.length; i++) {
@@ -275,7 +326,13 @@ async function main() {
   }
 
   await prisma.TimeJogador.createMany({ data: escalacoes });
+  
+  const timesMeioAno = timesDoBanco.filter(t => t.torneioId === torneioMeioAno.id);
+  const timesFimAno = timesDoBanco.filter(t => t.torneioId === torneioFimAno.id);
+  
   console.log(`✅ ${timesDoBanco.length} times criados`);
+  console.log(`   • Meio do Ano: ${timesMeioAno.length} times (Vôlei e Handebol)`);
+  console.log(`   • Fim de Ano: ${timesFimAno.length} times (Futsal e Basquete)`);
   console.log(`✅ ${escalacoes.length} escalações de jogadores criadas\n`);
 
   console.log('╔════════════════════════════════════════════════════════════╗');
@@ -286,12 +343,21 @@ async function main() {
   console.log('   ✓ 5 usuários de teste');
   console.log('   ✓ 2 locais');
   console.log('   ✓ 7 cursos');
-  console.log('   ✓ 4 modalidades');
-  console.log('   ✓ 2 torneios');
-  console.log('   ✓ 4 categorias');
+  console.log('   ✓ 4 modalidades (Futsal, Vôlei, Basquete, Handebol)');
+  console.log('   ✓ 2 torneios (Meio e Fim de Ano 2025)');
+  console.log('   ✓ 8 categorias (4 modalidades x 2 gêneros)');
   console.log(`   ✓ ${todosJogadoresParaCriar.length} jogadores`);
   console.log(`   ✓ ${timesDoBanco.length} times`);
   console.log(`   ✓ ${escalacoes.length} escalações\n`);
+  
+  console.log('🎯 DETALHES DOS TORNEIOS:');
+  console.log('   🏐 Meio do Ano 2025: 15/05/2025 - 30/06/2025 (EM ANDAMENTO)');
+  console.log('      Modalidades: Vôlei e Handebol');
+  console.log(`      Times: ${timesMeioAno.length} (${categoriasMeioAno.length} categorias)`);
+  console.log('');
+  console.log('   ⚽ Fim de Ano 2025: 15/10/2025 - 30/11/2025 (PLANEJAMENTO)');
+  console.log('      Modalidades: Futsal e Basquete');
+  console.log(`      Times: ${timesFimAno.length} (${categoriasFimAno.length} categorias)\n`);
 }
 
 main()
