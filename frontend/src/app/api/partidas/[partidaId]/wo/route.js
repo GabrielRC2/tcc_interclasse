@@ -88,7 +88,7 @@ export async function POST(request, { params }) {
             }
           });
 
-          // Atualizar resultado do time WO como PERDEDOR (nas outras partidas)
+          // Atualizar resultado do time WO como WO (nas outras partidas)
           await tx.partidaTime.update({
             where: {
               partidaId_timeId: {
@@ -97,8 +97,8 @@ export async function POST(request, { params }) {
               }
             },
             data: { 
-              resultado: 'PERDEDOR',
-              pontosTorneio: calcularPontosTorneio('PERDEDOR') // 0 pontos
+              resultado: 'WO',
+              pontosTorneio: calcularPontosTorneio('WO') // 0 pontos
             }
           });
 

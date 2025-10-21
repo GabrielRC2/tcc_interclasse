@@ -659,6 +659,20 @@ export const MatchesPage = () => {
     }
   };
 
+  // Função para obter vencedor no caso de WO
+  const obterVencedorWO = (partida) => {
+    if (!partida.timeWOId) return null;
+    
+    // O time que NÃO deu WO é o vencedor
+    if (partida.timeWOId === partida.team1Id) {
+      return { vencedor: partida.team2, tipo: 'visitante' };
+    } else if (partida.timeWOId === partida.team2Id) {
+      return { vencedor: partida.team1, tipo: 'casa' };
+    }
+    
+    return null;
+  };
+
   // Função para determinar a próxima ação do torneio
   const proximaAcao = (() => {
     if (!selectedTournament) return '';
@@ -980,11 +994,23 @@ export const MatchesPage = () => {
                         <div className="text-center px-3 md:px-4 flex-shrink-0">
                           {p.result ? (
                             <div className="text-center mb-1">
-                              {/* Detectar WO quando resultado é 0:0 e partida está finalizada */}
-                              {p.result === '0:0' && (p.status === 'Finalizada' || p.status === 'FINALIZADA') ? (
+                              {/* Detectar WO quando resultado é 0:0 e há timeWOId */}
+                              {p.timeWOId && p.result === '0:0' ? (
                                 <div className="text-center">
-                                  <div className="text-lg md:text-xl font-bold text-red-600 dark:text-red-400">WO</div>
-                                  <div className="text-xs md:text-sm font-semibold text-gray-600 dark:text-gray-400 mt-1">Walk Over</div>
+                                  <div className="text-lg md:text-xl font-bold text-gray-900 dark:text-gray-100">
+                                    WO:0
+                                  </div>
+                                  {(() => {
+                                    const vencedorWO = obterVencedorWO(p);
+                                    if (vencedorWO?.vencedor) {
+                                      return (
+                                        <div className="text-xs md:text-sm font-semibold text-green-600 dark:text-green-400 mt-2">
+                                          🏆 {vencedorWO.vencedor}
+                                        </div>
+                                      );
+                                    }
+                                    return null;
+                                  })()}
                                 </div>
                               ) : (
                                 <>

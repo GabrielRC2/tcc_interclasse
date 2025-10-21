@@ -53,6 +53,13 @@ export async function GET(request, { params }) {
     
     const timeCasa = timesCasa[0]?.time;
     const timeVisitante = timesVisitante[0]?.time;
+    const timeCasaData = timesCasa[0];
+    const timeVisitanteData = timesVisitante[0];
+
+    // Detectar se há WO e qual time deu WO
+    const timeWOId = timeCasaData?.resultado === 'WO' ? timeCasa?.id :
+                     timeVisitanteData?.resultado === 'WO' ? timeVisitante?.id :
+                     null;
 
     // Calcular resultado incluindo pênaltis
     let result = null;
@@ -94,7 +101,9 @@ export async function GET(request, { params }) {
       date: partida.dataHora.toISOString().split('T')[0],
       time: partida.dataHora.toTimeString().slice(0, 5),
       grupo: partida.grupo?.nome || 'N/A',
-      grupoId: partida.grupoId
+      grupoId: partida.grupoId,
+      // Informação sobre WO
+      timeWOId: timeWOId
     };
 
     return Response.json(partidaFormatada);

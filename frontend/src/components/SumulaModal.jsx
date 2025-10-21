@@ -61,7 +61,7 @@ const PDFDownloadButton = ({ className, fileName, matchData, tournamentData, tea
   );
 };
 
-export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', readOnly = false, onSumulaEnviada = () => { } }) => {
+export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEnviada = () => { }, onPenaltisChange = null }) => {
   const estaAoVivo = mode === 'live';
   const { selectedTournament } = useTournament();
   const toast = useToast();
@@ -93,13 +93,14 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', readOnly =
   // para garantir que o botão de export fique oculto até que os dados sejam efetivamente persistidos
   const [editingFinalizada, setEditingFinalizada] = useState(false);
 
+  // Estado para WO
+  const [timeWOId, setTimeWOId] = useState(null);
+
   // Verifica se é partida eliminatória (permitir pênaltis)
   // Partidas eliminatórias são aquelas SEM grupo (grupoId = null)
   const ehEliminatoria = match?.grupoId === null || match?.grupoId === undefined;
   // Verifica se há empate (necessário pênaltis em eliminatórias)
   const hahEmpate = placarA === placarB;
-
-
 
   useEffect(() => {
     const carregarDados = async () => {
@@ -175,7 +176,7 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', readOnly =
         setPlacarA(golsA);
         setPlacarB(golsB);
 
-        // Carregar dados de pênaltis se disponíveis
+        // Carregar dados de pênaltis e WO se disponíveis
         if (partidaData) {
           setPenaltisA(partidaData.penaltisCasa || 0);
           setPenaltisB(partidaData.penaltisVisitante || 0);
@@ -188,6 +189,9 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', readOnly =
               partidaData.penaltisCasa !== null && partidaData.penaltisVisitante !== null);
 
           setTemPenaltis(temPenaltisDetectado);
+
+          // Detectar WO
+          setTimeWOId(partidaData.timeWOId || null);
         }
       } catch (err) {
         console.error('Erro ao carregar súmula:', err);
@@ -225,6 +229,13 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', readOnly =
     atualizarStatusParaEmAndamento();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [match?.id, isOpen]);
+
+  // useEffect para notificar mudanças de pênaltis em tempo real
+  useEffect(() => {
+    if (onPenaltisChange && match?.id) {
+      onPenaltisChange(match.id, penaltisA, penaltisB, temPenaltis);
+    }
+  }, [penaltisA, penaltisB, temPenaltis, match?.id, onPenaltisChange]);
 
   // quando edições mudam em modo live OU quando estamos em edição manual, recalcula placar
   useEffect(() => {
@@ -377,6 +388,7 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', readOnly =
 
   const enviarSumula = async () => {
     if (!(estaAoVivo || permitirEdicao)) return;
+    if (salvando) return; // Prevenir múltiplas chamadas simultâneas
 
     // Validação especial para partidas eliminatórias
     if (ehEliminatoria && hahEmpate && (!temPenaltis || penaltisA === penaltisB)) {
@@ -535,12 +547,10 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', readOnly =
         body: JSON.stringify({
           pontosCasa: pontosCasaCalc,
           pontosVisitante: pontosVisitanteCalc,
-          // Adicionar dados de pênaltis se for eliminatória e tiver pênaltis
-          ...(ehEliminatoria && temPenaltis && {
-            penaltisCasa: penaltisA,
-            penaltisVisitante: penaltisB,
-            temPenaltis: true
-          })
+          // SEMPRE enviar dados de pênaltis, independente do tipo de partida
+          penaltisCasa: temPenaltis ? penaltisA : null,
+          penaltisVisitante: temPenaltis ? penaltisB : null,
+          temPenaltis: temPenaltis
         }),
       });
 
@@ -689,8 +699,8 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', readOnly =
   // Entretanto, quando o usuário ativa "Editar súmula" devemos esconder o botão
   // até que a súmula seja enviada ao banco (permitirEdicao === false novamente).
   const exportEsquerdaBase = (match?.status === 'Finalizada');
-  // Mostrar export somente quando não estivermos em modo de edição (nem edição iniciada para partida finalizada)
-  const mostrarExport = !carregando && !permitirEdicao && !editingFinalizada;
+  // Mostrar export somente quando a partida está FINALIZADA e não estivermos em modo de edição
+  const mostrarExport = !carregando && !permitirEdicao && !editingFinalizada && (match?.status === 'Finalizada');
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="INFORMAÇÕES DO TORNEIO" size="max-w-4xl max-h-[90vh]">
@@ -712,12 +722,16 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', readOnly =
               <div className="flex justify-around items-center text-center">
                 <div>
                   <p className="font-bold text-lg dark:text-gray-200">{match.team1}</p>
-                  <p className="font-extrabold text-6xl text-gray-800 dark:text-gray-100">{placarA}</p>
+                  <p className="font-extrabold text-6xl text-gray-800 dark:text-gray-100">
+                    {timeWOId === match.team1Id ? 'WO' : placarA}
+                  </p>
                 </div>
                 <p className="font-extrabold text-6xl text-gray-400 dark:text-gray-500">:</p>
                 <div>
                   <p className="font-bold text-lg dark:text-gray-200">{match.team2}</p>
-                  <p className="font-extrabold text-6xl text-gray-800 dark:text-gray-100">{placarB}</p>
+                  <p className="font-extrabold text-6xl text-gray-800 dark:text-gray-100">
+                    {timeWOId === match.team2Id ? 'WO' : placarB}
+                  </p>
                 </div>
               </div>
 

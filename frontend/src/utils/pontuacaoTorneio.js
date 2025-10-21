@@ -194,7 +194,7 @@ export async function processarWO(prisma, partidaId, timeWOId) {
         }
       },
       data: {
-        resultado: 'WO',
+        resultado: 'WO', // Manter 'WO' como resultado específico
         pontosTorneio: calcularPontosTorneio('WO') // 0 pontos
       }
     }),

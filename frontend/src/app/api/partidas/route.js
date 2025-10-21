@@ -75,6 +75,8 @@ export async function GET(request) {
       
       const timeCasa = timesCasa[0]?.time;
       const timeVisitante = timesVisitante[0]?.time;
+      const timeCasaData = timesCasa[0];
+      const timeVisitanteData = timesVisitante[0];
 
       // Buscar modalidade de diferentes formas dependendo do tipo de partida
       let modalidadeNome = 'N/A';
@@ -99,6 +101,30 @@ export async function GET(request) {
         }
       }
 
+      // Identificar se há WO e qual time deu WO
+      // Verifica se a partida tem resultado 0:0 E um dos times está marcado como WO
+      // (isso indica que houve WO, seja nesta partida ou em outra do mesmo time)
+      const ehWO = (result === '0:0' || (partida.statusPartida === 'FINALIZADA' && !result)) && 
+                   (timeCasaData?.resultado === 'WO' || timeVisitanteData?.resultado === 'WO');
+      
+      const timeWOId = ehWO ? (
+        timeCasaData?.resultado === 'WO' ? timeCasa?.id :
+        timeVisitanteData?.resultado === 'WO' ? timeVisitante?.id :
+        null
+      ) : null;
+
+      // Debug: Log para verificar detecção de WO
+      if (result === '0:0' && (partida.statusPartida === 'FINALIZADA')) {
+        console.log(`Partida ${partida.id} - Resultado 0:0 FINALIZADA:`, {
+          timeCasaNome: timeCasa?.nome,
+          timeCasaResultado: timeCasaData?.resultado,
+          timeVisitanteNome: timeVisitante?.nome,
+          timeVisitanteResultado: timeVisitanteData?.resultado,
+          ehWO: ehWO,
+          timeWOId: timeWOId
+        });
+      }
+
       return {
         id: partida.id,
         ordem: partida.ordem || index + 1, // Usar ordem do banco se disponível, senão calcular
@@ -116,7 +142,15 @@ export async function GET(request) {
         date: partida.dataHora.toISOString().split('T')[0],
         time: partida.dataHora.toTimeString().slice(0, 5),
         grupo: partida.grupo?.nome || partida.fase || 'N/A', // Mostrar fase para eliminatórias
-        fase: partida.fase // Adicionar campo fase separado também
+        fase: partida.fase, // Adicionar campo fase separado também
+        // Adicionar dados de pênaltis separadamente
+        pontosCasa: partida.pontosCasa,
+        pontosVisitante: partida.pontosVisitante,
+        temPenaltis: partida.temPenaltis,
+        penaltisCasa: partida.penaltisCasa,
+        penaltisVisitante: partida.penaltisVisitante,
+        // Adicionar informação sobre WO
+        timeWOId: timeWOId
       };
     });
 
