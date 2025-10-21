@@ -1,4 +1,5 @@
 const { PrismaClient } = require('@prisma/client');
+const bcrypt = require('bcryptjs');
 
 const prisma = new PrismaClient();
 
@@ -16,12 +17,109 @@ const sobrenomes = [
   'Costa', 'Ribeiro', 'Martins', 'Carvalho', 'Almeida', 'Melo', 'Barbosa', 'Nunes', 'Mendes', 'Vieira'
 ];
 
+// --- Função para Criar Usuários de Teste ---
+async function createTestUsers() {
+  console.log('\n🔄 Criando usuários de teste...');
+
+  // Hash para a senha "123456"
+  const hashedPassword = await bcrypt.hash('123456', 12);
+
+  // Deletar usuários de teste existentes
+  await prisma.usuario.deleteMany({
+    where: {
+      email: {
+        in: [
+          'admin@interclasse.com',
+          'staff@interclasse.com',
+          'rep1a@interclasse.com',
+          'rep1b@interclasse.com',
+          'rep2a@interclasse.com'
+        ]
+      }
+    }
+  });
+
+  // Criar usuários
+  const admin = await prisma.usuario.create({
+    data: {
+      nome: 'Administrador Sistema',
+      email: 'admin@interclasse.com',
+      senhaHash: hashedPassword,
+      tipo: 'ADMIN'
+    }
+  });
+
+  const staff = await prisma.usuario.create({
+    data: {
+      nome: 'Staff Organizador',
+      email: 'staff@interclasse.com',
+      senhaHash: hashedPassword,
+      tipo: 'STAFF'
+    }
+  });
+
+  const rep1A = await prisma.usuario.create({
+    data: {
+      nome: 'Representante Turma 1A',
+      email: 'rep1a@interclasse.com',
+      senhaHash: hashedPassword,
+      tipo: 'REPRESENTANTE'
+    }
+  });
+
+  const rep1B = await prisma.usuario.create({
+    data: {
+      nome: 'Representante Turma 1B',
+      email: 'rep1b@interclasse.com',
+      senhaHash: hashedPassword,
+      tipo: 'REPRESENTANTE'
+    }
+  });
+
+  const rep2A = await prisma.usuario.create({
+    data: {
+      nome: 'Representante Turma 2A',
+      email: 'rep2a@interclasse.com',
+      senhaHash: hashedPassword,
+      tipo: 'REPRESENTANTE'
+    }
+  });
+
+  console.log('✅ Usuários de teste criados com sucesso!\n');
+  console.log('═══════════════════════════════════════════════════════════');
+  console.log('📋 CREDENCIAIS PARA TESTE');
+  console.log('═══════════════════════════════════════════════════════════\n');
+  
+  console.log('👨‍💼 ADMIN');
+  console.log('   Email: admin@interclasse.com');
+  console.log('   Senha: 123456');
+  console.log('   ID: ' + admin.id + '\n');
+  
+  console.log('👔 STAFF');
+  console.log('   Email: staff@interclasse.com');
+  console.log('   Senha: 123456');
+  console.log('   ID: ' + staff.id + '\n');
+  
+  console.log('👨‍🎓 REPRESENTANTES');
+  console.log('   • rep1a@interclasse.com (ID: ' + rep1A.id + ')');
+  console.log('   • rep1b@interclasse.com (ID: ' + rep1B.id + ')');
+  console.log('   • rep2a@interclasse.com (ID: ' + rep2A.id + ')');
+  console.log('   Senha: 123456\n');
+  
+  console.log('═══════════════════════════════════════════════════════════\n');
+}
+
 // --- Função Principal do Seeder ---
 async function main() {
-  console.log('Iniciando o processo de seeding com nomes realistas...');
+  console.log('╔════════════════════════════════════════════════════════════╗');
+  console.log('║     SEEDING DO BANCO DE DADOS - SISTEMA INTERCLASSE       ║');
+  console.log('╚════════════════════════════════════════════════════════════╝\n');
 
-  // 1. Limpeza do banco de dados
-  console.log('Limpando dados antigos...');
+  // ETAPA 1: Criar usuários de teste
+  await createTestUsers();
+
+  // ETAPA 2: Limpeza do banco de dados
+  console.log('🗑️  Limpando dados antigos do sistema...');
   await prisma.TimeJogador.deleteMany({});
   await prisma.PartidaTime.deleteMany({});
   await prisma.EventoPartida.deleteMany({});
@@ -32,23 +130,25 @@ async function main() {
   await prisma.TorneioModalidade.deleteMany({});
   await prisma.Categoria.deleteMany({});
   await prisma.Jogador.deleteMany({});
-  await prisma.LocalModalidade.deleteMany({}); // ADICIONAR ANTES DE Local
+  await prisma.LocalModalidade.deleteMany({});
   await prisma.Local.deleteMany({});
   await prisma.Curso.deleteMany({});
   await prisma.Modalidade.deleteMany({});
   await prisma.Torneio.deleteMany({});
+  console.log('✅ Dados antigos removidos\n');
 
-  // 2. Inserir Locais
-  console.log('Criando Locais...');
+  // ETAPA 3: Inserir Locais
+  console.log('📍 Criando Locais...');
   await prisma.Local.createMany({
     data: [
       { nome: 'Quadra de Cima' },
       { nome: 'Quadra de Baixo' },
     ],
   });
+  console.log('✅ 2 locais criados\n');
 
-  // 3. Inserir Cursos
-  console.log('Criando Cursos...');
+  // ETAPA 4: Inserir Cursos
+  console.log('🎓 Criando Cursos...');
   await prisma.Curso.createMany({
     data: [
       { nome: 'Desenvolvimento de Sistemas', sigla: 'DS' },
@@ -61,28 +161,30 @@ async function main() {
     ],
   });
   const cursos = await prisma.Curso.findMany();
+  console.log('✅ 7 cursos criados\n');
 
-  // 4. Inserir Modalidades
-  console.log('Criando Modalidades...');
+  // ETAPA 5: Inserir Modalidades
+  console.log('⚽ Criando Modalidades...');
   await prisma.Modalidade.createMany({
     data: [{ nome: 'Futsal' }, { nome: 'Vôlei' }, { nome: 'Basquete' }, { nome: 'Handebol' }],
   });
   const modalidades = await prisma.Modalidade.findMany();
+  console.log('✅ 4 modalidades criadas\n');
 
-  // 5. Inserir Torneios
-  console.log('Criando Torneios...');
+  // ETAPA 6: Inserir Torneios
+  console.log('🏆 Criando Torneios...');
   await prisma.Torneio.createMany({
     data: [
       { nome: 'Meio do Ano 2024', status: 'EM ANDAMENTO', inicio: new Date('2024-05-15T08:00:00'), fim: new Date('2024-06-15T18:00:00') },
       { nome: 'Fim de Ano 2024', status: 'PLANEJAMENTO', inicio: new Date('2024-11-10T08:00:00'), fim: new Date('2024-12-10T18:00:00') },
-
     ],
   });
   const torneioPrincipal = await prisma.Torneio.findFirst({ where: { nome: 'Meio do Ano 2024' } });
   if (!torneioPrincipal) throw new Error("Torneio principal não encontrado!");
+  console.log('✅ 2 torneios criados\n');
 
-  // 6. Inserir Categorias
-  console.log('Criando Categorias...');
+  // ETAPA 7: Inserir Categorias
+  console.log('🎯 Criando Categorias...');
   const volei = modalidades.find(m => m.nome === 'Vôlei');
   const handebol = modalidades.find(m => m.nome === 'Handebol');
   if (!volei || !handebol) throw new Error("Modalidades de Vôlei ou Handebol não encontradas!");
@@ -96,9 +198,10 @@ async function main() {
     ],
   });
   const categorias = await prisma.Categoria.findMany();
+  console.log('✅ 4 categorias criadas\n');
 
-  // 7. Geração de Jogadores com Nomes Realistas
-  console.log('Gerando jogadores com nomes realistas...');
+  // ETAPA 8: Geração de Jogadores com Nomes Realistas
+  console.log('👥 Gerando jogadores com nomes realistas...');
   const salas = ['1º', '2º', '3º'];
   let todosJogadoresParaCriar = [];
 
@@ -129,9 +232,10 @@ async function main() {
   }
   await prisma.Jogador.createMany({ data: todosJogadoresParaCriar });
   const jogadoresDoBanco = await prisma.Jogador.findMany();
+  console.log(`✅ ${todosJogadoresParaCriar.length} jogadores criados\n`);
 
-  // 8. Geração de Times e associação de jogadores
-  console.log('Criando times e associando jogadores...');
+  // ETAPA 9: Geração de Times e associação de jogadores
+  console.log('🏃 Criando times e associando jogadores...');
   let timesParaCriar = [];
 
   for (const curso of cursos) {
@@ -171,18 +275,40 @@ async function main() {
   }
 
   await prisma.TimeJogador.createMany({ data: escalacoes });
+  console.log(`✅ ${timesDoBanco.length} times criados`);
+  console.log(`✅ ${escalacoes.length} escalações de jogadores criadas\n`);
 
-  console.log('Seeding concluído com sucesso!');
+  console.log('╔════════════════════════════════════════════════════════════╗');
+  console.log('║            SEEDING CONCLUÍDO COM SUCESSO! ✨               ║');
+  console.log('╚════════════════════════════════════════════════════════════╝\n');
+  
+  console.log('📊 RESUMO FINAL:');
+  console.log('   ✓ 5 usuários de teste');
+  console.log('   ✓ 2 locais');
+  console.log('   ✓ 7 cursos');
+  console.log('   ✓ 4 modalidades');
+  console.log('   ✓ 2 torneios');
+  console.log('   ✓ 4 categorias');
+  console.log(`   ✓ ${todosJogadoresParaCriar.length} jogadores`);
+  console.log(`   ✓ ${timesDoBanco.length} times`);
+  console.log(`   ✓ ${escalacoes.length} escalações\n`);
 }
 
 main()
+  .then(() => {
+    console.log('✨ Processo finalizado com sucesso!');
+    process.exit(0);
+  })
   .catch((e) => {
-    console.error('Ocorreu um erro durante o seeding:', e);
+    console.error('\n❌ Ocorreu um erro durante o seeding:', e);
+    console.error('\n💡 Dica: Verifique se:');
+    console.log('   1. O Prisma Client está atualizado (npx prisma generate)');
+    console.log('   2. As migrations foram executadas (npx prisma migrate dev)');
+    console.log('   3. O banco de dados está acessível\n');
     process.exit(1);
   })
   .finally(async () => {
     await prisma.$disconnect();
-
   });
 
 
