@@ -7,9 +7,11 @@ const prisma = new PrismaClient();
 function processarEventos(eventosRecebidos, partidaId) {
   const novosEventos = [];
   const golsPorJogador = new Map();
+  const penaltisPorTime = new Map();
 
   eventosRecebidos.forEach(evento => {
     const jogadorId = parseInt(evento.jogador || evento.jogadorId);
+    const timeId = parseInt(evento.timeId);
     const tipo = evento.tipo;
     const pontos = evento.ponto || evento.pontosGerados || 0;
 
@@ -24,6 +26,9 @@ function processarEventos(eventosRecebidos, partidaId) {
         tipo,
         pontosGerados: 0
       });
+    } else if (tipo === 'PENALTI' && timeId) {
+      // Para pênaltis: 1 registro por time com total de pênaltis
+      penaltisPorTime.set(timeId, pontos);
     }
   });
 
@@ -37,16 +42,27 @@ function processarEventos(eventosRecebidos, partidaId) {
     });
   });
 
+  // Adicionar pênaltis processados
+  penaltisPorTime.forEach((pontos, timeId) => {
+    novosEventos.push({
+      partidaId: parseInt(partidaId),
+      timeId,
+      tipo: 'PENALTI',
+      pontosGerados: pontos
+    });
+  });
+
   return novosEventos;
 }
 
 export async function GET(request, { params }) {
   try {
     const { partidaId } = await params;
+    const partidaIdInt = parseInt(partidaId);
 
     const eventos = await prisma.eventoPartida.findMany({
       where: {
-        partidaId: parseInt(partidaId),
+        partidaId: partidaIdInt,
       },
       include: {
         jogador: {
@@ -58,13 +74,41 @@ export async function GET(request, { params }) {
             }
           }
         },
+        time: true // Incluir informações do time para eventos de pênaltis
       },
       orderBy: {
         id: 'asc',
       },
     });
 
-    return NextResponse.json(eventos);
+    // Buscar informações de PartidaTime para eventos de pênaltis
+    const partidaTimes = await prisma.partidaTime.findMany({
+      where: {
+        partidaId: partidaIdInt
+      },
+      include: {
+        time: true
+      }
+    });
+
+    // Mapear timeId para PartidaTime
+    const partidaTimeMap = new Map();
+    partidaTimes.forEach(pt => {
+      partidaTimeMap.set(pt.timeId, pt);
+    });
+
+    // Enriquecer eventos com informação de PartidaTime
+    const eventosEnriquecidos = eventos.map(evento => {
+      if (evento.timeId && partidaTimeMap.has(evento.timeId)) {
+        return {
+          ...evento,
+          partidaTime: partidaTimeMap.get(evento.timeId)
+        };
+      }
+      return evento;
+    });
+
+    return NextResponse.json(eventosEnriquecidos);
   } catch (error) {
     console.error('Erro ao buscar eventos da partida:', error);
     return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 });
@@ -103,50 +147,91 @@ export async function POST(request, { params }) {
     }
 
     const partidaIdInt = parseInt(partidaId);
-    const novosEventos = processarEventos(eventosRecebidos, partidaIdInt);
+    
+    // Verificar se são eventos de pênaltis ou eventos normais (gols/cartões)
+    const temPenaltis = eventosRecebidos.some(e => e.tipo === 'PENALTI');
+    const temEventosJogadores = eventosRecebidos.some(e => e.tipo !== 'PENALTI');
 
     // Executar com retry automático para evitar deadlocks
     const resultado = await executeWithRetry(async () => {
       return await prisma.$transaction(async (tx) => {
-        // Verificar eventos existentes para otimização
-        const eventosExistentes = await tx.eventoPartida.findMany({
-          where: { partidaId: partidaIdInt },
-          select: { tipo: true, pontosGerados: true, jogadorId: true }
-        });
-
-        // Verificar se há mudanças reais (comparar eventos existentes vs novos)
-        const eventosExistentesStr = JSON.stringify(eventosExistentes.sort((a, b) => 
-          a.jogadorId - b.jogadorId || a.tipo.localeCompare(b.tipo)
-        ));
-        const novosEventosStr = JSON.stringify(novosEventos.map(e => ({
-          tipo: e.tipo, pontosGerados: e.pontosGerados, jogadorId: e.jogadorId
-        })).sort((a, b) => 
-          a.jogadorId - b.jogadorId || a.tipo.localeCompare(b.tipo)
-        ));
-
-        // Se não há mudanças, retornar eventos existentes sem fazer nada
-        if (eventosExistentesStr === novosEventosStr) {
-          console.log('📝 Nenhuma mudança detectada nos eventos, pulando atualização');
-          return eventosExistentes;
-        }
-
-        console.log('🔄 Atualizando eventos da partida:', partidaIdInt);
         
-        // Remover todos os eventos existentes da partida
-        await tx.eventoPartida.deleteMany({
-          where: { partidaId: partidaIdInt }
-        });
-
-        // Criar todos os novos eventos
-        if (novosEventos.length > 0) {
-          await tx.eventoPartida.createMany({
-            data: novosEventos
+        if (temPenaltis && !temEventosJogadores) {
+          // Caso 1: Apenas pênaltis - Atualizar só pênaltis, manter gols/cartões
+          console.log('🔄 Atualizando apenas eventos de pênaltis da partida:', partidaIdInt);
+          
+          // Remover apenas eventos de pênaltis existentes
+          await tx.eventoPartida.deleteMany({
+            where: { 
+              partidaId: partidaIdInt,
+              tipo: 'PENALTI'
+            }
           });
+
+          // Processar e adicionar novos pênaltis
+          const penaltisPorTime = new Map();
+          eventosRecebidos.forEach(evento => {
+            if (evento.tipo === 'PENALTI' && evento.timeId) {
+              const timeId = parseInt(evento.timeId);
+              const pontos = evento.ponto || evento.pontosGerados || 0;
+              penaltisPorTime.set(timeId, pontos);
+            }
+          });
+
+          // Criar eventos de pênaltis
+          const eventosPenaltis = [];
+          penaltisPorTime.forEach((pontos, timeId) => {
+            eventosPenaltis.push({
+              partidaId: partidaIdInt,
+              timeId,
+              tipo: 'PENALTI',
+              pontosGerados: pontos
+            });
+          });
+
+          if (eventosPenaltis.length > 0) {
+            await tx.eventoPartida.createMany({
+              data: eventosPenaltis
+            });
+          }
+          
+        } else if (temEventosJogadores) {
+          // Caso 2: Eventos de jogadores (gols/cartões) - Substituir tudo EXCETO pênaltis
+          console.log('🔄 Atualizando eventos de jogadores da partida:', partidaIdInt);
+          
+          const novosEventos = processarEventos(eventosRecebidos, partidaIdInt);
+          
+          // Remover apenas eventos de jogadores (gols e cartões)
+          await tx.eventoPartida.deleteMany({
+            where: { 
+              partidaId: partidaIdInt,
+              tipo: { in: ['GOL', 'CARTAO_AMARELO', 'CARTAO_VERMELHO'] }
+            }
+          });
+
+          // Criar novos eventos de jogadores
+          if (novosEventos.length > 0) {
+            await tx.eventoPartida.createMany({
+              data: novosEventos
+            });
+          }
         }
 
-        // Retornar eventos atualizados
+        // Retornar todos os eventos atualizados
         return await tx.eventoPartida.findMany({
           where: { partidaId: partidaIdInt },
+          include: {
+            jogador: {
+              include: {
+                times: {
+                  include: {
+                    time: true
+                  }
+                }
+              }
+            },
+            time: true
+          },
           orderBy: { id: 'asc' }
         });
       }, {

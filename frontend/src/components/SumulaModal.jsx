@@ -235,7 +235,51 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEn
     if (onPenaltisChange && match?.id) {
       onPenaltisChange(match.id, penaltisA, penaltisB, temPenaltis);
     }
+    
+    // Também enviar eventos de pênaltis via API para tempo real
+    enviarEventosPenaltisTempoReal();
   }, [penaltisA, penaltisB, temPenaltis, match?.id, onPenaltisChange]);
+
+  // Função para enviar eventos de pênaltis em tempo real
+  const enviarEventosPenaltisTempoReal = async () => {
+    if (!match?.id || !temPenaltis) return;
+
+    try {
+      const eventosParaEnviar = [];
+
+      // Adicionar evento de pênaltis para o time A 
+      if (penaltisA >= 0) {
+        eventosParaEnviar.push({
+          tipo: 'PENALTI',
+          ponto: penaltisA,
+          timeId: match.team1Id
+        });
+      }
+
+      // Adicionar evento de pênaltis para o time B
+      if (penaltisB >= 0) {
+        eventosParaEnviar.push({
+          tipo: 'PENALTI',
+          ponto: penaltisB,
+          timeId: match.team2Id
+        });
+      }
+
+      if (eventosParaEnviar.length > 0) {
+        const response = await fetch(`/api/partidas/${match.id}/eventos`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(eventosParaEnviar)
+        });
+
+        if (!response.ok) {
+          console.error('Erro ao enviar eventos de pênaltis em tempo real');
+        }
+      }
+    } catch (error) {
+      console.error('Erro ao enviar eventos de pênaltis:', error);
+    }
+  };
 
   // quando edições mudam em modo live OU quando estamos em edição manual, recalcula placar
   useEffect(() => {

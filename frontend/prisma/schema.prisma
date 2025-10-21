@@ -110,6 +110,7 @@ model Time {
   jogadores    TimeJogador[]
   partidas     PartidaTime[]
   grupos       GrupoTime[]
+  eventos      EventoPartida[] // Para eventos de pênaltis
 
   @@map("Time")
 }
@@ -173,13 +174,15 @@ model Partida {
 // Tabela: EventoPartida
 // Descrição: Registra eventos específicos durante uma partida.
 model EventoPartida {
-  id            Int      @id @default(autoincrement()) @map("id_evento")
-  tipo          String   @map("tipo_evento") @db.VarChar(30)
-  pontosGerados Int      @map("pontos_gerados")
-  partidaId     Int      @map("fk_id_partida")
-  jogadorId     Int      @map("fk_id_jogador")
-  partida       Partida  @relation(fields: [partidaId], references: [id])
-  jogador       Jogador  @relation(fields: [jogadorId], references: [id])
+  id               Int          @id @default(autoincrement()) @map("id_evento")
+  tipo             String       @map("tipo_evento") @db.VarChar(30)
+  pontosGerados    Int          @map("pontos_gerados")
+  partidaId        Int          @map("fk_id_partida")
+  jogadorId        Int?         @map("fk_id_jogador")
+  timeId           Int?         @map("fk_id_time") // Para eventos de pênaltis
+  partida          Partida      @relation(fields: [partidaId], references: [id])
+  jogador          Jogador?     @relation(fields: [jogadorId], references: [id])
+  time             Time?        @relation(fields: [timeId], references: [id])  
 
   @@map("EventoPartida")
 }
@@ -250,6 +253,7 @@ model PartidaTime {
   pontosTorneio   Int     @default(0) @map("pontos_torneio") // Pontos ganhos no torneio (3-1-0)
   partida         Partida @relation(fields: [partidaId], references: [id])
   time            Time    @relation(fields: [timeId], references: [id])
+  // Relacionamento manual com EventoPartida será feito via query
 
   @@id([partidaId, timeId])
   @@map("PartidaTime")
