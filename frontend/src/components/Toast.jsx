@@ -47,18 +47,18 @@ const Toast = ({ toast, onRemove }) => {
     };
 
     const getToastStyles = (type) => {
-        const baseStyles = "flex items-start gap-3 p-4 rounded-lg shadow-lg border transition-all duration-300 ease-in-out transform";
+        const baseStyles = "flex items-start gap-3 p-4 rounded-lg shadow-xl border transition-all duration-300 ease-in-out transform";
 
         switch (type) {
             case 'success':
-                return `${baseStyles} bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800 text-green-800 dark:text-green-200`;
+                return `${baseStyles} bg-green-50 dark:bg-green-900 border-green-200 dark:border-green-700 text-green-800 dark:text-green-100`;
             case 'error':
-                return `${baseStyles} bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-800 dark:text-red-200`;
+                return `${baseStyles} bg-red-50 dark:bg-red-900 border-red-200 dark:border-red-700 text-red-800 dark:text-red-100`;
             case 'warning':
-                return `${baseStyles} bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800 text-yellow-800 dark:text-yellow-200`;
+                return `${baseStyles} bg-yellow-50 dark:bg-yellow-900 border-yellow-200 dark:border-yellow-700 text-yellow-800 dark:text-yellow-100`;
             case 'info':
             default:
-                return `${baseStyles} bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-200`;
+                return `${baseStyles} bg-blue-50 dark:bg-blue-900 border-blue-200 dark:border-blue-700 text-blue-800 dark:text-blue-100`;
         }
     };
 
@@ -86,7 +86,7 @@ const Toast = ({ toast, onRemove }) => {
                 {toast.title && (
                     <h4 className="text-sm font-semibold mb-1">{toast.title}</h4>
                 )}
-                <p className="text-sm opacity-90">{toast.message}</p>
+                <p className="text-sm">{toast.message}</p>
             </div>
 
             <button
@@ -107,7 +107,7 @@ const ToastContainer = ({ toasts, removeToast }) => {
     if (!toasts.length) return null;
 
     return (
-        <div className="fixed top-4 right-4 z-[9999] space-y-3 max-w-sm w-full pr-4 md:pr-0">
+        <div className="fixed bottom-10 right-4 z-[9999] space-y-3 max-w-sm w-full pr-4 md:pr-0">
             {toasts.map((toast) => (
                 <Toast
                     key={toast.id}

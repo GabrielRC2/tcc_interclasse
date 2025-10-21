@@ -221,7 +221,7 @@ export const Dashboard = ({ isGuest = false }) => {
   // busca partidas em andamento
   const carregarPartidasEmAndamento = async () => {
     if (!selectedTournament) return;
-    
+
     // Só mostrar loading se for primeira carga ou não tiver dados
     if (primeiraCarregaAndamento || partidasEmAndamento.length === 0) {
       setCarregandoAndamento(true);
@@ -234,18 +234,18 @@ export const Dashboard = ({ isGuest = false }) => {
         const s = (p.status || '').toLowerCase();
         return s === 'em andamento' || s === 'andamento' || s === 'jogando' || s === 'iniciada';
       });
-      
+
       // Para cada partida em andamento, carregar os eventos/pontuação
       const partidasComPontuacao = await Promise.all(
         emAndamento.map(async (partida) => {
           try {
             const eventosRes = await fetch(`/api/partidas/${partida.id}/eventos`);
             const eventos = eventosRes.ok ? await eventosRes.json() : [];
-            
+
             // Debug: log dos eventos para verificar estrutura
             console.log(`Eventos da partida ${partida.id}:`, eventos);
             console.log(`Team1ID: ${partida.team1Id}, Team2ID: ${partida.team2Id}`);
-            
+
             // Calcular pontuação por time baseado nos eventos
             const eventosTime1 = eventos.filter(evento => {
               // Verificar se o jogador pertence ao time 1
@@ -254,17 +254,17 @@ export const Dashboard = ({ isGuest = false }) => {
               console.log(`Evento ${evento.id}: Jogador ${evento.jogador?.nome}, Times: ${evento.jogador?.times?.map(t => t.timeId)}, Pertence Time1: ${pertenceTime1}, É Gol: ${ehGol}, Pontos: ${evento.pontosGerados}`);
               return pertenceTime1 && ehGol;
             });
-            
+
             const eventosTime2 = eventos.filter(evento => {
               // Verificar se o jogador pertence ao time 2
               const pertenceTime2 = evento.jogador?.times?.some(timeJogador => timeJogador.timeId === partida.team2Id);
               const ehGol = evento.tipo === 'GOL';
               return pertenceTime2 && ehGol;
             });
-            
+
             const pontuacaoTime1 = eventosTime1.reduce((total, evento) => total + (evento.pontosGerados || 0), 0);
             const pontuacaoTime2 = eventosTime2.reduce((total, evento) => total + (evento.pontosGerados || 0), 0);
-            
+
             console.log(`Pontuação calculada - Time1: ${pontuacaoTime1}, Time2: ${pontuacaoTime2}`);
 
             return {
@@ -284,10 +284,10 @@ export const Dashboard = ({ isGuest = false }) => {
           }
         })
       );
-      
+
       setPartidasEmAndamento(partidasComPontuacao);
       setUltimaAtualizacao(new Date());
-      
+
       // Marcar que a primeira carga foi concluída
       if (primeiraCarregaAndamento) {
         setPrimeiraCarregaAndamento(false);
@@ -349,7 +349,7 @@ export const Dashboard = ({ isGuest = false }) => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-6">
       {/* Seletor de Torneio Global */}
       <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm p-6">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -385,7 +385,7 @@ export const Dashboard = ({ isGuest = false }) => {
             Dashboard - {selectedTournament.name}
           </h1>
 
-          <div className="space-y-8">
+          <div className="flex flex-col gap-8">
             {/* PARTIDAS ATUAIS (partidas em andamento com pontuação em tempo real) */}
             <div>
               <div className="flex items-center justify-between mb-4">
@@ -424,7 +424,7 @@ export const Dashboard = ({ isGuest = false }) => {
                             AO VIVO
                           </p>
                         </div>
-                        
+
                         {/* Layout com colunas proporcionais */}
                         <div className="mb-4 w-full text-center">
                           {(() => {
@@ -432,11 +432,11 @@ export const Dashboard = ({ isGuest = false }) => {
                             const maxLength = Math.max(match.team1.length, match.team2.length);
                             // Definir largura mínima de 80px e máxima de 160px, baseada no comprimento
                             const columnWidth = Math.max(80, Math.min(160, maxLength * 12));
-                            
+
                             return (
                               <div className="grid grid-cols-3 gap-2 items-center justify-center max-w-fit mx-auto">
                                 {/* Coluna Time 1 */}
-                                <div className="text-center" style={{minWidth: `${columnWidth}px`}}>
+                                <div className="text-center" style={{ minWidth: `${columnWidth}px` }}>
                                   <p className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-1">
                                     {match.team1}
                                   </p>
@@ -444,15 +444,15 @@ export const Dashboard = ({ isGuest = false }) => {
                                     {match.pontuacaoTime1 || 0}
                                   </span>
                                 </div>
-                                
+
                                 {/* Coluna separador VS */}
                                 <div className="text-center px-3">
                                   <div className="mb-1 h-6"></div>
                                   <span className="text-2xl font-bold text-red-600 dark:text-red-400">x</span>
                                 </div>
-                                
+
                                 {/* Coluna Time 2 */}
-                                <div className="text-center" style={{minWidth: `${columnWidth}px`}}>
+                                <div className="text-center" style={{ minWidth: `${columnWidth}px` }}>
                                   <p className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-1">
                                     {match.team2}
                                   </p>
@@ -476,7 +476,7 @@ export const Dashboard = ({ isGuest = false }) => {
                   ))
                 )}
               </div>
-              
+
               {/* Mostrar próximas partidas sempre que existirem */}
               {proximasPartidas.length > 0 && (
                 <>
