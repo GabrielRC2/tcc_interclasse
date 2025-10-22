@@ -157,7 +157,8 @@ function TeamsPage() {
     course: '',
     year: '',
     gender: '',
-    sport: ''
+    sport: '',
+    turma: ''
   });
 
   const handleInputChange = (e) => {
@@ -189,7 +190,7 @@ function TeamsPage() {
       if (response.ok) {
         await loadTeams();
         setIsDetailOpen(false);
-        setFormData({ course: '', year: '', gender: '', sport: '' });
+        setFormData({ course: '', year: '', gender: '', sport: '', turma: '' });
         toast.success('Time criado com sucesso!');
       } else {
         const error = await response.json();
@@ -260,15 +261,20 @@ function TeamsPage() {
   };
 
   // Adicionar função para gerar nome automaticamente
-  const generateTeamName = (year, course) => {
+  const generateTeamName = (year, course, turma) => {
     if (!year || !course) return '';
 
     // Buscar sigla do curso no estado cursos
     const cursoObj = cursos.find(c => c.nome === course);
     const sigla = cursoObj ? cursoObj.sigla : course.substring(0, 4).toUpperCase();
 
-    // Se for time Misto, retorna apenas a sigla
-    return year === 'Misto' ? sigla : `${year}${sigla}`;
+    // Formato com turma: [Ano][Sigla]-[Turma] -> Ex: 2ºDS-A, 1ºADM-B
+    // Formato sem turma: [Ano][Sigla] -> Ex: 2ºDS, 1ºADM
+    if (year === 'Misto') {
+      return turma ? `${sigla}-${turma}` : sigla;
+    } else {
+      return turma ? `${year}${sigla}-${turma}` : `${year}${sigla}`;
+    }
   };
 
   // Adicionar novos estados
@@ -867,7 +873,7 @@ function TeamsPage() {
                     Nome do Time (Automático)
                   </label>
                   <div className="text-2xl font-bold text-red-600 dark:text-red-400 text-center py-2">
-                    {generateTeamName(formData.year, formData.course) || 'Selecione Ano e Curso'}
+                    {generateTeamName(formData.year, formData.course, formData.turma) || 'Selecione Ano e Curso'}
                   </div>
                 </div>
 
@@ -883,6 +889,18 @@ function TeamsPage() {
                   <option value="2º">2º</option>
                   <option value="3º">3º</option>
                   <option value="Misto">Misto</option>
+                </Select>
+
+                <Select
+                  label="Turma (Opcional)"
+                  name="turma"
+                  value={formData.turma}
+                  onChange={handleInputChange}
+                >
+                  <option value="">Nenhuma (time geral)</option>
+                  <option value="A">A (Manhã)</option>
+                  <option value="B">B (Tarde)</option>
+                  <option value="C">C (Noite)</option>
                 </Select>
 
                 <Select
@@ -944,7 +962,7 @@ function TeamsPage() {
                     Nome do Time (Automático)
                   </label>
                   <div className="text-2xl font-bold text-red-600 dark:text-red-400 text-center py-2">
-                    {generateTeamName(formData.year, formData.course) || 'Selecione Ano e Curso'}
+                    {generateTeamName(formData.year, formData.course, formData.turma) || 'Selecione Ano e Curso'}
                   </div>
                 </div>
 
@@ -960,6 +978,18 @@ function TeamsPage() {
                   <option value="2º">2º</option>
                   <option value="3º">3º</option>
                   <option value="Misto">Misto</option>
+                </Select>
+
+                <Select
+                  label="Turma (Opcional)"
+                  name="turma"
+                  value={formData.turma}
+                  onChange={handleInputChange}
+                >
+                  <option value="">Nenhuma (time geral)</option>
+                  <option value="A">A (Manhã)</option>
+                  <option value="B">B (Tarde)</option>
+                  <option value="C">C (Noite)</option>
                 </Select>
 
                 <Select

@@ -1,4 +1,5 @@
 const { PrismaClient } = require('@prisma/client');
+const bcrypt = require('bcryptjs');
 
 const prisma = new PrismaClient();
 
@@ -37,6 +38,7 @@ async function main() {
   await prisma.Curso.deleteMany({});
   await prisma.Modalidade.deleteMany({});
   await prisma.Torneio.deleteMany({});
+  await prisma.Usuario.deleteMany({});
 
   // 2. Inserir Locais
   console.log('Criando Locais...');
@@ -137,13 +139,51 @@ async function main() {
   for (const curso of cursos) {
     for (const sala of salas) {
       for (const categoria of categorias) {
+        // MAIORIA DOS TIMES: sem turma específica (time geral)
         timesParaCriar.push({
           nome: `${sala}${curso.sigla}`,
           sala,
+          turma: null,
           cursoId: curso.id,
           categoriaId: categoria.id,
           torneioId: torneioPrincipal.id,
         });
+
+        // ALGUNS TIMES: criar com turmas específicas
+        // Apenas para DS e INF do 2º ano (exemplo realista)
+        if ((curso.sigla === 'DS' || curso.sigla === 'INF') && sala === '2º') {
+          // Time turma A (Manhã)
+          timesParaCriar.push({
+            nome: `${sala}${curso.sigla}-A`,
+            sala,
+            turma: 'A',
+            cursoId: curso.id,
+            categoriaId: categoria.id,
+            torneioId: torneioPrincipal.id,
+          });
+
+          // Time turma B (Tarde)
+          timesParaCriar.push({
+            nome: `${sala}${curso.sigla}-B`,
+            sala,
+            turma: 'B',
+            cursoId: curso.id,
+            categoriaId: categoria.id,
+            torneioId: torneioPrincipal.id,
+          });
+        }
+
+        // Apenas ADA do 1º ano tem turma C (Noite)
+        if (curso.sigla === 'ADA' && sala === '1º') {
+          timesParaCriar.push({
+            nome: `${sala}${curso.sigla}-C`,
+            sala,
+            turma: 'C',
+            cursoId: curso.id,
+            categoriaId: categoria.id,
+            torneioId: torneioPrincipal.id,
+          });
+        }
       }
     }
   }
@@ -172,7 +212,55 @@ async function main() {
 
   await prisma.TimeJogador.createMany({ data: escalacoes });
 
-  console.log('Seeding concluído com sucesso!');
+  // 9. Criação de Usuários de Teste
+  console.log('Criando usuários de teste...');
+  
+  // Hash para a senha "123456"
+  const hashedPassword = await bcrypt.hash('123456', 12);
+
+  // Criar usuários de teste
+  await prisma.Usuario.createMany({
+    data: [
+      {
+        nome: 'Admin Teste',
+        email: 'a@test.com',
+        senhaHash: hashedPassword,
+        tipo: 'ADMIN'
+      },
+      {
+        nome: 'Staff Teste',
+        email: 's@test.com',
+        senhaHash: hashedPassword,
+        tipo: 'STAFF'
+      },
+      {
+        nome: 'Representante Teste',
+        email: 'r@test.com',
+        senhaHash: hashedPassword,
+        tipo: 'REPRESENTANTE'
+      }
+    ]
+  });
+
+  console.log('✅ Seeding concluído com sucesso!');
+  console.log('');
+  console.log('📝 Usuários de teste criados:');
+  console.log('');
+  console.log('   👤 ADMIN:');
+  console.log('      Email: a@test.com');
+  console.log('      Senha: 123456');
+  console.log('      Acesso: Todas as páginas');
+  console.log('');
+  console.log('   👤 STAFF:');
+  console.log('      Email: s@test.com');
+  console.log('      Senha: 123456');
+  console.log('      Acesso: Home, Times, Cadastros');
+  console.log('');
+  console.log('   👤 REPRESENTANTE:');
+  console.log('      Email: r@test.com');
+  console.log('      Senha: 123456');
+  console.log('      Acesso: Home, Times');
+  console.log('');
 }
 
 main()
