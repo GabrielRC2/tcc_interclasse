@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Trophy, Users, Calendar, Target, Filter, X, Settings, ChevronDown, ChevronRight } from 'lucide-react';
 import { useTournament } from '@/contexts/TournamentContext';
 import { SumulaModal } from '@/components/SumulaModal';
@@ -386,8 +386,8 @@ export const Dashboard = ({ isGuest = false }) => {
     });
   };
 
-  // Função para atualizar pênaltis temporários em tempo real
-  const atualizarPenaltisTemporarios = (partidaId, penaltisCasa, penaltisVisitante, temPenaltis) => {
+  // Função para atualizar pênaltis temporários em tempo real (memorizada com useCallback)
+  const atualizarPenaltisTemporarios = useCallback((partidaId, penaltisCasa, penaltisVisitante, temPenaltis) => {
     setPenaltisTemporarios(prev => ({
       ...prev,
       [partidaId]: {
@@ -396,7 +396,7 @@ export const Dashboard = ({ isGuest = false }) => {
         temPenaltis
       }
     }));
-  };
+  }, []);
 
   // Função para limpar pênaltis temporários quando súmula é fechada/enviada
   const limparPenaltisTemporarios = (partidaId) => {
@@ -1001,9 +1001,7 @@ export const Dashboard = ({ isGuest = false }) => {
                 tratarSumulaEnviada(id);
                 limparPenaltisTemporarios(id);
               }}
-              onPenaltisChange={(partidaId, penaltisCasa, penaltisVisitante, temPenaltis) => {
-                atualizarPenaltisTemporarios(partidaId, penaltisCasa, penaltisVisitante, temPenaltis);
-              }}
+              onPenaltisChange={atualizarPenaltisTemporarios}
             />
           )}
 

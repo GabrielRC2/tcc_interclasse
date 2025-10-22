@@ -1,6 +1,7 @@
 
 'use client';
 import React, { useState, useEffect, useRef } from 'react';
+import { useSession } from 'next-auth/react';
 import { Modal } from '@/components/Modal';
 import { Button } from '@/components/common';
 import { useTournament } from '@/contexts/TournamentContext';
@@ -64,6 +65,7 @@ const PDFDownloadButton = ({ className, fileName, matchData, tournamentData, tea
 export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEnviada = () => { }, onPenaltisChange = null }) => {
   const estaAoVivo = mode === 'live';
   const { selectedTournament } = useTournament();
+  const { data: session } = useSession();
   const toast = useToast();
   const confirm = useConfirm();
   const sumulaRef = useRef(null);
@@ -101,6 +103,12 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEn
   const ehEliminatoria = match?.grupoId === null || match?.grupoId === undefined;
   // Verifica se há empate (necessário pênaltis em eliminatórias)
   const hahEmpate = placarA === placarB;
+
+  // Define se o modal está em modo readOnly (apenas visualização)
+  const readOnly = match?.status === 'Finalizada' && !permitirEdicao;
+
+  // Verifica se o usuário é admin
+  const isAdmin = session?.user?.tipo_usuario === 'ADMIN';
 
   useEffect(() => {
     const carregarDados = async () => {
@@ -952,8 +960,8 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEn
               </Button>
             )}
 
-            {/* Botão para permitir edição mesmo quando não está ao vivo (escondido em modo readOnly) */}
-            {!estaAoVivo && !readOnly && (
+            {/* Botão para permitir edição mesmo quando não está ao vivo (apenas para admins) */}
+            {!estaAoVivo && isAdmin && (
               <Button
                 onClick={() => {
                   const novo = !permitirEdicao;
