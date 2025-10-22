@@ -376,7 +376,7 @@ export const SeasonsPage = () => {
                                                     </div>
 
                                                     <div className="text-sm text-gray-500 dark:text-gray-400">
-                                                        <strong>Modalidades:</strong> {season.modalities}
+                                                        <strong>Modalidades:</strong> {Array.isArray(season.modalities) ? season.modalities.join(', ') : (season.modalities || 'Nenhuma')}
                                                     </div>
                                                 </div>
                                                 <CardSplat />

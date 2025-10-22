@@ -80,13 +80,36 @@ async function main() {
 
     ],
   });
+  const torneios = await prisma.Torneio.findMany();
   const torneioPrincipal = await prisma.Torneio.findFirst({ where: { nome: 'Meio do Ano 2024' } });
+  const torneioFimAno = await prisma.Torneio.findFirst({ where: { nome: 'Fim de Ano 2024' } });
   if (!torneioPrincipal) throw new Error("Torneio principal não encontrado!");
+
+  // 5.1 Associar Modalidades aos Torneios
+  console.log('Associando modalidades aos torneios...');
+  const volei = modalidades.find(m => m.nome === 'Vôlei');
+  const handebol = modalidades.find(m => m.nome === 'Handebol');
+  const futsal = modalidades.find(m => m.nome === 'Futsal');
+  const basquete = modalidades.find(m => m.nome === 'Basquete');
+
+  // Torneio Meio do Ano 2024: Vôlei e Handebol
+  await prisma.TorneioModalidade.createMany({
+    data: [
+      { torneioId: torneioPrincipal.id, modalidadeId: volei.id },
+      { torneioId: torneioPrincipal.id, modalidadeId: handebol.id },
+    ]
+  });
+
+  // Torneio Fim de Ano 2024: Futsal e Basquete
+  await prisma.TorneioModalidade.createMany({
+    data: [
+      { torneioId: torneioFimAno.id, modalidadeId: futsal.id },
+      { torneioId: torneioFimAno.id, modalidadeId: basquete.id },
+    ]
+  });
 
   // 6. Inserir Categorias
   console.log('Criando Categorias...');
-  const volei = modalidades.find(m => m.nome === 'Vôlei');
-  const handebol = modalidades.find(m => m.nome === 'Handebol');
   if (!volei || !handebol) throw new Error("Modalidades de Vôlei ou Handebol não encontradas!");
 
   await prisma.Categoria.createMany({
