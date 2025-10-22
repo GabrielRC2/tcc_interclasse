@@ -145,8 +145,8 @@ export const Dashboard = ({ isGuest = false }) => {
   const carregarOpcoesFiltragem = async () => {
     if (!selectedTournament) return;
     try {
-      // Carregar modalidades
-      const resModalidades = await fetch('/api/modalidades');
+      // Carregar modalidades DO TORNEIO SELECIONADO
+      const resModalidades = await fetch(`/api/torneios/${selectedTournament.id}/modalidades`);
       if (resModalidades.ok) {
         const modalidadesData = await resModalidades.json();
         setModalidades(modalidadesData);
@@ -704,7 +704,7 @@ export const Dashboard = ({ isGuest = false }) => {
                       >
                         <option value="">Todas as modalidades</option>
                         {modalidades.map(modalidade => (
-                          <option key={modalidade.id} value={modalidade.id}>{modalidade.nome}</option>
+                          <option key={modalidade.modalidadeId} value={modalidade.modalidadeId}>{modalidade.nome}</option>
                         ))}
                       </Select>
                       <Select
@@ -836,7 +836,7 @@ export const Dashboard = ({ isGuest = false }) => {
                       >
                         <option value="">Todas as modalidades</option>
                         {modalidades.map(modalidade => (
-                          <option key={modalidade.id} value={modalidade.id}>{modalidade.nome}</option>
+                          <option key={modalidade.modalidadeId} value={modalidade.modalidadeId}>{modalidade.nome}</option>
                         ))}
                       </Select>
                       <Select

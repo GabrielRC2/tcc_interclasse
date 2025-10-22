@@ -35,7 +35,7 @@ export const MatchesPage = () => {
   useEffect(() => {
     carregarDadosIniciais();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [selectedTournament]); // Recarregar quando o torneio mudar
 
   useEffect(() => {
     carregarPartidas();
@@ -53,11 +53,18 @@ export const MatchesPage = () => {
   // carrega modalidades (exemplo)
   const carregarDadosIniciais = async () => {
     try {
-      const res = await fetch('/api/modalidades');
-      const data = res.ok ? await res.json() : [];
-      setModalidades(data);
+      // Se há torneio selecionado, buscar apenas suas modalidades
+      if (selectedTournament?.id) {
+        const res = await fetch(`/api/torneios/${selectedTournament.id}/modalidades`);
+        const data = res.ok ? await res.json() : [];
+        setModalidades(data);
+      } else {
+        // Se não há torneio, limpar modalidades
+        setModalidades([]);
+      }
     } catch (err) {
-      console.error('Erro ao carregar modalidades:', err);
+      console.error('Erro ao carregar modalidades do torneio:', err);
+      setModalidades([]);
     } finally {
       setCarregando(false);
     }
@@ -883,7 +890,7 @@ export const MatchesPage = () => {
                 }}
               >
                 <option value="">Todas as modalidades</option>
-                {modalidades.map(m => <option key={m.id} value={m.id}>{m.nome}</option>)}
+                {modalidades.map(m => <option key={m.modalidadeId} value={m.modalidadeId}>{m.nome}</option>)}
               </Select>
 
               <Select
@@ -1167,9 +1174,10 @@ export const MatchesPage = () => {
                         // Recarregar configurações após salvar
                         await loadConfiguracaoLocais();
                         setShowConfigModal(false);
+                        toast.success('✅ Configurações salvas com sucesso!');
                       } catch (error) {
                         console.error('Erro ao salvar configurações:', error);
-                        alert('Erro ao salvar configurações. Tente novamente.');
+                        toast.error('❌ Erro ao salvar configurações. Tente novamente.');
                       }
                     }}
                     className="flex-1"

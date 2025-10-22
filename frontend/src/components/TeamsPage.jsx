@@ -39,7 +39,7 @@ function TeamsPage() {
     loadTeams();
     loadCursos();
     loadModalidades();
-  }, []);
+  }, [selectedTournament]); // Recarregar quando o torneio mudar
 
   const loadTeams = async () => {
     if (!selectedTournament) {
@@ -80,12 +80,23 @@ function TeamsPage() {
 
   const loadModalidades = async () => {
     try {
-      const response = await fetch('/api/modalidades');
-      const modalidadesData = await response.json();
-      setModalidades(modalidadesData);
+      // Se há torneio selecionado, buscar apenas suas modalidades
+      if (selectedTournament?.id) {
+        const response = await fetch(`/api/torneios/${selectedTournament.id}/modalidades`);
+        const modalidadesData = await response.json();
+        setModalidades(modalidadesData);
 
-      const sportNames = ['Todos', ...modalidadesData.map(m => m.nome)];
-      setSportOptions(sportNames);
+        const sportNames = ['Todos', ...modalidadesData.map(m => m.nome)];
+        setSportOptions(sportNames);
+      } else {
+        // Se não há torneio, buscar todas (para criação de times)
+        const response = await fetch('/api/modalidades');
+        const modalidadesData = await response.json();
+        setModalidades(modalidadesData);
+
+        const sportNames = ['Todos', ...modalidadesData.map(m => m.nome)];
+        setSportOptions(sportNames);
+      }
     } catch (error) {
       console.error('Erro ao carregar modalidades:', error);
     }
@@ -937,7 +948,7 @@ function TeamsPage() {
                 >
                   <option value="">Selecione o esporte</option>
                   {modalidades.map(modalidade => (
-                    <option key={modalidade.id} value={modalidade.nome}>{modalidade.nome}</option>
+                    <option key={modalidade.modalidadeId || modalidade.id} value={modalidade.nome}>{modalidade.nome}</option>
                   ))}
                 </Select>
               </div>
@@ -1027,7 +1038,7 @@ function TeamsPage() {
                 >
                   <option value="">Selecione o esporte</option>
                   {modalidades.map(modalidade => (
-                    <option key={modalidade.id} value={modalidade.nome}>{modalidade.nome}</option>
+                    <option key={modalidade.modalidadeId || modalidade.id} value={modalidade.nome}>{modalidade.nome}</option>
                   ))}
                 </Select>
               </div>

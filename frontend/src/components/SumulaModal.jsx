@@ -96,9 +96,12 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEn
   // Estado para WO
   const [timeWOId, setTimeWOId] = useState(null);
 
-  // Verifica se é partida eliminatória (permitir pênaltis)
-  // Partidas eliminatórias são aquelas SEM grupo (grupoId = null)
-  const ehEliminatoria = match?.grupoId === null || match?.grupoId === undefined;
+  // Verifica se é partida eliminatória (não permite empate)
+  // Partidas eliminatórias são aquelas com fase de mata-mata (Final, Semifinais, etc.)
+  const fase = match?.phase || match?.fase || 'Grupos';
+  const fasesEliminatorias = ['Oitavas de Final', 'Quartas de Final', 'Semifinais', 'Final', 'Triangular Final', 'Partida Extra'];
+  const ehEliminatoria = fasesEliminatorias.includes(fase);
+  
   // Verifica se há empate (necessário pênaltis em eliminatórias)
   const hahEmpate = placarA === placarB;
 

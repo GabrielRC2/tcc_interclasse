@@ -1,8 +1,10 @@
 'use client';
 import { Input, Button } from '@/components/common';
 import { signIn } from "next-auth/react";
+import { useToast } from '@/components/Toast';
 
 export const LoginPage = ({ onLogin }) => {
+  const toast = useToast();
   const handleLogin = async (e) => {
     e.preventDefault();
     const email = e.target.email.value;
@@ -17,9 +19,10 @@ export const LoginPage = ({ onLogin }) => {
 
     if (result?.ok) {
       onLogin(); // Login bem-sucedido, atualiza o estado no pai
+      toast.success('✅ Login realizado com sucesso!');
     } else {
-      // Aqui você pode mostrar uma mensagem de erro se quiser
-      alert("Usuário ou senha inválidos.");
+      // Mostrar mensagem de erro usando toast
+      toast.error('❌ Usuário ou senha inválidos.');
     }
   };
 

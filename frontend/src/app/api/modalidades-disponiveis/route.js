@@ -11,44 +11,66 @@ export async function GET(request) {
       return Response.json({ error: 'torneioId é obrigatório' }, { status: 400 });
     }
 
-    // Buscar times agrupados por categoria
-    const timesGrouped = await prisma.time.groupBy({
-      by: ['categoriaId'],
+    // Buscar modalidades associadas ao torneio via TorneioModalidade
+    const torneioModalidades = await prisma.torneioModalidade.findMany({
       where: {
         torneioId: torneioId
-      },
-      _count: {
-        id: true
-      }
-    });
-
-    // Buscar detalhes das categorias
-    const categorias = await prisma.categoria.findMany({
-      where: {
-        id: {
-          in: timesGrouped.map(t => t.categoriaId)
-        }
       },
       include: {
         modalidade: true
       }
     });
 
-    // Montar resultado
-    const resultado = timesGrouped.map(timeGroup => {
-      const categoria = categorias.find(c => c.id === timeGroup.categoriaId);
-      
-      return {
-        modalidadeId: categoria.modalidade.id,
-        modalidadeNome: categoria.modalidade.nome,
-        genero: categoria.genero,
-        totalTimes: timeGroup._count.id,
-        categoriaId: categoria.id
-      };
-    }).filter(item => item.totalTimes > 0);
+    if (torneioModalidades.length === 0) {
+      console.log('⚠️ Nenhuma modalidade associada ao torneio:', torneioId);
+      return Response.json([]);
+    }
 
-    console.log('Modalidades encontradas:', resultado);
-    return Response.json(resultado);
+    // Para cada modalidade do torneio, verificar gêneros com times cadastrados
+    const modalidadesComGeneros = [];
+
+    for (const tm of torneioModalidades) {
+      const modalidade = tm.modalidade;
+      
+      // Buscar categorias dessa modalidade no torneio
+      const categorias = await prisma.categoria.findMany({
+        where: {
+          modalidadeId: modalidade.id,
+          times: {
+            some: {
+              torneioId: torneioId
+            }
+          }
+        },
+        include: {
+          times: {
+            where: {
+              torneioId: torneioId
+            }
+          }
+        }
+      });
+
+      // Agrupar por gênero
+      const generos = {};
+      categorias.forEach(cat => {
+        if (!generos[cat.genero]) {
+          generos[cat.genero] = {
+            modalidadeId: modalidade.id,
+            modalidadeNome: modalidade.nome,
+            genero: cat.genero,
+            totalTimes: 0,
+            categoriaId: cat.id
+          };
+        }
+        generos[cat.genero].totalTimes += cat.times.length;
+      });
+
+      modalidadesComGeneros.push(...Object.values(generos));
+    }
+
+    console.log('✅ Modalidades encontradas para torneio', torneioId, ':', modalidadesComGeneros);
+    return Response.json(modalidadesComGeneros.filter(item => item.totalTimes > 0));
 
   } catch (error) {
     console.error('Erro ao buscar modalidades disponíveis:', error);
