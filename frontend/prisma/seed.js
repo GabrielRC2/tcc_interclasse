@@ -135,7 +135,7 @@ async function main() {
   await prisma.Curso.deleteMany({});
   await prisma.Modalidade.deleteMany({});
   await prisma.Torneio.deleteMany({});
-  console.log('✅ Dados antigos removidos\n');
+  await prisma.Usuario.deleteMany({});
 
   // ETAPA 3: Inserir Locais
   console.log('📍 Criando Locais...');
@@ -180,18 +180,36 @@ async function main() {
     ],
   });
   const torneios = await prisma.Torneio.findMany();
-  const torneioMeioAno = torneios.find(t => t.nome === 'Meio do Ano 2025');
-  const torneioFimAno = torneios.find(t => t.nome === 'Fim de Ano 2025');
-  if (!torneioMeioAno || !torneioFimAno) throw new Error("Torneios não encontrados!");
-  console.log('✅ 2 torneios criados (Meio e Fim de Ano 2025)\n');
+  const torneioPrincipal = await prisma.Torneio.findFirst({ where: { nome: 'Meio do Ano 2024' } });
+  const torneioFimAno = await prisma.Torneio.findFirst({ where: { nome: 'Fim de Ano 2024' } });
+  if (!torneioPrincipal) throw new Error("Torneio principal não encontrado!");
 
-  // ETAPA 7: Inserir Categorias
-  console.log('🎯 Criando Categorias...');
+  // 5.1 Associar Modalidades aos Torneios
+  console.log('Associando modalidades aos torneios...');
   const volei = modalidades.find(m => m.nome === 'Vôlei');
   const handebol = modalidades.find(m => m.nome === 'Handebol');
   const futsal = modalidades.find(m => m.nome === 'Futsal');
   const basquete = modalidades.find(m => m.nome === 'Basquete');
-  if (!volei || !handebol || !futsal || !basquete) throw new Error("Modalidades não encontradas!");
+
+  // Torneio Meio do Ano 2024: Vôlei e Handebol
+  await prisma.TorneioModalidade.createMany({
+    data: [
+      { torneioId: torneioPrincipal.id, modalidadeId: volei.id },
+      { torneioId: torneioPrincipal.id, modalidadeId: handebol.id },
+    ]
+  });
+
+  // Torneio Fim de Ano 2024: Futsal e Basquete
+  await prisma.TorneioModalidade.createMany({
+    data: [
+      { torneioId: torneioFimAno.id, modalidadeId: futsal.id },
+      { torneioId: torneioFimAno.id, modalidadeId: basquete.id },
+    ]
+  });
+
+  // 6. Inserir Categorias
+  console.log('Criando Categorias...');
+  if (!volei || !handebol) throw new Error("Modalidades de Vôlei ou Handebol não encontradas!");
 
   await prisma.Categoria.createMany({
     data: [
@@ -264,14 +282,52 @@ async function main() {
   // Criar times para Meio do Ano 2025 (Vôlei e Handebol)
   for (const curso of cursos) {
     for (const sala of salas) {
-      for (const categoria of categoriasMeioAno) {
+      for (const categoria of categorias) {
+        // MAIORIA DOS TIMES: sem turma específica (time geral)
         timesParaCriar.push({
           nome: `${sala}${curso.sigla}`,
           sala,
+          turma: null,
           cursoId: curso.id,
           categoriaId: categoria.id,
           torneioId: torneioMeioAno.id,
         });
+
+        // ALGUNS TIMES: criar com turmas específicas
+        // Apenas para DS e INF do 2º ano (exemplo realista)
+        if ((curso.sigla === 'DS' || curso.sigla === 'INF') && sala === '2º') {
+          // Time turma A (Manhã)
+          timesParaCriar.push({
+            nome: `${sala}${curso.sigla}-A`,
+            sala,
+            turma: 'A',
+            cursoId: curso.id,
+            categoriaId: categoria.id,
+            torneioId: torneioPrincipal.id,
+          });
+
+          // Time turma B (Tarde)
+          timesParaCriar.push({
+            nome: `${sala}${curso.sigla}-B`,
+            sala,
+            turma: 'B',
+            cursoId: curso.id,
+            categoriaId: categoria.id,
+            torneioId: torneioPrincipal.id,
+          });
+        }
+
+        // Apenas ADA do 1º ano tem turma C (Noite)
+        if (curso.sigla === 'ADA' && sala === '1º') {
+          timesParaCriar.push({
+            nome: `${sala}${curso.sigla}-C`,
+            sala,
+            turma: 'C',
+            cursoId: curso.id,
+            categoriaId: categoria.id,
+            torneioId: torneioPrincipal.id,
+          });
+        }
       }
     }
   }
@@ -335,29 +391,55 @@ async function main() {
   console.log(`   • Fim de Ano: ${timesFimAno.length} times (Futsal e Basquete)`);
   console.log(`✅ ${escalacoes.length} escalações de jogadores criadas\n`);
 
-  console.log('╔════════════════════════════════════════════════════════════╗');
-  console.log('║            SEEDING CONCLUÍDO COM SUCESSO! ✨               ║');
-  console.log('╚════════════════════════════════════════════════════════════╝\n');
+  // 9. Criação de Usuários de Teste
+  console.log('Criando usuários de teste...');
   
-  console.log('📊 RESUMO FINAL:');
-  console.log('   ✓ 5 usuários de teste');
-  console.log('   ✓ 2 locais');
-  console.log('   ✓ 7 cursos');
-  console.log('   ✓ 4 modalidades (Futsal, Vôlei, Basquete, Handebol)');
-  console.log('   ✓ 2 torneios (Meio e Fim de Ano 2025)');
-  console.log('   ✓ 8 categorias (4 modalidades x 2 gêneros)');
-  console.log(`   ✓ ${todosJogadoresParaCriar.length} jogadores`);
-  console.log(`   ✓ ${timesDoBanco.length} times`);
-  console.log(`   ✓ ${escalacoes.length} escalações\n`);
-  
-  console.log('🎯 DETALHES DOS TORNEIOS:');
-  console.log('   🏐 Meio do Ano 2025: 15/05/2025 - 30/06/2025 (EM ANDAMENTO)');
-  console.log('      Modalidades: Vôlei e Handebol');
-  console.log(`      Times: ${timesMeioAno.length} (${categoriasMeioAno.length} categorias)`);
+  // Hash para a senha "123456"
+  const hashedPassword = await bcrypt.hash('123456', 12);
+
+  // Criar usuários de teste
+  await prisma.Usuario.createMany({
+    data: [
+      {
+        nome: 'Admin Teste',
+        email: 'a@test.com',
+        senhaHash: hashedPassword,
+        tipo: 'ADMIN'
+      },
+      {
+        nome: 'Staff Teste',
+        email: 's@test.com',
+        senhaHash: hashedPassword,
+        tipo: 'STAFF'
+      },
+      {
+        nome: 'Representante Teste',
+        email: 'r@test.com',
+        senhaHash: hashedPassword,
+        tipo: 'REPRESENTANTE'
+      }
+    ]
+  });
+
+  console.log('✅ Seeding concluído com sucesso!');
   console.log('');
-  console.log('   ⚽ Fim de Ano 2025: 15/10/2025 - 30/11/2025 (PLANEJAMENTO)');
-  console.log('      Modalidades: Futsal e Basquete');
-  console.log(`      Times: ${timesFimAno.length} (${categoriasFimAno.length} categorias)\n`);
+  console.log('📝 Usuários de teste criados:');
+  console.log('');
+  console.log('   👤 ADMIN:');
+  console.log('      Email: a@test.com');
+  console.log('      Senha: 123456');
+  console.log('      Acesso: Todas as páginas');
+  console.log('');
+  console.log('   👤 STAFF:');
+  console.log('      Email: s@test.com');
+  console.log('      Senha: 123456');
+  console.log('      Acesso: Home, Times, Cadastros');
+  console.log('');
+  console.log('   👤 REPRESENTANTE:');
+  console.log('      Email: r@test.com');
+  console.log('      Senha: 123456');
+  console.log('      Acesso: Home, Times');
+  console.log('');
 }
 
 main()

@@ -39,7 +39,7 @@ function TeamsPage() {
     loadTeams();
     loadCursos();
     loadModalidades();
-  }, []);
+  }, [selectedTournament]); // Recarregar quando o torneio mudar
 
   const loadTeams = async () => {
     if (!selectedTournament) {
@@ -80,12 +80,23 @@ function TeamsPage() {
 
   const loadModalidades = async () => {
     try {
-      const response = await fetch('/api/modalidades');
-      const modalidadesData = await response.json();
-      setModalidades(modalidadesData);
+      // Se há torneio selecionado, buscar apenas suas modalidades
+      if (selectedTournament?.id) {
+        const response = await fetch(`/api/torneios/${selectedTournament.id}/modalidades`);
+        const modalidadesData = await response.json();
+        setModalidades(modalidadesData);
 
-      const sportNames = ['Todos', ...modalidadesData.map(m => m.nome)];
-      setSportOptions(sportNames);
+        const sportNames = ['Todos', ...modalidadesData.map(m => m.nome)];
+        setSportOptions(sportNames);
+      } else {
+        // Se não há torneio, buscar todas (para criação de times)
+        const response = await fetch('/api/modalidades');
+        const modalidadesData = await response.json();
+        setModalidades(modalidadesData);
+
+        const sportNames = ['Todos', ...modalidadesData.map(m => m.nome)];
+        setSportOptions(sportNames);
+      }
     } catch (error) {
       console.error('Erro ao carregar modalidades:', error);
     }
@@ -157,7 +168,8 @@ function TeamsPage() {
     course: '',
     year: '',
     gender: '',
-    sport: ''
+    sport: '',
+    turma: ''
   });
 
   const handleInputChange = (e) => {
@@ -189,7 +201,7 @@ function TeamsPage() {
       if (response.ok) {
         await loadTeams();
         setIsDetailOpen(false);
-        setFormData({ course: '', year: '', gender: '', sport: '' });
+        setFormData({ course: '', year: '', gender: '', sport: '', turma: '' });
         toast.success('Time criado com sucesso!');
       } else {
         const error = await response.json();
@@ -260,15 +272,20 @@ function TeamsPage() {
   };
 
   // Adicionar função para gerar nome automaticamente
-  const generateTeamName = (year, course) => {
+  const generateTeamName = (year, course, turma) => {
     if (!year || !course) return '';
 
     // Buscar sigla do curso no estado cursos
     const cursoObj = cursos.find(c => c.nome === course);
     const sigla = cursoObj ? cursoObj.sigla : course.substring(0, 4).toUpperCase();
 
-    // Se for time Misto, retorna apenas a sigla
-    return year === 'Misto' ? sigla : `${year}${sigla}`;
+    // Formato com turma: [Ano][Sigla]-[Turma] -> Ex: 2ºDS-A, 1ºADM-B
+    // Formato sem turma: [Ano][Sigla] -> Ex: 2ºDS, 1ºADM
+    if (year === 'Misto') {
+      return turma ? `${sigla}-${turma}` : sigla;
+    } else {
+      return turma ? `${year}${sigla}-${turma}` : `${year}${sigla}`;
+    }
   };
 
   // Adicionar novos estados
@@ -867,7 +884,7 @@ function TeamsPage() {
                     Nome do Time (Automático)
                   </label>
                   <div className="text-2xl font-bold text-red-600 dark:text-red-400 text-center py-2">
-                    {generateTeamName(formData.year, formData.course) || 'Selecione Ano e Curso'}
+                    {generateTeamName(formData.year, formData.course, formData.turma) || 'Selecione Ano e Curso'}
                   </div>
                 </div>
 
@@ -883,6 +900,18 @@ function TeamsPage() {
                   <option value="2º">2º</option>
                   <option value="3º">3º</option>
                   <option value="Misto">Misto</option>
+                </Select>
+
+                <Select
+                  label="Turma (Opcional)"
+                  name="turma"
+                  value={formData.turma}
+                  onChange={handleInputChange}
+                >
+                  <option value="">Nenhuma (time geral)</option>
+                  <option value="A">A (Manhã)</option>
+                  <option value="B">B (Tarde)</option>
+                  <option value="C">C (Noite)</option>
                 </Select>
 
                 <Select
@@ -919,7 +948,7 @@ function TeamsPage() {
                 >
                   <option value="">Selecione o esporte</option>
                   {modalidades.map(modalidade => (
-                    <option key={modalidade.id} value={modalidade.nome}>{modalidade.nome}</option>
+                    <option key={modalidade.modalidadeId || modalidade.id} value={modalidade.nome}>{modalidade.nome}</option>
                   ))}
                 </Select>
               </div>
@@ -944,7 +973,7 @@ function TeamsPage() {
                     Nome do Time (Automático)
                   </label>
                   <div className="text-2xl font-bold text-red-600 dark:text-red-400 text-center py-2">
-                    {generateTeamName(formData.year, formData.course) || 'Selecione Ano e Curso'}
+                    {generateTeamName(formData.year, formData.course, formData.turma) || 'Selecione Ano e Curso'}
                   </div>
                 </div>
 
@@ -960,6 +989,18 @@ function TeamsPage() {
                   <option value="2º">2º</option>
                   <option value="3º">3º</option>
                   <option value="Misto">Misto</option>
+                </Select>
+
+                <Select
+                  label="Turma (Opcional)"
+                  name="turma"
+                  value={formData.turma}
+                  onChange={handleInputChange}
+                >
+                  <option value="">Nenhuma (time geral)</option>
+                  <option value="A">A (Manhã)</option>
+                  <option value="B">B (Tarde)</option>
+                  <option value="C">C (Noite)</option>
                 </Select>
 
                 <Select
@@ -997,7 +1038,7 @@ function TeamsPage() {
                 >
                   <option value="">Selecione o esporte</option>
                   {modalidades.map(modalidade => (
-                    <option key={modalidade.id} value={modalidade.nome}>{modalidade.nome}</option>
+                    <option key={modalidade.modalidadeId || modalidade.id} value={modalidade.nome}>{modalidade.nome}</option>
                   ))}
                 </Select>
               </div>

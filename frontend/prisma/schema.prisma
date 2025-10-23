@@ -101,6 +101,7 @@ model Time {
   id           Int            @id @default(autoincrement()) @map("id_time")
   nome         String         @map("nome_time") @db.VarChar(100)
   sala         String         @map("sala_time") @db.VarChar(10)
+  turma        String?        @map("turma_time") @db.VarChar(1) // A, B, C (turno: manhã, tarde, noite) - OPCIONAL
   cursoId      Int            @map("fk_id_curso")
   categoriaId  Int            @map("fk_id_categoria")
   torneioId    Int            @map("fk_id_torneio") // ADICIONAR ESTA LINHA

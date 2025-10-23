@@ -36,6 +36,7 @@ export async function GET(request) {
       name: t.nome,
       course: t.curso.nome,
       year: t.sala,
+      turma: t.turma,
       gender: t.categoria.nome.includes('Masculino') ? 'Masculino' : 'Feminino',
       sport: t.categoria.modalidade?.nome || 'N/A',
       playersCount: t.jogadores.length,
@@ -61,7 +62,7 @@ export async function POST(request) {
     const data = await request.json();
     console.log('Dados recebidos para criar time:', data);
 
-    const { course, year, gender, sport, torneioId } = data;
+    const { course, year, gender, sport, torneioId, turma } = data;
 
     if (!torneioId) {
       return Response.json({ error: 'Torneio é obrigatório' }, { status: 400 });
@@ -118,8 +119,16 @@ export async function POST(request) {
     }
 
     // Gerar nome do time
-    // Se for "Misto", não incluir no nome do time
-    const teamName = year === 'Misto' ? curso.sigla : `${year}${curso.sigla}`;
+    // Formato com turma: [Ano][Sigla]-[Turma] -> Ex: 2ºDS-A, 1ºADM-B
+    // Formato sem turma: [Ano][Sigla] -> Ex: 2ºDS, 1ºADM
+    // Misto com turma: [Sigla]-[Turma] -> Ex: DS-A, ADM-B
+    // Misto sem turma: [Sigla] -> Ex: DS, ADM
+    let teamName;
+    if (year === 'Misto') {
+      teamName = turma ? `${curso.sigla}-${turma}` : curso.sigla;
+    } else {
+      teamName = turma ? `${year}${curso.sigla}-${turma}` : `${year}${curso.sigla}`;
+    }
 
     // Verificar se time já existe neste torneio
     const existingTeam = await prisma.time.findFirst({
@@ -139,6 +148,7 @@ export async function POST(request) {
       data: {
         nome: teamName,
         sala: year,
+        turma: turma || null,
         cursoId: curso.id,
         categoriaId: categoria.id,
         torneioId: parseInt(torneioId)

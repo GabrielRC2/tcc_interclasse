@@ -1,11 +1,12 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { Plus, Calendar, MapPin, Trophy, Users, Clock, ChevronDown, ChevronRight } from 'lucide-react';
+import { Plus, Calendar, MapPin, Trophy, Users, Clock, ChevronDown, ChevronRight, Settings } from 'lucide-react';
 import { Modal } from '@/components/Modal';
 import { Button, Input, Select, CardSplat } from '@/components/common';
 import { useTournament } from '@/contexts/TournamentContext';
 import { useToast } from '@/components/Toast';
 import { useConfirm } from '@/components/Confirm';
+import { ModalidadesModal } from '@/components/ModalidadesModal';
 
 export const SeasonsPage = () => {
     const toast = useToast();
@@ -16,6 +17,8 @@ export const SeasonsPage = () => {
     
     const [seasons, setSeasons] = useState([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isModalidadesModalOpen, setIsModalidadesModalOpen] = useState(false);
+    const [torneioSelecionado, setTorneioSelecionado] = useState(null);
     const [editingSeason, setEditingSeason] = useState(null);
     const [loading, setLoading] = useState(true);
     const [expandedYears, setExpandedYears] = useState(new Set());
@@ -181,6 +184,11 @@ export const SeasonsPage = () => {
         setIsModalOpen(true);
     };
 
+    const handleGerenciarModalidades = (season) => {
+        setTorneioSelecionado(season);
+        setIsModalidadesModalOpen(true);
+    };
+
     const handleDelete = async (season) => {
         const confirmed = await confirm.danger(`Tem certeza que deseja excluir o torneio "${season.name}"?`, {
             title: 'Confirmar Exclusão',
@@ -344,6 +352,13 @@ export const SeasonsPage = () => {
                                                             </span>
                                                         </div>
                                                         <div className="flex gap-2">
+                                                            <Button
+                                                                onClick={() => handleGerenciarModalidades(season)}
+                                                                className="bg-purple-600 hover:bg-purple-700 text-sm"
+                                                            >
+                                                                <Settings size={16} className="mr-1" />
+                                                                Modalidades
+                                                            </Button>
                                                             <Button onClick={() => handleEdit(season)} className="text-sm">
                                                                 Editar
                                                             </Button>
@@ -376,7 +391,7 @@ export const SeasonsPage = () => {
                                                     </div>
 
                                                     <div className="text-sm text-gray-500 dark:text-gray-400">
-                                                        <strong>Modalidades:</strong> {season.modalities}
+                                                        <strong>Modalidades:</strong> {Array.isArray(season.modalities) ? season.modalities.join(', ') : (season.modalities || 'Nenhuma')}
                                                     </div>
                                                 </div>
                                                 <CardSplat />
@@ -459,6 +474,13 @@ export const SeasonsPage = () => {
                     </div>
                 </form>
             </Modal>
+
+            <ModalidadesModal
+                isOpen={isModalidadesModalOpen}
+                onClose={() => setIsModalidadesModalOpen(false)}
+                torneio={torneioSelecionado}
+                onUpdate={loadSeasons}
+            />
         </>
     );
 };
