@@ -9,6 +9,10 @@ const inter = Inter({ subsets: ['latin'] });
 export const metadata = {
   title: 'ICM - Interclasse',
   description: 'Sistema de gerenciamento de torneios interclasse',
+  icons: {
+    icon: '/icon.png',
+    apple: '/icon.png',
+  },
 };
 
 export default function RootLayout({ children }) {
