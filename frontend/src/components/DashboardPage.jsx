@@ -5,7 +5,6 @@ import { useTournament } from '@/contexts/TournamentContext';
 import { SumulaModal } from '@/components/SumulaModal';
 import { TournamentSelector } from '@/components/TournamentSelector';
 import { Button, CardSplat, Select } from '@/components/common';
-import { mockData } from '@/data';
 
 export const Dashboard = ({ isGuest = false }) => {
   const { selectedTournament, tournaments, selectTournament, loading } = useTournament();

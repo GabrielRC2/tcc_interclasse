@@ -180,9 +180,10 @@ async function main() {
     ],
   });
   const torneios = await prisma.Torneio.findMany();
-  const torneioPrincipal = await prisma.Torneio.findFirst({ where: { nome: 'Meio do Ano 2024' } });
-  const torneioFimAno = await prisma.Torneio.findFirst({ where: { nome: 'Fim de Ano 2024' } });
-  if (!torneioPrincipal) throw new Error("Torneio principal não encontrado!");
+  // Ajuste: os torneios criados acima são de 2025, então buscamos pelos nomes corretos
+  const torneioMeioAno = await prisma.Torneio.findFirst({ where: { nome: 'Meio do Ano 2025' } });
+  const torneioFimAno = await prisma.Torneio.findFirst({ where: { nome: 'Fim de Ano 2025' } });
+  if (!torneioMeioAno) throw new Error("Torneio principal não encontrado!");
 
   // 5.1 Associar Modalidades aos Torneios
   console.log('Associando modalidades aos torneios...');
@@ -191,15 +192,15 @@ async function main() {
   const futsal = modalidades.find(m => m.nome === 'Futsal');
   const basquete = modalidades.find(m => m.nome === 'Basquete');
 
-  // Torneio Meio do Ano 2024: Vôlei e Handebol
+  // Torneio Meio do Ano 2025: Vôlei e Handebol
   await prisma.TorneioModalidade.createMany({
     data: [
-      { torneioId: torneioPrincipal.id, modalidadeId: volei.id },
-      { torneioId: torneioPrincipal.id, modalidadeId: handebol.id },
+      { torneioId: torneioMeioAno.id, modalidadeId: volei.id },
+      { torneioId: torneioMeioAno.id, modalidadeId: handebol.id },
     ]
   });
 
-  // Torneio Fim de Ano 2024: Futsal e Basquete
+  // Torneio Fim de Ano 2025: Futsal e Basquete
   await prisma.TorneioModalidade.createMany({
     data: [
       { torneioId: torneioFimAno.id, modalidadeId: futsal.id },
@@ -303,7 +304,7 @@ async function main() {
             turma: 'A',
             cursoId: curso.id,
             categoriaId: categoria.id,
-            torneioId: torneioPrincipal.id,
+            torneioId: torneioMeioAno.id,
           });
 
           // Time turma B (Tarde)
@@ -313,7 +314,7 @@ async function main() {
             turma: 'B',
             cursoId: curso.id,
             categoriaId: categoria.id,
-            torneioId: torneioPrincipal.id,
+            torneioId: torneioMeioAno.id,
           });
         }
 
@@ -325,7 +326,7 @@ async function main() {
             turma: 'C',
             cursoId: curso.id,
             categoriaId: categoria.id,
-            torneioId: torneioPrincipal.id,
+            torneioId: torneioMeioAno.id,
           });
         }
       }
