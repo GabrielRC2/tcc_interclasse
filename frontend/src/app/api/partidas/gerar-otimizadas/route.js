@@ -39,7 +39,7 @@ export async function POST(request) {
     const locais = await prisma.local.findMany();
     const localMap = {};
     locais.forEach(local => localMap[local.nome] = local.id);
-    
+
     console.log('🏟️ Locais cadastrados no banco de dados:', locais.map(l => l.nome));
     console.log('🗺️ LocalMap criado:', localMap);
 
@@ -60,10 +60,13 @@ export async function POST(request) {
 
     // 4. Gerar TODAS as partidas de TODAS as modalidades
     const todasPartidas = [];
-    
+
     for (const grupo of grupos) {
-      const times = grupo.times.map(gt => gt.time);
-      
+      // 🎲 Embaralhar os times para gerar confrontos diferentes a cada sorteio
+      const times = grupo.times
+        .map(gt => gt.time)
+        .sort(() => Math.random() - 0.5);
+
       if (times.length < 2) continue;
 
       const partidasGrupo = gerarRodizioPartidas(times, grupo);
@@ -79,21 +82,21 @@ export async function POST(request) {
 
     // 6. Salvar partidas no banco
     const partidasCriadas = [];
-    
+
     for (let i = 0; i < partidasOtimizadas.length; i++) {
       const partida = partidasOtimizadas[i];
-      
+
       // Garantir que localId seja válido
       let localIdFinal = partida.localId;
       if (!localIdFinal) {
-        console.warn(`⚠️ Partida ${i+1} sem localId válido. Usando primeiro local disponível.`);
+        console.warn(`⚠️ Partida ${i + 1} sem localId válido. Usando primeiro local disponível.`);
         const primeiroLocal = locais[0];
         localIdFinal = primeiroLocal?.id;
         if (!localIdFinal) {
           throw new Error('Nenhum local disponível no sistema');
         }
       }
-      
+
       // Criar partida
       const novaPartida = await prisma.partida.create({
         data: {
@@ -138,21 +141,21 @@ export async function POST(request) {
       acc[partida.slot].push(partida);
       return acc;
     }, {});
-    
-    const slotsComModalidadesDiferentes = Object.values(slotsComDuasPartidas).filter(partidas => 
+
+    const slotsComModalidadesDiferentes = Object.values(slotsComDuasPartidas).filter(partidas =>
       partidas.length === 2 && partidas[0].modalidade !== partidas[1].modalidade
     ).length;
 
     // Calcular estatísticas de alternância por modalidade
     const modalidadesUnicas = [...new Set(todasPartidas.map(p => p.modalidade))];
     const estatisticasModalidades = {};
-    
+
     modalidadesUnicas.forEach(modalidade => {
       const partidasModalidade = partidasOtimizadas.filter(p => p.modalidade === modalidade);
       const totalPartidas = partidasModalidade.length;
       const ciclosCompletos = Math.floor(totalPartidas / 5);
       const partidasRestantes = totalPartidas % 5;
-      
+
       estatisticasModalidades[modalidade] = {
         totalPartidas,
         ciclosCompletos,
@@ -160,7 +163,7 @@ export async function POST(request) {
       };
     });
 
-    return Response.json({ 
+    return Response.json({
       message: 'Partidas otimizadas geradas com sucesso!',
       partidasGeradas: partidasCriadas.length,
       slots: totalSlots,
@@ -168,7 +171,7 @@ export async function POST(request) {
       diversidadeModalidades: {
         slotsComModalidadesDiferentes,
         totalSlots,
-        percentual: totalSlots > 0 ? Math.round(slotsComModalidadesDiferentes/totalSlots*100) : 0
+        percentual: totalSlots > 0 ? Math.round(slotsComModalidadesDiferentes / totalSlots * 100) : 0
       },
       alternanciaPorModalidade: {
         estatisticasModalidades,
@@ -250,7 +253,7 @@ function otimizarPartidasGlobalmente(partidas, configuracaoLocais, localMap) {
   // Controle de alternância por modalidade
   const contadorModalidades = {};
   const modalidades = [...new Set(partidas.map(p => p.modalidade))];
-  
+
   // Configurar qual gênero cada modalidade deve começar
   const configuracaoInicial = {
     'Handebol': 'Feminino',  // Começa com feminino
@@ -258,7 +261,7 @@ function otimizarPartidasGlobalmente(partidas, configuracaoLocais, localMap) {
     'Futsal': 'Masculino',   // Começa com masculino
     'Basquete': 'Feminino'   // Começa com feminino
   };
-  
+
   modalidades.forEach(modalidade => {
     const generoInicial = configuracaoInicial[modalidade] || 'Masculino';
     contadorModalidades[modalidade] = {
@@ -306,14 +309,14 @@ function otimizarPartidasGlobalmente(partidas, configuracaoLocais, localMap) {
     // Configurar locais para as partidas
     if (primeiraPartida) {
       const { localId: localId1, localNome: localNome1 } = obterLocalParaModalidade(primeiraPartida.modalidade, configuracaoLocais, localMap);
-      
+
       console.log(`🎯 Modalidade: ${primeiraPartida.modalidade} -> Local: ${localNome1} -> ID: ${localId1}`);
-      
+
       if (!localId1) {
         console.error(`❌ LocalId não encontrado para local: "${localNome1}"`);
         console.error(`📋 Locais disponíveis no mapa:`, Object.keys(localMap));
       }
-      
+
       slot.partidas.push({
         ...primeiraPartida,
         slot: slotAtual,
@@ -333,7 +336,7 @@ function otimizarPartidasGlobalmente(partidas, configuracaoLocais, localMap) {
       // Se a configuração permitir quadras diferentes, será diferente
       // Se a configuração forçar mesma quadra, será a mesma
       const { localId: localId2, localNome: localNome2 } = obterLocalParaModalidade(segundaPartida.modalidade, configuracaoLocais, localMap);
-      
+
       slot.partidas.push({
         ...segundaPartida,
         slot: slotAtual,
@@ -353,7 +356,7 @@ function otimizarPartidasGlobalmente(partidas, configuracaoLocais, localMap) {
       const partidasDescricao = slot.partidas.map(p => `${p.modalidade} ${p.genero} (${p.localNome})`);
       const modalidadesDiferentes = slot.partidas.length === 2 && slot.partidas[0].modalidade !== slot.partidas[1].modalidade;
       const iconeModalidade = modalidadesDiferentes ? '🔄' : '⚠️';
-      
+
       // Mostrar informações de alternância por modalidade
       const infoAlternancia = slot.partidas.map(p => {
         const contador = contadorModalidades[p.modalidade];
@@ -361,7 +364,7 @@ function otimizarPartidasGlobalmente(partidas, configuracaoLocais, localMap) {
         const cicloAtual = Math.floor((totalModalidade - 1) / 5);
         return `${p.modalidade}: ${totalModalidade}° (ciclo ${cicloAtual})`;
       }).join(', ');
-      
+
       console.log(`⏰ Slot ${slotAtual}: ${partidasDescricao.join(' + ')} ${iconeModalidade} | ${infoAlternancia}`);
     }
 
@@ -380,15 +383,15 @@ function otimizarPartidasGlobalmente(partidas, configuracaoLocais, localMap) {
   });
 
   console.log(`✅ Otimização concluída: ${resultado.length} partidas em ${slots.length} slots`);
-  
+
   // Calcular estatísticas de diversidade de modalidades
-  const slotsComModalidadesDiferentes = slots.filter(slot => 
-    slot.partidas.length === 2 && 
+  const slotsComModalidadesDiferentes = slots.filter(slot =>
+    slot.partidas.length === 2 &&
     slot.partidas[0].modalidade !== slot.partidas[1].modalidade
   ).length;
-  
+
   // Calcular estatísticas de alternância por modalidade
-  console.log(`🔄 Slots com modalidades diferentes: ${slotsComModalidadesDiferentes}/${slots.length} (${Math.round(slotsComModalidadesDiferentes/slots.length*100)}%)`);
+  console.log(`🔄 Slots com modalidades diferentes: ${slotsComModalidadesDiferentes}/${slots.length} (${Math.round(slotsComModalidadesDiferentes / slots.length * 100)}%)`);
   console.log(`🔀 Estatísticas de alternância por modalidade:`);
   modalidades.forEach(modalidade => {
     const contador = contadorModalidades[modalidade];
@@ -396,7 +399,7 @@ function otimizarPartidasGlobalmente(partidas, configuracaoLocais, localMap) {
     const ciclosCompletos = Math.floor(total / 5);
     console.log(`   ${modalidade}: ${total} partidas, ${ciclosCompletos} ciclos de 5 completados`);
   });
-  
+
   return resultado;
 }
 
@@ -427,7 +430,7 @@ function escolherMelhorPartidaComModalidadeDiferente(listaPartidas, ultimaPartid
 
   // Primeiro, tentar encontrar partidas de modalidades diferentes
   const partidasDiferentes = listaPartidas.filter(p => p.modalidade !== modalidadeEvitar);
-  
+
   if (partidasDiferentes.length > 0) {
     // Se há partidas de modalidades diferentes, escolher a melhor entre elas
     let melhorIdx = -1;
@@ -447,9 +450,9 @@ function escolherMelhorPartidaComModalidadeDiferente(listaPartidas, ultimaPartid
     if (melhorIdx >= 0) {
       const partidaEscolhida = partidasDiferentes[melhorIdx];
       // Remover da lista original
-      const idxOriginal = listaPartidas.findIndex(p => 
-        p.time1Id === partidaEscolhida.time1Id && 
-        p.time2Id === partidaEscolhida.time2Id && 
+      const idxOriginal = listaPartidas.findIndex(p =>
+        p.time1Id === partidaEscolhida.time1Id &&
+        p.time2Id === partidaEscolhida.time2Id &&
         p.modalidade === partidaEscolhida.modalidade
       );
       if (idxOriginal >= 0) {
@@ -475,15 +478,15 @@ function escolherMelhorPartidaComAlternancia(listaPartidas, ultimaPartidaTime, s
     const contador = contadorModalidades[partida.modalidade];
     const totalPartidas = contador.masculino + contador.feminino;
     const cicloAtual = Math.floor(totalPartidas / 5);
-    
+
     // Determinar se deve priorizar este gênero neste momento
     let deveEscolherEsteGenero = false;
-    
+
     // Verificar se deve seguir o gênero inicial ou alternar
-    const generoEsperado = (cicloAtual % 2 === 0) 
-      ? contador.generoInicial 
+    const generoEsperado = (cicloAtual % 2 === 0)
+      ? contador.generoInicial
       : (contador.generoInicial === 'Masculino' ? 'Feminino' : 'Masculino');
-    
+
     deveEscolherEsteGenero = partida.genero === generoEsperado;
 
     // Se estamos no começo de um novo ciclo de 5, priorizar o gênero correto
@@ -496,7 +499,7 @@ function escolherMelhorPartidaComAlternancia(listaPartidas, ultimaPartidaTime, s
 
   // Escolher da lista prioritária se disponível, senão da normal
   const listaEscolha = partidasPrioritarias.length > 0 ? partidasPrioritarias : partidasNormais;
-  
+
   if (listaEscolha.length === 0) return null;
 
   // Encontrar a melhor partida baseada no tempo de descanso
@@ -515,28 +518,28 @@ function escolherMelhorPartidaComAlternancia(listaPartidas, ultimaPartidaTime, s
   });
 
   const partidaEscolhida = listaEscolha[melhorIdx];
-  
+
   // Log para debug
   const contador = contadorModalidades[partidaEscolhida.modalidade];
   const totalPartidas = contador.masculino + contador.feminino;
   const cicloAtual = Math.floor(totalPartidas / 5);
-  const generoEsperado = (cicloAtual % 2 === 0) 
-    ? contador.generoInicial 
+  const generoEsperado = (cicloAtual % 2 === 0)
+    ? contador.generoInicial
     : (contador.generoInicial === 'Masculino' ? 'Feminino' : 'Masculino');
   const estaCorreto = partidaEscolhida.genero === generoEsperado ? '✅' : '⚠️';
   console.log(`🔀 ${partidaEscolhida.modalidade} ${partidaEscolhida.genero} - Partida ${totalPartidas + 1}/5 (Ciclo ${cicloAtual}, Esperado: ${generoEsperado}) ${estaCorreto}`);
-  
+
   // Remover da lista original
-  const idxOriginal = listaPartidas.findIndex(p => 
-    p.time1Id === partidaEscolhida.time1Id && 
-    p.time2Id === partidaEscolhida.time2Id && 
+  const idxOriginal = listaPartidas.findIndex(p =>
+    p.time1Id === partidaEscolhida.time1Id &&
+    p.time2Id === partidaEscolhida.time2Id &&
     p.modalidade === partidaEscolhida.modalidade
   );
-  
+
   if (idxOriginal >= 0) {
     return listaPartidas.splice(idxOriginal, 1)[0];
   }
-  
+
   return null;
 }
 
@@ -546,7 +549,7 @@ function escolherMelhorPartidaComModalidadeDiferenteEAlternancia(listaPartidas, 
 
   // Primeiro, filtrar partidas de modalidades diferentes
   const partidasDiferentes = listaPartidas.filter(p => p.modalidade !== modalidadeEvitar);
-  
+
   if (partidasDiferentes.length > 0) {
     // Aplicar a lógica de alternância nas partidas de modalidades diferentes
     const partidasPrioritarias = [];
@@ -556,13 +559,13 @@ function escolherMelhorPartidaComModalidadeDiferenteEAlternancia(listaPartidas, 
       const contador = contadorModalidades[partida.modalidade];
       const totalPartidas = contador.masculino + contador.feminino;
       const cicloAtual = Math.floor(totalPartidas / 5);
-      
+
       // Determinar se deve priorizar este gênero neste momento
       // Verificar se deve seguir o gênero inicial ou alternar
-      const generoEsperado = (cicloAtual % 2 === 0) 
-        ? contador.generoInicial 
+      const generoEsperado = (cicloAtual % 2 === 0)
+        ? contador.generoInicial
         : (contador.generoInicial === 'Masculino' ? 'Feminino' : 'Masculino');
-      
+
       const deveEscolherEsteGenero = partida.genero === generoEsperado;
 
       if (deveEscolherEsteGenero) {
@@ -574,7 +577,7 @@ function escolherMelhorPartidaComModalidadeDiferenteEAlternancia(listaPartidas, 
 
     // Escolher da lista prioritária se disponível, senão da normal
     const listaEscolha = partidasPrioritarias.length > 0 ? partidasPrioritarias : partidasNormais;
-    
+
     if (listaEscolha.length > 0) {
       // Encontrar a melhor partida baseada no tempo de descanso
       let melhorIdx = 0;
@@ -592,24 +595,24 @@ function escolherMelhorPartidaComModalidadeDiferenteEAlternancia(listaPartidas, 
       });
 
       const partidaEscolhida = listaEscolha[melhorIdx];
-      
+
       // Log para debug
       const contador = contadorModalidades[partidaEscolhida.modalidade];
       const totalPartidas = contador.masculino + contador.feminino;
       const cicloAtual = Math.floor(totalPartidas / 5);
-      const generoEsperado = (cicloAtual % 2 === 0) 
-        ? contador.generoInicial 
+      const generoEsperado = (cicloAtual % 2 === 0)
+        ? contador.generoInicial
         : (contador.generoInicial === 'Masculino' ? 'Feminino' : 'Masculino');
       const estaCorreto = partidaEscolhida.genero === generoEsperado ? '✅' : '⚠️';
       console.log(`🔀 ${partidaEscolhida.modalidade} ${partidaEscolhida.genero} (≠${modalidadeEvitar}) - Partida ${totalPartidas + 1}/5 (Ciclo ${cicloAtual}, Esperado: ${generoEsperado}) ${estaCorreto}`);
-      
+
       // Remover da lista original
-      const idxOriginal = listaPartidas.findIndex(p => 
-        p.time1Id === partidaEscolhida.time1Id && 
-        p.time2Id === partidaEscolhida.time2Id && 
+      const idxOriginal = listaPartidas.findIndex(p =>
+        p.time1Id === partidaEscolhida.time1Id &&
+        p.time2Id === partidaEscolhida.time2Id &&
         p.modalidade === partidaEscolhida.modalidade
       );
-      
+
       if (idxOriginal >= 0) {
         return listaPartidas.splice(idxOriginal, 1)[0];
       }
@@ -641,9 +644,9 @@ function obterLocalParaModalidade(modalidade, configuracaoLocais, localMap, loca
     'Vôlei': 'Quadra de Baixo',
     'Basquete': 'Quadra de Baixo'
   };
-  
+
   let localDesejado = configuracaoLocais?.[modalidade] || configuracaoPadrao[modalidade] || 'Quadra de Baixo';
-  
+
   // Verificar se o local existe no mapa
   if (localMap && !localMap[localDesejado]) {
     console.warn(`⚠️ Local "${localDesejado}" não encontrado no banco. Usando primeiro local disponível.`);
@@ -654,7 +657,7 @@ function obterLocalParaModalidade(modalidade, configuracaoLocais, localMap, loca
       console.log(`✅ Usando local alternativo: "${localDesejado}"`);
     }
   }
-  
+
   // SEMPRE retornar um objeto consistente
   return { localId: localMap[localDesejado], localNome: localDesejado };
 }

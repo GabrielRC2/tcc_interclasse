@@ -5,7 +5,6 @@ import { useTournament } from '@/contexts/TournamentContext';
 import { SumulaModal } from '@/components/SumulaModal';
 import { TournamentSelector } from '@/components/TournamentSelector';
 import { Button, CardSplat, Select, Loading } from '@/components/common';
-import { mockData } from '@/data';
 
 export const Dashboard = ({ isGuest = false }) => {
   const { selectedTournament, tournaments, selectTournament, loading } = useTournament();
@@ -440,80 +439,80 @@ export const Dashboard = ({ isGuest = false }) => {
                     const temPenaltis = penaltisTemp?.temPenaltis ?? match.temPenaltis;
                     const penaltisCasa = penaltisTemp?.penaltisCasa ?? match.penaltisCasa;
                     const penaltisVisitante = penaltisTemp?.penaltisVisitante ?? match.penaltisVisitante;
-                    
+
                     return (
-                    <div key={match.id} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm p-4 relative overflow-hidden">
-                      <div className="relative z-10">
-                        {/* AO VIVO no canto superior esquerdo */}
-                        <div className="mb-4">
-                          <p className="text-sm text-red-600 dark:text-red-400 font-semibold uppercase flex items-center gap-2">
-                            <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
-                            AO VIVO
-                          </p>
-                        </div>
+                      <div key={match.id} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm p-4 relative overflow-hidden">
+                        <div className="relative z-10">
+                          {/* AO VIVO no canto superior esquerdo */}
+                          <div className="mb-4">
+                            <p className="text-sm text-red-600 dark:text-red-400 font-semibold uppercase flex items-center gap-2">
+                              <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
+                              AO VIVO
+                            </p>
+                          </div>
 
-                        {/* Layout com colunas proporcionais */}
-                        <div className="mb-4 w-full text-center">
-                          {(() => {
-                            // Calcular a largura baseada no maior nome
-                            const maxLength = Math.max(match.team1.length, match.team2.length);
-                            // Definir largura mínima de 80px e máxima de 160px, baseada no comprimento
-                            const columnWidth = Math.max(80, Math.min(160, maxLength * 12));
+                          {/* Layout com colunas proporcionais */}
+                          <div className="mb-4 w-full text-center">
+                            {(() => {
+                              // Calcular a largura baseada no maior nome
+                              const maxLength = Math.max(match.team1.length, match.team2.length);
+                              // Definir largura mínima de 80px e máxima de 160px, baseada no comprimento
+                              const columnWidth = Math.max(80, Math.min(160, maxLength * 12));
 
-                            return (
-                              <div className="grid grid-cols-3 gap-2 items-center justify-center max-w-fit mx-auto">
-                                {/* Coluna Time 1 */}
-                                <div className="text-center" style={{ minWidth: `${columnWidth}px` }}>
-                                  <p className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-1">
-                                    {match.team1}
-                                  </p>
-                                  <div className="flex flex-col items-center">
-                                    <span className="text-3xl font-bold text-red-600 dark:text-red-400">
-                                      {match.pontuacaoTime1 || 0}
-                                    </span>
-                                    {temPenaltis && penaltisCasa !== null && (
-                                      <span className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                                        ({penaltisCasa})
+                              return (
+                                <div className="grid grid-cols-3 gap-2 items-center justify-center max-w-fit mx-auto">
+                                  {/* Coluna Time 1 */}
+                                  <div className="text-center" style={{ minWidth: `${columnWidth}px` }}>
+                                    <p className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-1">
+                                      {match.team1}
+                                    </p>
+                                    <div className="flex flex-col items-center">
+                                      <span className="text-3xl font-bold text-red-600 dark:text-red-400">
+                                        {match.pontuacaoTime1 || 0}
                                       </span>
-                                    )}
+                                      {temPenaltis && penaltisCasa !== null && (
+                                        <span className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                                          ({penaltisCasa})
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+
+                                  {/* Coluna separador VS */}
+                                  <div className="text-center px-3">
+                                    <div className="mb-1 h-6"></div>
+                                    <span className="text-2xl font-bold text-red-600 dark:text-red-400">x</span>
+                                  </div>
+
+                                  {/* Coluna Time 2 */}
+                                  <div className="text-center" style={{ minWidth: `${columnWidth}px` }}>
+                                    <p className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-1">
+                                      {match.team2}
+                                    </p>
+                                    <div className="flex flex-col items-center">
+                                      <span className="text-3xl font-bold text-red-600 dark:text-red-400">
+                                        {match.pontuacaoTime2 || 0}
+                                      </span>
+                                      {temPenaltis && penaltisVisitante !== null && (
+                                        <span className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                                          ({penaltisVisitante})
+                                        </span>
+                                      )}
+                                    </div>
                                   </div>
                                 </div>
-
-                                {/* Coluna separador VS */}
-                                <div className="text-center px-3">
-                                  <div className="mb-1 h-6"></div>
-                                  <span className="text-2xl font-bold text-red-600 dark:text-red-400">x</span>
-                                </div>
-
-                                {/* Coluna Time 2 */}
-                                <div className="text-center" style={{ minWidth: `${columnWidth}px` }}>
-                                  <p className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-1">
-                                    {match.team2}
-                                  </p>
-                                  <div className="flex flex-col items-center">
-                                    <span className="text-3xl font-bold text-red-600 dark:text-red-400">
-                                      {match.pontuacaoTime2 || 0}
-                                    </span>
-                                    {temPenaltis && penaltisVisitante !== null && (
-                                      <span className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                                        ({penaltisVisitante})
-                                      </span>
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
-                            );
-                          })()}
+                              );
+                            })()}
+                          </div>
+                          <div className="space-y-1">
+                            <p className="text-sm text-gray-600 dark:text-gray-300">Esporte: {match.modality}</p>
+                            <p className="text-sm text-gray-600 dark:text-gray-300">Modalidade: {match.category}</p>
+                            <p className="text-sm text-gray-600 dark:text-gray-300">Local: {match.location}</p>
+                            {match.fase && <p className="text-sm text-gray-600 dark:text-gray-300">Fase: {match.fase}</p>}
+                          </div>
                         </div>
-                        <div className="space-y-1">
-                          <p className="text-sm text-gray-600 dark:text-gray-300">Esporte: {match.modality}</p>
-                          <p className="text-sm text-gray-600 dark:text-gray-300">Modalidade: {match.category}</p>
-                          <p className="text-sm text-gray-600 dark:text-gray-300">Local: {match.location}</p>
-                          {match.fase && <p className="text-sm text-gray-600 dark:text-gray-300">Fase: {match.fase}</p>}
-                        </div>
+                        <CardSplat />
                       </div>
-                      <CardSplat />
-                    </div>
                     );
                   })
                 )}

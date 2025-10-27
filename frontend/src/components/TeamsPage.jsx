@@ -39,7 +39,7 @@ function TeamsPage() {
     loadTeams();
     loadCursos();
     loadModalidades();
-  }, []);
+  }, [selectedTournament]); // Adicionar selectedTournament como dependência
 
   const loadTeams = async () => {
     if (!selectedTournament) {
