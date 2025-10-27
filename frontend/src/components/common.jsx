@@ -55,6 +55,30 @@ export const Button = ({ children, onClick, variant = 'primary', className = '',
     );
 };
 
+export const IconButton = ({ children, onClick, variant = 'primary', className = '', type = 'button', disabled = false, title, ...props }) => {
+    const baseClasses = 'rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center shrink-0';
+
+    const variants = {
+        primary: 'bg-red-600 text-white hover:bg-red-700 dark:hover:bg-red-500',
+        secondary: 'bg-gray-500 text-white hover:bg-gray-600 dark:bg-gray-600 dark:hover:bg-gray-500',
+        tertiary: 'bg-transparent text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20',
+        outline: 'bg-transparent border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700',
+    };
+
+    return (
+        <button
+            type={type}
+            onClick={onClick}
+            disabled={disabled}
+            title={title}
+            className={`${baseClasses} h-[50px] w-[50px] ${variants[variant]} ${className}`}
+            {...props}
+        >
+            {children}
+        </button>
+    );
+};
+
 export const Input = ({ label, ...props }) => (
     <div>
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{label}</label>

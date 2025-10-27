@@ -1,7 +1,7 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import { Calendar, MapPin, Trophy, Filter, Play, Settings, Shuffle, RefreshCcw, AlertTriangle } from 'lucide-react';
-import { Button, Select, Loading } from '@/components/common';
+import { Button, IconButton, Select, Loading } from '@/components/common';
 import { useTournament } from '@/contexts/TournamentContext';
 import { SumulaModal } from '@/components/SumulaModal';
 import { WOModal } from '@/components/WOModal';
@@ -662,14 +662,14 @@ export const MatchesPage = () => {
   // Função para obter vencedor no caso de WO
   const obterVencedorWO = (partida) => {
     if (!partida.timeWOId) return null;
-    
+
     // O time que NÃO deu WO é o vencedor
     if (partida.timeWOId === partida.team1Id) {
       return { vencedor: partida.team2, tipo: 'visitante' };
     } else if (partida.timeWOId === partida.team2Id) {
       return { vencedor: partida.team1, tipo: 'casa' };
     }
-    
+
     return null;
   };
 
@@ -826,8 +826,7 @@ export const MatchesPage = () => {
           <Button
             onClick={refazerSorteioPartidas}
             disabled={!selectedTournament || generating || partidas.length === 0}
-            variant="outline"
-            className="border-red-500 text-red-600 hover:bg-red-50 dark:border-red-400 dark:text-red-400 dark:hover:bg-red-900/20 w-full sm:w-auto whitespace-nowrap"
+            className="bg-red-600 hover:bg-red-700 w-full sm:w-auto whitespace-nowrap"
           >
             <RefreshCcw size={16} className="mr-2" />
             Refazer Sorteio
@@ -836,7 +835,8 @@ export const MatchesPage = () => {
             <Button
               onClick={reorganizarEliminatorias}
               disabled={!selectedTournament || generating}
-              className="bg-indigo-600 hover:bg-indigo-700 w-full sm:w-auto whitespace-nowrap"
+              variant="outline"
+              className="border-red-500 text-red-600 hover:bg-red-50 dark:border-red-400 dark:text-red-400 dark:hover:bg-red-900/20 w-full sm:w-auto whitespace-nowrap"
             >
               <RefreshCcw size={16} className="mr-2" />
               Reorganizar Eliminatórias
@@ -922,23 +922,23 @@ export const MatchesPage = () => {
               </div>
 
               {/* Botões de Configuração */}
-              <div className="flex flex-col sm:flex-row gap-2">
+              <div className="flex gap-2">
+                <IconButton
+                  onClick={gerarPontuacoesAleatorias}
+                  disabled={partidas.filter(p => p.status === 'Agendada').length === 0}
+                  variant="primary"
+                  title="Gerar Pontuações Aleatórias"
+                >
+                  <Shuffle size={20} />
+                </IconButton>
                 <Button
                   onClick={() => setShowConfigModal(true)}
                   variant="outline"
                   disabled={!selectedTournament}
-                  className="w-full sm:w-auto whitespace-nowrap"
+                  className="flex-1 sm:flex-none sm:w-auto whitespace-nowrap"
                 >
                   <Settings size={16} className="mr-2" />
                   Configurar Locais
-                </Button>
-                <Button
-                  onClick={gerarPontuacoesAleatorias}
-                  disabled={partidas.filter(p => p.status === 'Agendada').length === 0}
-                  className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto whitespace-nowrap"
-                >
-                  <Shuffle size={16} className="mr-2" />
-                  Gerar Pontuações Aleatórias
                 </Button>
               </div>
 
@@ -963,8 +963,8 @@ export const MatchesPage = () => {
                               }
                             }}
                             className={`px-2 py-1 rounded-full text-xs font-medium self-start sm:self-center ${obterCorStatus(p.status)} ${p.status === 'Finalizada' || p.status === 'FINALIZADA'
-                                ? 'cursor-not-allowed opacity-75'
-                                : 'cursor-pointer hover:opacity-80'
+                              ? 'cursor-not-allowed opacity-75'
+                              : 'cursor-pointer hover:opacity-80'
                               }`}
                             title={
                               p.status === 'Finalizada' || p.status === 'FINALIZADA'
