@@ -1,6 +1,7 @@
 
 'use client';
 import React, { useState, useEffect, useRef } from 'react';
+import { useSession } from 'next-auth/react';
 import { Modal } from '@/components/Modal';
 import { Button } from '@/components/common';
 import { useTournament } from '@/contexts/TournamentContext';
@@ -64,6 +65,7 @@ const PDFDownloadButton = ({ className, fileName, matchData, tournamentData, tea
 export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEnviada = () => { }, onPenaltisChange = null }) => {
   const estaAoVivo = mode === 'live';
   const { selectedTournament } = useTournament();
+  const { data: session } = useSession();
   const toast = useToast();
   const confirm = useConfirm();
   const sumulaRef = useRef(null);
@@ -104,6 +106,12 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEn
   
   // Verifica se há empate (necessário pênaltis em eliminatórias)
   const hahEmpate = placarA === placarB;
+
+  // Define se o modal está em modo readOnly (apenas visualização)
+  const readOnly = match?.status === 'Finalizada' && !permitirEdicao;
+
+  // Verifica se o usuário é admin
+  const isAdmin = session?.user?.tipo_usuario === 'ADMIN';
 
   useEffect(() => {
     const carregarDados = async () => {
@@ -238,7 +246,51 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEn
     if (onPenaltisChange && match?.id) {
       onPenaltisChange(match.id, penaltisA, penaltisB, temPenaltis);
     }
+    
+    // Também enviar eventos de pênaltis via API para tempo real
+    enviarEventosPenaltisTempoReal();
   }, [penaltisA, penaltisB, temPenaltis, match?.id, onPenaltisChange]);
+
+  // Função para enviar eventos de pênaltis em tempo real
+  const enviarEventosPenaltisTempoReal = async () => {
+    if (!match?.id || !temPenaltis) return;
+
+    try {
+      const eventosParaEnviar = [];
+
+      // Adicionar evento de pênaltis para o time A 
+      if (penaltisA >= 0) {
+        eventosParaEnviar.push({
+          tipo: 'PENALTI',
+          ponto: penaltisA,
+          timeId: match.team1Id
+        });
+      }
+
+      // Adicionar evento de pênaltis para o time B
+      if (penaltisB >= 0) {
+        eventosParaEnviar.push({
+          tipo: 'PENALTI',
+          ponto: penaltisB,
+          timeId: match.team2Id
+        });
+      }
+
+      if (eventosParaEnviar.length > 0) {
+        const response = await fetch(`/api/partidas/${match.id}/eventos`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(eventosParaEnviar)
+        });
+
+        if (!response.ok) {
+          console.error('Erro ao enviar eventos de pênaltis em tempo real');
+        }
+      }
+    } catch (error) {
+      console.error('Erro ao enviar eventos de pênaltis:', error);
+    }
+  };
 
   // quando edições mudam em modo live OU quando estamos em edição manual, recalcula placar
   useEffect(() => {
@@ -247,7 +299,13 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEn
     const gB = (edicaoTimeB || []).reduce((s, p) => s + (p.points || 0), 0);
     setPlacarA(gA);
     setPlacarB(gB);
-  }, [edicaoTimeA, edicaoTimeB, estaAoVivo, permitirEdicao]);
+    
+    // Se pênaltis estão ativados mas não há mais empate, desativar automaticamente
+    if (temPenaltis && gA !== gB) {
+      setTemPenaltis(false);
+      toast.info('Pênaltis desativados - não há mais empate no placar.');
+    }
+  }, [edicaoTimeA, edicaoTimeB, estaAoVivo, permitirEdicao, temPenaltis, toast]);
 
   // Estados para controle de salvamento assíncrono
   const [debounceTimer, setDebounceTimer] = useState(null);
@@ -748,11 +806,25 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEn
                         type="checkbox"
                         id="penaltis-checkbox"
                         checked={temPenaltis}
-                        onChange={(e) => setTemPenaltis(e.target.checked)}
-                        className="w-4 h-4"
+                        disabled={placarA !== placarB && !temPenaltis}
+                        onChange={(e) => {
+                          const querAtivar = e.target.checked;
+                          
+                          // Só permite ativar pênaltis se houver empate
+                          if (querAtivar && placarA !== placarB) {
+                            toast.warning('Os pênaltis são um critério de desempate!');
+                            return;
+                          }
+                          
+                          setTemPenaltis(querAtivar);
+                        }}
+                        className="w-4 h-4 disabled:opacity-50 disabled:cursor-not-allowed"
                       />
-                      <label htmlFor="penaltis-checkbox" className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
-                        Ativar pênaltis
+                      <label 
+                        htmlFor="penaltis-checkbox" 
+                        className={`text-sm font-medium ${placarA !== placarB && !temPenaltis ? 'text-gray-400 dark:text-gray-500' : 'text-yellow-800 dark:text-yellow-200'}`}
+                      >
+                        Ativar pênaltis {placarA !== placarB && !temPenaltis && '(apenas em empate)'}
                       </label>
                     </div>
                   </div>
@@ -911,8 +983,8 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEn
               </Button>
             )}
 
-            {/* Botão para permitir edição mesmo quando não está ao vivo (escondido em modo readOnly) */}
-            {!estaAoVivo && !readOnly && (
+            {/* Botão para permitir edição mesmo quando não está ao vivo (apenas para admins) */}
+            {!estaAoVivo && isAdmin && (
               <Button
                 onClick={() => {
                   const novo = !permitirEdicao;

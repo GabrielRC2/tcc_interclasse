@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Trophy, Users, Calendar, Target, Filter, X, Settings, ChevronDown, ChevronRight } from 'lucide-react';
 import { useTournament } from '@/contexts/TournamentContext';
 import { SumulaModal } from '@/components/SumulaModal';
@@ -265,15 +265,51 @@ export const Dashboard = ({ isGuest = false }) => {
               return pertenceTime2 && ehGol;
             });
 
+            // Calcular pênaltis por time
+            const penaltisTime1 = eventos.find(evento => {
+              return evento.tipo === 'PENALTI' && evento.timeId === partida.team1Id;
+            });
+
+            const penaltisTime2 = eventos.find(evento => {
+              return evento.tipo === 'PENALTI' && evento.timeId === partida.team2Id;
+            });
+
+            // Log para verificar se partidaTime está vindo
+            if (penaltisTime1 || penaltisTime2) {
+              console.log('Eventos de pênaltis encontrados:', {
+                penaltisTime1: penaltisTime1 ? {
+                  pontos: penaltisTime1.pontosGerados,
+                  timeId: penaltisTime1.timeId,
+                  partidaTime: penaltisTime1.partidaTime,
+                  ehCasa: penaltisTime1.partidaTime?.ehCasa
+                } : null,
+                penaltisTime2: penaltisTime2 ? {
+                  pontos: penaltisTime2.pontosGerados,
+                  timeId: penaltisTime2.timeId,
+                  partidaTime: penaltisTime2.partidaTime,
+                  ehCasa: penaltisTime2.partidaTime?.ehCasa
+                } : null
+              });
+            }
+
             const pontuacaoTime1 = eventosTime1.reduce((total, evento) => total + (evento.pontosGerados || 0), 0);
             const pontuacaoTime2 = eventosTime2.reduce((total, evento) => total + (evento.pontosGerados || 0), 0);
+            
+            const penaltisCasa = penaltisTime1?.pontosGerados || 0;
+            const penaltisVisitante = penaltisTime2?.pontosGerados || 0;
+            const temPenaltisEventos = penaltisTime1 || penaltisTime2;
 
             console.log(`Pontuação calculada - Time1: ${pontuacaoTime1}, Time2: ${pontuacaoTime2}`);
+            console.log(`Pênaltis calculados - Time1: ${penaltisCasa}, Time2: ${penaltisVisitante}`);
 
             return {
               ...partida,
               pontuacaoTime1,
               pontuacaoTime2,
+              // Usar pênaltis dos eventos se existirem, senão usar do banco
+              penaltisCasa: temPenaltisEventos ? penaltisCasa : (partida.penaltisCasa || 0),
+              penaltisVisitante: temPenaltisEventos ? penaltisVisitante : (partida.penaltisVisitante || 0),
+              temPenaltis: temPenaltisEventos || partida.temPenaltis,
               eventos
             };
           } catch (err) {
@@ -351,8 +387,8 @@ export const Dashboard = ({ isGuest = false }) => {
     });
   };
 
-  // Função para atualizar pênaltis temporários em tempo real
-  const atualizarPenaltisTemporarios = (partidaId, penaltisCasa, penaltisVisitante, temPenaltis) => {
+  // Função para atualizar pênaltis temporários em tempo real (memorizada com useCallback)
+  const atualizarPenaltisTemporarios = useCallback((partidaId, penaltisCasa, penaltisVisitante, temPenaltis) => {
     setPenaltisTemporarios(prev => ({
       ...prev,
       [partidaId]: {
@@ -361,7 +397,7 @@ export const Dashboard = ({ isGuest = false }) => {
         temPenaltis
       }
     }));
-  };
+  }, []);
 
   // Função para limpar pênaltis temporários quando súmula é fechada/enviada
   const limparPenaltisTemporarios = (partidaId) => {
@@ -442,7 +478,7 @@ export const Dashboard = ({ isGuest = false }) => {
                   </div>
                 ) : (
                   partidasEmAndamento.slice(0, 2).map((match) => {
-                    // Buscar pênaltis temporários ou usar do banco
+                    // Usar pênaltis dos eventos ou temporários
                     const penaltisTemp = penaltisTemporarios[match.id];
                     const temPenaltis = penaltisTemp?.temPenaltis ?? match.temPenaltis;
                     const penaltisCasa = penaltisTemp?.penaltisCasa ?? match.penaltisCasa;
@@ -478,8 +514,8 @@ export const Dashboard = ({ isGuest = false }) => {
                                     <span className="text-3xl font-bold text-red-600 dark:text-red-400">
                                       {match.pontuacaoTime1 || 0}
                                     </span>
-                                    {temPenaltis && penaltisCasa !== null && (
-                                      <span className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                                    {temPenaltis && penaltisCasa !== null && penaltisCasa !== undefined && (
+                                      <span className="text-lg text-gray-600 dark:text-gray-400 mt-1 font-medium">
                                         ({penaltisCasa})
                                       </span>
                                     )}
@@ -501,8 +537,8 @@ export const Dashboard = ({ isGuest = false }) => {
                                     <span className="text-3xl font-bold text-red-600 dark:text-red-400">
                                       {match.pontuacaoTime2 || 0}
                                     </span>
-                                    {temPenaltis && penaltisVisitante !== null && (
-                                      <span className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                                    {temPenaltis && penaltisVisitante !== null && penaltisVisitante !== undefined && (
+                                      <span className="text-lg text-gray-600 dark:text-gray-400 mt-1 font-medium">
                                         ({penaltisVisitante})
                                       </span>
                                     )}
@@ -969,9 +1005,7 @@ export const Dashboard = ({ isGuest = false }) => {
                 tratarSumulaEnviada(id);
                 limparPenaltisTemporarios(id);
               }}
-              onPenaltisChange={(partidaId, penaltisCasa, penaltisVisitante, temPenaltis) => {
-                atualizarPenaltisTemporarios(partidaId, penaltisCasa, penaltisVisitante, temPenaltis);
-              }}
+              onPenaltisChange={atualizarPenaltisTemporarios}
             />
           )}
 
