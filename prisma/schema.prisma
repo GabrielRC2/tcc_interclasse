@@ -9,7 +9,7 @@ generator client {
 // 2. Define a fonte de dados. Aqui, configuramos para usar MySQL.
 //    Você precisará definir a variável de ambiente DATABASE_URL no seu arquivo .env.
 datasource db {
-  provider = "mysql"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -31,8 +31,8 @@ model Torneio {
   nome               String              @map("nome_torneio") @db.VarChar(200)
   local              String              @map("local_torneio") @db.VarChar(200) @default("ETEC João Belarmino")
   status             String              @map("status_torneio") @db.VarChar(20)
-  inicio             DateTime            @map("inicio_torneio") @db.DateTime
-  fim                DateTime            @map("fim_torneio") @db.DateTime
+  inicio             DateTime            @map("inicio_torneio")
+  fim                DateTime            @map("fim_torneio")
   times              Time[]              // ADICIONAR ESTA LINHA
   grupos             Grupo[]
   partidas           Partida[]
@@ -146,7 +146,7 @@ model Local {
 // Descrição: Registra cada partida que ocorre.
 model Partida {
   id               Int               @id @default(autoincrement()) @map("id_partida")
-  dataHora         DateTime          @map("data_hora_partida") @db.DateTime
+  dataHora         DateTime          @map("data_hora_partida")
   statusPartida    String            @map("status_partida") @db.VarChar(20)
   pontosCasa       Int?              @map("pontos_casa")
   pontosVisitante  Int?              @map("pontos_visitante")
