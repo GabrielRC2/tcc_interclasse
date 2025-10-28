@@ -296,7 +296,13 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEn
     const gB = (edicaoTimeB || []).reduce((s, p) => s + (p.points || 0), 0);
     setPlacarA(gA);
     setPlacarB(gB);
-  }, [edicaoTimeA, edicaoTimeB, estaAoVivo, permitirEdicao]);
+    
+    // Se pênaltis estão ativados mas não há mais empate, desativar automaticamente
+    if (temPenaltis && gA !== gB) {
+      setTemPenaltis(false);
+      toast.info('Pênaltis desativados - não há mais empate no placar.');
+    }
+  }, [edicaoTimeA, edicaoTimeB, estaAoVivo, permitirEdicao, temPenaltis, toast]);
 
   // Estados para controle de salvamento assíncrono
   const [debounceTimer, setDebounceTimer] = useState(null);
@@ -797,11 +803,25 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEn
                         type="checkbox"
                         id="penaltis-checkbox"
                         checked={temPenaltis}
-                        onChange={(e) => setTemPenaltis(e.target.checked)}
-                        className="w-4 h-4"
+                        disabled={placarA !== placarB && !temPenaltis}
+                        onChange={(e) => {
+                          const querAtivar = e.target.checked;
+                          
+                          // Só permite ativar pênaltis se houver empate
+                          if (querAtivar && placarA !== placarB) {
+                            toast.warning('Os pênaltis são um critério de desempate!');
+                            return;
+                          }
+                          
+                          setTemPenaltis(querAtivar);
+                        }}
+                        className="w-4 h-4 disabled:opacity-50 disabled:cursor-not-allowed"
                       />
-                      <label htmlFor="penaltis-checkbox" className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
-                        Ativar pênaltis
+                      <label 
+                        htmlFor="penaltis-checkbox" 
+                        className={`text-sm font-medium ${placarA !== placarB && !temPenaltis ? 'text-gray-400 dark:text-gray-500' : 'text-yellow-800 dark:text-yellow-200'}`}
+                      >
+                        Ativar pênaltis {placarA !== placarB && !temPenaltis && '(apenas em empate)'}
                       </label>
                     </div>
                   </div>
