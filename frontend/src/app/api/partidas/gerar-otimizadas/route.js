@@ -62,10 +62,7 @@ export async function POST(request) {
     const todasPartidas = [];
 
     for (const grupo of grupos) {
-      // 🎲 Embaralhar os times para gerar confrontos diferentes a cada sorteio
-      const times = grupo.times
-        .map(gt => gt.time)
-        .sort(() => Math.random() - 0.5);
+      const times = grupo.times.map(gt => gt.time);
 
       if (times.length < 2) continue;
 
