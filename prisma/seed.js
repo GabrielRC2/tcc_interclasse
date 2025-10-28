@@ -280,72 +280,106 @@ async function main() {
     c.nome.includes('Futsal') || c.nome.includes('Basquete')
   );
 
-  // Criar times para Meio do Ano 2025 (Vôlei e Handebol)
-  for (const curso of cursos) {
-    for (const sala of salas) {
-      for (const categoria of categorias) {
-        // MAIORIA DOS TIMES: sem turma específica (time geral)
-        timesParaCriar.push({
-          nome: `${sala}${curso.sigla}`,
-          sala,
-          turma: null,
-          cursoId: curso.id,
-          categoriaId: categoria.id,
-          torneioId: torneioMeioAno.id,
-        });
+  // Função auxiliar para decidir se uma turma participa (aleatorizado)
+  const turmaParticipa = (probabilidade = 0.7) => Math.random() < probabilidade;
 
-        // ALGUNS TIMES: criar com turmas específicas
-        // Apenas para DS e INF do 2º ano (exemplo realista)
-        if ((curso.sigla === 'DS' || curso.sigla === 'INF') && sala === '2º') {
-          // Time turma A (Manhã)
-          timesParaCriar.push({
-            nome: `${sala}${curso.sigla}-A`,
-            sala,
-            turma: 'A',
-            cursoId: curso.id,
-            categoriaId: categoria.id,
-            torneioId: torneioMeioAno.id,
-          });
+  // ===== MEIO DO ANO 2025: VÔLEI E HANDEBOL =====
+  console.log('   Gerando times para Meio do Ano (Vôlei e Handebol)...');
+  
+  for (const categoria of categoriasMeioAno) {
+    const isVolei = categoria.nome.includes('Vôlei');
+    const isHandebol = categoria.nome.includes('Handebol');
 
-          // Time turma B (Tarde)
-          timesParaCriar.push({
-            nome: `${sala}${curso.sigla}-B`,
-            sala,
-            turma: 'B',
-            cursoId: curso.id,
-            categoriaId: categoria.id,
-            torneioId: torneioMeioAno.id,
-          });
-        }
+    // DS - Desenvolvimento de Sistemas (alta participação)
+    const ds = cursos.find(c => c.sigla === 'DS');
+    if (turmaParticipa(0.9)) timesParaCriar.push({ nome: `1º${ds.sigla}`, sala: '1º', turma: null, cursoId: ds.id, categoriaId: categoria.id, torneioId: torneioMeioAno.id });
+    if (turmaParticipa(0.9)) timesParaCriar.push({ nome: `2º${ds.sigla}`, sala: '2º', turma: null, cursoId: ds.id, categoriaId: categoria.id, torneioId: torneioMeioAno.id });
+    if (turmaParticipa(0.85)) timesParaCriar.push({ nome: `3º${ds.sigla}`, sala: '3º', turma: null, cursoId: ds.id, categoriaId: categoria.id, torneioId: torneioMeioAno.id });
 
-        // Apenas ADA do 1º ano tem turma C (Noite)
-        if (curso.sigla === 'ADA' && sala === '1º') {
-          timesParaCriar.push({
-            nome: `${sala}${curso.sigla}-C`,
-            sala,
-            turma: 'C',
-            cursoId: curso.id,
-            categoriaId: categoria.id,
-            torneioId: torneioMeioAno.id,
-          });
-        }
-      }
-    }
+    // ETEL - Eletrônica (participação moderada)
+    const etel = cursos.find(c => c.sigla === 'ETEL');
+    if (turmaParticipa(0.7)) timesParaCriar.push({ nome: `1º${etel.sigla}`, sala: '1º', turma: null, cursoId: etel.id, categoriaId: categoria.id, torneioId: torneioMeioAno.id });
+    if (turmaParticipa(0.75)) timesParaCriar.push({ nome: `2º${etel.sigla}`, sala: '2º', turma: null, cursoId: etel.id, categoriaId: categoria.id, torneioId: torneioMeioAno.id });
+    if (turmaParticipa(0.65)) timesParaCriar.push({ nome: `3º${etel.sigla}`, sala: '3º', turma: null, cursoId: etel.id, categoriaId: categoria.id, torneioId: torneioMeioAno.id });
+
+    // EVE - Eventos (gostam mais de Vôlei)
+    const eve = cursos.find(c => c.sigla === 'EVE');
+    if (isVolei && turmaParticipa(0.9)) timesParaCriar.push({ nome: `1º${eve.sigla}`, sala: '1º', turma: null, cursoId: eve.id, categoriaId: categoria.id, torneioId: torneioMeioAno.id });
+    if (isVolei && turmaParticipa(0.85)) timesParaCriar.push({ nome: `2º${eve.sigla}`, sala: '2º', turma: null, cursoId: eve.id, categoriaId: categoria.id, torneioId: torneioMeioAno.id });
+    if (isHandebol && turmaParticipa(0.5)) timesParaCriar.push({ nome: `1º${eve.sigla}`, sala: '1º', turma: null, cursoId: eve.id, categoriaId: categoria.id, torneioId: torneioMeioAno.id });
+
+    // ETIQ - Química (participação moderada)
+    const etiq = cursos.find(c => c.sigla === 'ETIQ');
+    if (turmaParticipa(0.65)) timesParaCriar.push({ nome: `1º${etiq.sigla}`, sala: '1º', turma: null, cursoId: etiq.id, categoriaId: categoria.id, torneioId: torneioMeioAno.id });
+    if (turmaParticipa(0.7)) timesParaCriar.push({ nome: `2º${etiq.sigla}`, sala: '2º', turma: null, cursoId: etiq.id, categoriaId: categoria.id, torneioId: torneioMeioAno.id });
+    if (turmaParticipa(0.6)) timesParaCriar.push({ nome: `3º${etiq.sigla}`, sala: '3º', turma: null, cursoId: etiq.id, categoriaId: categoria.id, torneioId: torneioMeioAno.id });
+
+    // HUM - Humanas (preferem Handebol)
+    const hum = cursos.find(c => c.sigla === 'HUM');
+    if (isHandebol && turmaParticipa(0.85)) timesParaCriar.push({ nome: `1º${hum.sigla}`, sala: '1º', turma: null, cursoId: hum.id, categoriaId: categoria.id, torneioId: torneioMeioAno.id });
+    if (isHandebol && turmaParticipa(0.8)) timesParaCriar.push({ nome: `2º${hum.sigla}`, sala: '2º', turma: null, cursoId: hum.id, categoriaId: categoria.id, torneioId: torneioMeioAno.id });
+    if (isVolei && turmaParticipa(0.5)) timesParaCriar.push({ nome: `1º${hum.sigla}`, sala: '1º', turma: null, cursoId: hum.id, categoriaId: categoria.id, torneioId: torneioMeioAno.id });
+
+    // EDA - Edificações (participação baixa no meio do ano)
+    const eda = cursos.find(c => c.sigla === 'EDA');
+    if (turmaParticipa(0.5)) timesParaCriar.push({ nome: `2º${eda.sigla}`, sala: '2º', turma: null, cursoId: eda.id, categoriaId: categoria.id, torneioId: torneioMeioAno.id });
+    if (turmaParticipa(0.45)) timesParaCriar.push({ nome: `3º${eda.sigla}`, sala: '3º', turma: null, cursoId: eda.id, categoriaId: categoria.id, torneioId: torneioMeioAno.id });
+
+    // ADA - Administração (participação variada)
+    const ada = cursos.find(c => c.sigla === 'ADA');
+    if (turmaParticipa(0.7)) timesParaCriar.push({ nome: `1º${ada.sigla}`, sala: '1º', turma: null, cursoId: ada.id, categoriaId: categoria.id, torneioId: torneioMeioAno.id });
+    if (turmaParticipa(0.6)) timesParaCriar.push({ nome: `2º${ada.sigla}`, sala: '2º', turma: null, cursoId: ada.id, categoriaId: categoria.id, torneioId: torneioMeioAno.id });
+    if (turmaParticipa(0.55)) timesParaCriar.push({ nome: `3º${ada.sigla}`, sala: '3º', turma: null, cursoId: ada.id, categoriaId: categoria.id, torneioId: torneioMeioAno.id });
   }
 
-  // Criar times para Fim de Ano 2025 (Futsal e Basquete)
-  for (const curso of cursos) {
-    for (const sala of salas) {
-      for (const categoria of categoriasFimAno) {
-        timesParaCriar.push({
-          nome: `${sala}${curso.sigla}`,
-          sala,
-          cursoId: curso.id,
-          categoriaId: categoria.id,
-          torneioId: torneioFimAno.id,
-        });
-      }
-    }
+  // ===== FIM DO ANO 2025: FUTSAL E BASQUETE =====
+  console.log('   Gerando times para Fim de Ano (Futsal e Basquete)...');
+  
+  for (const categoria of categoriasFimAno) {
+    const isFutsal = categoria.nome.includes('Futsal');
+    const isBasquete = categoria.nome.includes('Basquete');
+
+    // DS - Desenvolvimento de Sistemas (alta participação em ambos)
+    const ds = cursos.find(c => c.sigla === 'DS');
+    if (turmaParticipa(0.95)) timesParaCriar.push({ nome: `1º${ds.sigla}`, sala: '1º', turma: null, cursoId: ds.id, categoriaId: categoria.id, torneioId: torneioFimAno.id });
+    if (turmaParticipa(0.95)) timesParaCriar.push({ nome: `2º${ds.sigla}`, sala: '2º', turma: null, cursoId: ds.id, categoriaId: categoria.id, torneioId: torneioFimAno.id });
+    if (turmaParticipa(0.9)) timesParaCriar.push({ nome: `3º${ds.sigla}`, sala: '3º', turma: null, cursoId: ds.id, categoriaId: categoria.id, torneioId: torneioFimAno.id });
+
+    // ETEL - Eletrônica (preferem Futsal)
+    const etel = cursos.find(c => c.sigla === 'ETEL');
+    if (isFutsal && turmaParticipa(0.9)) timesParaCriar.push({ nome: `1º${etel.sigla}`, sala: '1º', turma: null, cursoId: etel.id, categoriaId: categoria.id, torneioId: torneioFimAno.id });
+    if (isFutsal && turmaParticipa(0.85)) timesParaCriar.push({ nome: `2º${etel.sigla}`, sala: '2º', turma: null, cursoId: etel.id, categoriaId: categoria.id, torneioId: torneioFimAno.id });
+    if (isFutsal && turmaParticipa(0.8)) timesParaCriar.push({ nome: `3º${etel.sigla}`, sala: '3º', turma: null, cursoId: etel.id, categoriaId: categoria.id, torneioId: torneioFimAno.id });
+    if (isBasquete && turmaParticipa(0.6)) timesParaCriar.push({ nome: `2º${etel.sigla}`, sala: '2º', turma: null, cursoId: etel.id, categoriaId: categoria.id, torneioId: torneioFimAno.id });
+
+    // EVE - Eventos (participação baixa no fim do ano - organizando eventos)
+    const eve = cursos.find(c => c.sigla === 'EVE');
+    if (turmaParticipa(0.4)) timesParaCriar.push({ nome: `1º${eve.sigla}`, sala: '1º', turma: null, cursoId: eve.id, categoriaId: categoria.id, torneioId: torneioFimAno.id });
+
+    // ETIQ - Química (preferem Basquete no fim do ano)
+    const etiq = cursos.find(c => c.sigla === 'ETIQ');
+    if (isBasquete && turmaParticipa(0.8)) timesParaCriar.push({ nome: `1º${etiq.sigla}`, sala: '1º', turma: null, cursoId: etiq.id, categoriaId: categoria.id, torneioId: torneioFimAno.id });
+    if (isBasquete && turmaParticipa(0.85)) timesParaCriar.push({ nome: `2º${etiq.sigla}`, sala: '2º', turma: null, cursoId: etiq.id, categoriaId: categoria.id, torneioId: torneioFimAno.id });
+    if (isFutsal && turmaParticipa(0.65)) timesParaCriar.push({ nome: `1º${etiq.sigla}`, sala: '1º', turma: null, cursoId: etiq.id, categoriaId: categoria.id, torneioId: torneioFimAno.id });
+    if (isFutsal && turmaParticipa(0.7)) timesParaCriar.push({ nome: `3º${etiq.sigla}`, sala: '3º', turma: null, cursoId: etiq.id, categoriaId: categoria.id, torneioId: torneioFimAno.id });
+
+    // HUM - Humanas (alta participação no Futsal)
+    const hum = cursos.find(c => c.sigla === 'HUM');
+    if (isFutsal && turmaParticipa(0.9)) timesParaCriar.push({ nome: `1º${hum.sigla}`, sala: '1º', turma: null, cursoId: hum.id, categoriaId: categoria.id, torneioId: torneioFimAno.id });
+    if (isFutsal && turmaParticipa(0.85)) timesParaCriar.push({ nome: `2º${hum.sigla}`, sala: '2º', turma: null, cursoId: hum.id, categoriaId: categoria.id, torneioId: torneioFimAno.id });
+    if (isBasquete && turmaParticipa(0.5)) timesParaCriar.push({ nome: `1º${hum.sigla}`, sala: '1º', turma: null, cursoId: hum.id, categoriaId: categoria.id, torneioId: torneioFimAno.id });
+
+    // EDA - Edificações (maior participação no fim do ano)
+    const eda = cursos.find(c => c.sigla === 'EDA');
+    if (turmaParticipa(0.8)) timesParaCriar.push({ nome: `1º${eda.sigla}`, sala: '1º', turma: null, cursoId: eda.id, categoriaId: categoria.id, torneioId: torneioFimAno.id });
+    if (turmaParticipa(0.85)) timesParaCriar.push({ nome: `2º${eda.sigla}`, sala: '2º', turma: null, cursoId: eda.id, categoriaId: categoria.id, torneioId: torneioFimAno.id });
+    if (turmaParticipa(0.75)) timesParaCriar.push({ nome: `3º${eda.sigla}`, sala: '3º', turma: null, cursoId: eda.id, categoriaId: categoria.id, torneioId: torneioFimAno.id });
+
+    // ADA - Administração (participação moderada-alta)
+    const ada = cursos.find(c => c.sigla === 'ADA');
+    if (turmaParticipa(0.8)) timesParaCriar.push({ nome: `1º${ada.sigla}`, sala: '1º', turma: null, cursoId: ada.id, categoriaId: categoria.id, torneioId: torneioFimAno.id });
+    if (turmaParticipa(0.75)) timesParaCriar.push({ nome: `2º${ada.sigla}`, sala: '2º', turma: null, cursoId: ada.id, categoriaId: categoria.id, torneioId: torneioFimAno.id });
+    if (turmaParticipa(0.7)) timesParaCriar.push({ nome: `3º${ada.sigla}`, sala: '3º', turma: null, cursoId: ada.id, categoriaId: categoria.id, torneioId: torneioFimAno.id });
   }
   
   await prisma.Time.createMany({ data: timesParaCriar });

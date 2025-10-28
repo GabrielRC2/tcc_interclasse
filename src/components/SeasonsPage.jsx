@@ -279,8 +279,10 @@ export const SeasonsPage = () => {
             <div className="space-y-6">
                 <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4">
                     <div>
-                        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">TORNEIOS</h1>
-                        <HelpButton onClick={() => setShowHelp(true)} />
+                        <div className="flex items-center">
+                            <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">TORNEIOS</h1>
+                            <HelpButton onClick={() => setShowHelp(true)} />
+                        </div>
                         {selectedTournament && (
                             <p className="text-gray-500 dark:text-gray-400">
                                 Torneio: {selectedTournament.name}

@@ -500,23 +500,19 @@ export const Dashboard = ({ isGuest = false }) => {
                               // Definir largura mínima de 80px e máxima de 160px, baseada no comprimento
                               const columnWidth = Math.max(80, Math.min(160, maxLength * 12));
 
-                            return (
-                              <div className="grid grid-cols-3 gap-2 items-center justify-center max-w-fit mx-auto">
-                                {/* Coluna Time 1 */}
-                                <div className="text-center" style={{ minWidth: `${columnWidth}px` }}>
-                                  <p className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-1">
-                                    {match.team1}
-                                  </p>
-                                  <div className="flex flex-col items-center">
-                                    <span className="text-3xl font-bold text-red-600 dark:text-red-400">
-                                      {match.pontuacaoTime1 || 0}
-                                    </span>
-                                    {temPenaltis && penaltisCasa !== null && penaltisCasa !== undefined && (
-                                      <span className="text-lg text-gray-600 dark:text-gray-400 mt-1 font-medium">
-                                        ({penaltisCasa})
+                              return (
+                                <div className="grid grid-cols-3 gap-2 items-center justify-center max-w-fit mx-auto">
+                                  {/* Coluna Time 1 */}
+                                  <div className="text-center" style={{ minWidth: `${columnWidth}px` }}>
+                                    <p className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-1">
+                                      {match.team1}
+                                    </p>
+                                    <div className="flex flex-col items-center">
+                                      <span className="text-3xl font-bold text-red-600 dark:text-red-400">
+                                        {match.pontuacaoTime1 || 0}
                                       </span>
-                                      {temPenaltis && penaltisCasa !== null && (
-                                        <span className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                                      {temPenaltis && penaltisCasa !== null && penaltisCasa !== undefined && (
+                                        <span className="text-lg text-gray-600 dark:text-gray-400 mt-1 font-medium">
                                           ({penaltisCasa})
                                         </span>
                                       )}
@@ -538,46 +534,23 @@ export const Dashboard = ({ isGuest = false }) => {
                                       <span className="text-3xl font-bold text-red-600 dark:text-red-400">
                                         {match.pontuacaoTime2 || 0}
                                       </span>
-                                      {temPenaltis && penaltisVisitante !== null && (
-                                        <span className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                                      {temPenaltis && penaltisVisitante !== null && penaltisVisitante !== undefined && (
+                                        <span className="text-lg text-gray-600 dark:text-gray-400 mt-1 font-medium">
                                           ({penaltisVisitante})
                                         </span>
                                       )}
                                     </div>
                                   </div>
                                 </div>
-
-                                {/* Coluna separador VS */}
-                                <div className="text-center px-3">
-                                  <div className="mb-1 h-6"></div>
-                                  <span className="text-2xl font-bold text-red-600 dark:text-red-400">x</span>
-                                </div>
-
-                                {/* Coluna Time 2 */}
-                                <div className="text-center" style={{ minWidth: `${columnWidth}px` }}>
-                                  <p className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-1">
-                                    {match.team2}
-                                  </p>
-                                  <div className="flex flex-col items-center">
-                                    <span className="text-3xl font-bold text-red-600 dark:text-red-400">
-                                      {match.pontuacaoTime2 || 0}
-                                    </span>
-                                    {temPenaltis && penaltisVisitante !== null && penaltisVisitante !== undefined && (
-                                      <span className="text-lg text-gray-600 dark:text-gray-400 mt-1 font-medium">
-                                        ({penaltisVisitante})
-                                      </span>
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
-                            );
-                          })()}
-                        </div>
-                        <div className="space-y-1">
-                          <p className="text-sm text-gray-600 dark:text-gray-300">Esporte: {match.modality}</p>
-                          <p className="text-sm text-gray-600 dark:text-gray-300">Modalidade: {match.category}</p>
-                          <p className="text-sm text-gray-600 dark:text-gray-300">Local: {match.location}</p>
-                          {match.fase && <p className="text-sm text-gray-600 dark:text-gray-300">Fase: {match.fase}</p>}
+                              );
+                            })()}
+                          </div>
+                          <div className="space-y-1">
+                            <p className="text-sm text-gray-600 dark:text-gray-300">Esporte: {match.modality}</p>
+                            <p className="text-sm text-gray-600 dark:text-gray-300">Modalidade: {match.category}</p>
+                            <p className="text-sm text-gray-600 dark:text-gray-300">Local: {match.location}</p>
+                            {match.fase && <p className="text-sm text-gray-600 dark:text-gray-300">Fase: {match.fase}</p>}
+                          </div>
                         </div>
                         <CardSplat />
                       </div>
