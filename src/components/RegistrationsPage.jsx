@@ -5,6 +5,7 @@ import { Modal } from '@/components/Modal';
 import { Button, Input, Select, Textarea, CardSplat } from '@/components/common';
 import { useToast } from '@/components/Toast';
 import { useConfirm } from '@/components/Confirm';
+import { HelpModal, HelpButton } from '@/components/HelpModal';
 
 export const RegistrationsPage = () => {
     // Hooks
@@ -18,6 +19,7 @@ export const RegistrationsPage = () => {
     const [editingItem, setEditingItem] = useState(null);
     const [category, setCategory] = useState('');
     const [selectedUserCategory, setSelectedUserCategory] = useState('Administradores');
+    const [showHelp, setShowHelp] = useState(false);
 
     // Estados para dados principais
     const [sports, setSports] = useState([]);
@@ -326,7 +328,10 @@ export const RegistrationsPage = () => {
         <>
             <div className="space-y-8">
                 <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
-                    <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">CADASTROS</h1>
+                    <div className="flex items-center">
+                        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">CADASTROS</h1>
+                        <HelpButton onClick={() => setShowHelp(true)} />
+                    </div>
                     <Button onClick={handleCreate} className="w-full md:w-auto">Cadastrar Novo</Button>
                 </div>
 
@@ -573,6 +578,121 @@ export const RegistrationsPage = () => {
                     </div>
                 </form>
             </Modal>
+            
+            <HelpModal
+                isOpen={showHelp}
+                onClose={() => setShowHelp(false)}
+                title="Ajuda - Cadastros"
+                sections={[
+                    {
+                        title: "O que é a página de Cadastros?",
+                        content: "Esta é a página administrativa onde você gerencia todos os dados base do sistema: usuários, cursos, modalidades, locais, categorias e jogadores. São os cadastros fundamentais que alimentam todo o sistema de gerenciamento de torneios."
+                    },
+                    {
+                        title: "Usuários",
+                        content: [
+                            "Gerencie contas de acesso ao sistema",
+                            "3 tipos: Administrador (acesso total), Staff (organização) e Representante (visualização)",
+                            "Administradores podem criar, editar e excluir usuários",
+                            "Cada usuário possui: nome, email e senha",
+                            "Use emails válidos pois serão usados para login"
+                        ]
+                    },
+                    {
+                        title: "Cursos",
+                        content: [
+                            "Cadastre os cursos técnicos da escola",
+                            "Exemplo: Desenvolvimento de Sistemas, Eletrônica, Química",
+                            "Cada curso tem: nome completo e sigla",
+                            "A sigla é usada nos nomes dos times (ex: DS, ETEL)",
+                            "Cursos são necessários para criar times"
+                        ]
+                    },
+                    {
+                        title: "Modalidades",
+                        content: [
+                            "Registre os esportes disponíveis no torneio",
+                            "Exemplo: Futsal, Vôlei, Handebol, Basquete",
+                            "Cada modalidade tem apenas um nome",
+                            "Modalidades são vinculadas aos torneios posteriormente",
+                            "São usadas para criar categorias e organizar partidas"
+                        ]
+                    },
+                    {
+                        title: "Locais",
+                        content: [
+                            "Cadastre os espaços onde acontecem as partidas",
+                            "Exemplo: Quadra de Cima, Quadra de Baixo, Ginásio",
+                            "Cada local tem apenas um nome identificador",
+                            "Locais são vinculados às modalidades na página de Partidas",
+                            "Importante para evitar conflitos de horários"
+                        ]
+                    },
+                    {
+                        title: "Categorias",
+                        content: [
+                            "Categorias combinam modalidade + gênero",
+                            "Exemplo: Futsal Masculino, Vôlei Feminino",
+                            "Criadas automaticamente ou manualmente",
+                            "Cada categoria precisa de uma modalidade existente",
+                            "Gêneros disponíveis: Masculino e Feminino",
+                            "Times são criados por categoria"
+                        ]
+                    },
+                    {
+                        title: "Jogadores",
+                        content: [
+                            "Cadastre os alunos que participarão dos times",
+                            "Informações: nome, curso, série (1º/2º/3º), gênero",
+                            "Jogadores são escalados nos times pela página de Times",
+                            "Um jogador pode estar em múltiplos times (diferentes modalidades)",
+                            "Mantenha os dados atualizados para estatísticas corretas"
+                        ]
+                    },
+                    {
+                        title: "Ordem de Cadastro Recomendada",
+                        content: [
+                            "1. Cursos (base para times e jogadores)",
+                            "2. Modalidades (esportes do torneio)",
+                            "3. Locais (onde acontecem os jogos)",
+                            "4. Categorias (automático ao vincular modalidades)",
+                            "5. Jogadores (alunos participantes)",
+                            "6. Usuários (pessoas que acessarão o sistema)"
+                        ]
+                    },
+                    {
+                        title: "Editando Cadastros",
+                        content: [
+                            "Clique no ícone de lápis para editar um item",
+                            "Cuidado ao editar dados já em uso (ex: curso com times criados)",
+                            "Alterações afetam todos os registros relacionados",
+                            "Siglas de cursos devem ser únicas",
+                            "Emails de usuários devem ser únicos"
+                        ]
+                    },
+                    {
+                        title: "Excluindo Cadastros",
+                        content: [
+                            "Clique no ícone de lixeira para excluir",
+                            "ATENÇÃO: Exclusões podem ter impacto em cascata",
+                            "Não é possível excluir itens em uso (ex: curso com times)",
+                            "Sistema impede exclusões que quebrariam integridade",
+                            "Confirme sempre antes de excluir dados importantes"
+                        ]
+                    },
+                    {
+                        title: "Dicas Importantes",
+                        content: [
+                            "Cadastre TODOS os cursos antes de criar times",
+                            "Use siglas curtas e claras para os cursos (2-4 letras)",
+                            "Cadastre jogadores antes de montar os times",
+                            "Verifique dados duplicados antes de criar novos registros",
+                            "Mantenha um backup dos cadastros importantes",
+                            "Organize os cadastros no início do ano letivo"
+                        ]
+                    }
+                ]}
+            />
         </>
     );
 };

@@ -7,6 +7,7 @@ import { useTournament } from '@/contexts/TournamentContext';
 import { useToast } from '@/components/Toast';
 import { useConfirm } from '@/components/Confirm';
 import { ModalidadesModal } from '@/components/ModalidadesModal';
+import { HelpModal, HelpButton } from '@/components/HelpModal';
 
 export const SeasonsPage = () => {
     const toast = useToast();
@@ -22,6 +23,7 @@ export const SeasonsPage = () => {
     const [editingSeason, setEditingSeason] = useState(null);
     const [loading, setLoading] = useState(true);
     const [expandedYears, setExpandedYears] = useState(new Set());
+    const [showHelp, setShowHelp] = useState(false);
 
     const { refreshTournaments } = useTournament();
 
@@ -276,7 +278,10 @@ export const SeasonsPage = () => {
         <>
             <div className="space-y-6">
                 <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
-                    <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">TORNEIOS</h1>
+                    <div className="flex items-center">
+                        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">TORNEIOS</h1>
+                        <HelpButton onClick={() => setShowHelp(true)} />
+                    </div>
                     <Button onClick={() => setIsModalOpen(true)} className="w-full md:w-auto">
                         <Plus size={20} className="mr-2" />
                         Novo Torneio
@@ -450,6 +455,85 @@ export const SeasonsPage = () => {
                 onClose={() => setIsModalidadesModalOpen(false)}
                 torneio={torneioSelecionado}
                 onUpdate={loadSeasons}
+            />
+            
+            <HelpModal
+                isOpen={showHelp}
+                onClose={() => setShowHelp(false)}
+                title="Ajuda - Temporadas"
+                sections={[
+                    {
+                        title: "O que é a página de Temporadas?",
+                        content: "Esta página gerencia os torneios (temporadas) do sistema. Cada torneio representa um evento competitivo, como 'Meio do Ano 2025' ou 'Fim de Ano 2025', onde acontecem as partidas de diferentes modalidades esportivas."
+                    },
+                    {
+                        title: "Visualizando Torneios",
+                        content: [
+                            "Os torneios são organizados por ano em seções expansíveis",
+                            "Cada card mostra: nome, status, período, local e quantidade de times",
+                            "As estatísticas incluem número de partidas totais e finalizadas",
+                            "Clique no ano para expandir/recolher os torneios daquele período"
+                        ]
+                    },
+                    {
+                        title: "Criando um Torneio",
+                        content: [
+                            "Clique em 'Novo Torneio' no topo da página",
+                            "Preencha: nome (ex: Meio do Ano 2025), local, datas de início e fim",
+                            "Selecione o status inicial (geralmente 'Planejamento')",
+                            "O ano é extraído automaticamente da data de início",
+                            "Após criar, use 'Gerenciar Modalidades' para vincular esportes"
+                        ]
+                    },
+                    {
+                        title: "Gerenciando Modalidades",
+                        content: [
+                            "Clique no ícone de engrenagem (⚙️) no card do torneio",
+                            "Selecione quais modalidades farão parte do torneio",
+                            "Marque/desmarque: Futsal, Vôlei, Handebol, Basquete",
+                            "As modalidades vinculadas aparecerão nas outras páginas do sistema",
+                            "Você pode alterar as modalidades a qualquer momento"
+                        ]
+                    },
+                    {
+                        title: "Status do Torneio",
+                        content: [
+                            "PLANEJAMENTO: Torneio em fase de organização, times podem ser ajustados",
+                            "EM ANDAMENTO: Torneio ativo com partidas acontecendo",
+                            "FINALIZADO: Torneio concluído, não permite mais alterações",
+                            "O status afeta as permissões de edição em outras partes do sistema"
+                        ]
+                    },
+                    {
+                        title: "Editando Torneios",
+                        content: [
+                            "Clique no ícone de lápis no card do torneio",
+                            "Você pode alterar: nome, local, datas e status",
+                            "Cuidado ao alterar datas de torneios com partidas agendadas",
+                            "O sistema mantém a integridade dos dados relacionados"
+                        ]
+                    },
+                    {
+                        title: "Excluindo Torneios",
+                        content: [
+                            "Clique no ícone de lixeira no card do torneio",
+                            "Confirme a exclusão na mensagem de aviso",
+                            "ATENÇÃO: Excluir um torneio remove todos os dados relacionados:",
+                            "Times, partidas, grupos, chaveamentos e estatísticas",
+                            "Esta ação não pode ser desfeita, use com cautela"
+                        ]
+                    },
+                    {
+                        title: "Dicas Importantes",
+                        content: [
+                            "Crie o torneio primeiro, depois vincule as modalidades",
+                            "Mantenha nomes claros e descritivos (ex: 'Interclasse 2025 - 1º Semestre')",
+                            "Defina datas realistas que permitam tempo para organização",
+                            "Use o status 'Planejamento' enquanto organiza times e grupos",
+                            "Só mude para 'Em Andamento' quando as partidas começarem"
+                        ]
+                    }
+                ]}
             />
         </>
     );

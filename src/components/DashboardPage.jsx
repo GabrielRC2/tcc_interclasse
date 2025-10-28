@@ -5,12 +5,14 @@ import { useTournament } from '@/contexts/TournamentContext';
 import { SumulaModal } from '@/components/SumulaModal';
 import { TournamentSelector } from '@/components/TournamentSelector';
 import { Button, CardSplat, Select } from '@/components/common';
+import { HelpModal, HelpButton } from '@/components/HelpModal';
 
 export const Dashboard = ({ isGuest = false }) => {
   const { selectedTournament, tournaments, selectTournament, loading } = useTournament();
 
   const [partidaSelecionada, setPartidaSelecionada] = useState(null);
   const [showTournamentSelector, setShowTournamentSelector] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
 
   // Estados para próximas partidas
   const [proximasPartidas, setProximasPartidas] = useState([]);
@@ -403,9 +405,12 @@ export const Dashboard = ({ isGuest = false }) => {
 
       {selectedTournament && (
         <>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
-            Dashboard - {selectedTournament.name}
-          </h1>
+          <div className="flex items-center">
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
+              Dashboard - {selectedTournament.name}
+            </h1>
+            <HelpButton onClick={() => setShowHelp(true)} />
+          </div>
 
           <div className="flex flex-col gap-8">
             {/* PARTIDAS ATUAIS (partidas em andamento com pontuação em tempo real) */}
@@ -976,6 +981,72 @@ export const Dashboard = ({ isGuest = false }) => {
             tournaments={tournaments}
             selectedTournament={selectedTournament}
             onSelectTournament={selectTournament}
+          />
+          
+          <HelpModal
+            isOpen={showHelp}
+            onClose={() => setShowHelp(false)}
+            title="Ajuda - Home"
+            sections={[
+              {
+                title: "O que é a página Home?",
+                content: "A Home é o painel principal do sistema, onde você visualiza informações em tempo real sobre as partidas do torneio selecionado. É o centro de controle para acompanhar o andamento de todos os jogos."
+              },
+              {
+                title: "Partidas em Andamento",
+                content: [
+                  "Mostra as partidas que estão acontecendo neste momento",
+                  "Atualiza automaticamente a cada 5 segundos",
+                  "Exibe o placar ao vivo de cada jogo",
+                  "Permite acessar os eventos da partida clicando no card"
+                ]
+              },
+              {
+                title: "Próximas Partidas",
+                content: [
+                  "Lista as próximas 6 partidas que irão acontecer",
+                  "Ordenadas por data e horário mais próximo",
+                  "Mostra informações como modalidade, categoria, local e horário",
+                  "Útil para saber quando e onde serão os próximos jogos"
+                ]
+              },
+              {
+                title: "Jogadores em Destaque",
+                content: [
+                  "Apresenta os artilheiros do torneio por modalidade",
+                  "Top 5 jogadores com mais pontos/gols marcados",
+                  "Categorizado por esporte (Futsal, Vôlei, Handebol, Basquete)",
+                  "Atualizado conforme as súmulas são finalizadas"
+                ]
+              },
+              {
+                title: "Partidas Agendadas",
+                content: [
+                  "Seção minimizada por padrão para melhor organização",
+                  "Contém todas as partidas futuras do torneio",
+                  "Permite filtrar por modalidade, gênero e local",
+                  "Use os filtros para encontrar jogos específicos rapidamente"
+                ]
+              },
+              {
+                title: "Súmulas (Partidas Finalizadas)",
+                content: [
+                  "Seção minimizada com todas as partidas já concluídas",
+                  "Clique em qualquer partida para ver a súmula completa",
+                  "Visualize eventos, estatísticas e resultados finais",
+                  "Também possui filtros por modalidade, gênero e local"
+                ]
+              },
+              {
+                title: "Dicas de Uso",
+                content: [
+                  "Selecione o torneio ativo no topo da página",
+                  "As seções minimizadas podem ser expandidas clicando nelas",
+                  "Os dados são atualizados automaticamente",
+                  "Use os filtros para encontrar partidas específicas mais facilmente"
+                ]
+              }
+            ]}
           />
         </>
       )}

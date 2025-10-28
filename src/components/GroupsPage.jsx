@@ -6,6 +6,7 @@ import { Button, Select, CardSplat } from '@/components/common';
 import { useTournament } from '@/contexts/TournamentContext';
 import { useToast } from '@/components/Toast';
 import { useConfirm } from '@/components/Confirm';
+import { HelpModal, HelpButton } from '@/components/HelpModal';
 
 export const GroupsPage = () => {
     const { selectedTournament, pageStates, updatePageState } = useTournament();
@@ -22,6 +23,7 @@ export const GroupsPage = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [isTimesExpanded, setIsTimesExpanded] = useState(true);
+    const [showHelp, setShowHelp] = useState(false);
 
     // Função para selecionar modalidade+gênero combinados
     const selecionarModalidade = (modalidade) => {
@@ -250,7 +252,10 @@ export const GroupsPage = () => {
             <div className="space-y-6">
                 <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
                     <div>
-                        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">GRUPOS</h1>
+                        <div className="flex items-center">
+                            <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">GRUPOS</h1>
+                            <HelpButton onClick={() => setShowHelp(true)} />
+                        </div>
                         {selectedTournament && (
                             <p className="text-gray-500 dark:text-gray-400">
                                 Torneio: {selectedTournament.name}
@@ -449,6 +454,90 @@ export const GroupsPage = () => {
                     </>
                 )}
             </div>
+            
+            <HelpModal
+                isOpen={showHelp}
+                onClose={() => setShowHelp(false)}
+                title="Ajuda - Grupos"
+                sections={[
+                    {
+                        title: "O que é a página de Grupos?",
+                        content: "Esta página permite criar e gerenciar grupos para a fase classificatória do torneio. Os grupos organizam os times que irão se enfrentar antes das eliminatórias, permitindo classificação justa baseada em desempenho."
+                    },
+                    {
+                        title: "Preparando para Criar Grupos",
+                        content: [
+                            "Certifique-se de que o torneio está selecionado",
+                            "Tenha times criados e vinculados às modalidades desejadas",
+                            "Cada modalidade + gênero terá seus próprios grupos",
+                            "Exemplo: Futsal Masculino terá grupos separados de Futsal Feminino"
+                        ]
+                    },
+                    {
+                        title: "Selecionando Modalidade e Gênero",
+                        content: [
+                            "Primeiro, escolha uma modalidade (ex: Futsal, Vôlei)",
+                            "Os cards mostram quantos times estão disponíveis",
+                            "Só aparecem modalidades que foram vinculadas ao torneio",
+                            "Após selecionar, a lista de times disponíveis é carregada"
+                        ]
+                    },
+                    {
+                        title: "Definindo Quantidade de Grupos",
+                        content: [
+                            "Escolha quantos grupos deseja criar (geralmente 2 a 4)",
+                            "O sistema divide os times de forma equilibrada",
+                            "Grupos com times pares permitem rodízio completo",
+                            "Exemplo: 8 times em 2 grupos = 4 times por grupo"
+                        ]
+                    },
+                    {
+                        title: "Sorteando Grupos",
+                        content: [
+                            "Clique em 'Sortear Grupos' após definir a quantidade",
+                            "O sistema distribui os times aleatoriamente entre os grupos",
+                            "Os grupos são nomeados automaticamente (A, B, C...)",
+                            "Se não gostar do sorteio, limpe e faça novamente"
+                        ]
+                    },
+                    {
+                        title: "Visualizando Grupos",
+                        content: [
+                            "Cada grupo mostra os times sorteados em cards",
+                            "Você pode ver curso, série e informações de cada time",
+                            "A seção de times disponíveis mostra o que ainda não foi sorteado",
+                            "Expanda/recolha seções para melhor visualização"
+                        ]
+                    },
+                    {
+                        title: "Limpando Grupos",
+                        content: [
+                            "Use 'Limpar Grupos' para desfazer o sorteio",
+                            "Isso remove os grupos mas mantém os times",
+                            "Útil se quiser refazer o sorteio com diferentes configurações",
+                            "ATENÇÃO: Se já houver partidas agendadas, não será possível limpar"
+                        ]
+                    },
+                    {
+                        title: "Próximos Passos",
+                        content: [
+                            "Após criar grupos, vá para a página 'Partidas'",
+                            "Lá você poderá gerar as partidas da fase de grupos",
+                            "As partidas são criadas automaticamente baseadas nos grupos",
+                            "Cada time jogará contra todos do seu grupo (todos contra todos)"
+                        ]
+                    },
+                    {
+                        title: "Dicas Importantes",
+                        content: [
+                            "Crie grupos balanceados em quantidade de times",
+                            "Evite grupos com apenas 2 times (muito poucas partidas)",
+                            "Grupos de 3-5 times são ideais para torneios escolares",
+                            "Lembre-se: cada modalidade/gênero precisa de grupos separados"
+                        ]
+                    }
+                ]}
+            />
         </>
     );
 };

@@ -5,6 +5,7 @@ import { Button, Select, CardSplat } from '@/components/common';
 import { useTournament } from '@/contexts/TournamentContext';
 import { useToast } from '@/components/Toast';
 import { useConfirm } from '@/components/Confirm';
+import { HelpModal, HelpButton } from '@/components/HelpModal';
 
 export const BracketsPage = () => {
     const { selectedTournament } = useTournament();
@@ -22,6 +23,7 @@ export const BracketsPage = () => {
     const [loading, setLoading] = useState(true);
     const [loadingData, setLoadingData] = useState(false); // Loading específico para atualizações
     const [classificacaoGeralExpandida, setClassificacaoGeralExpandida] = useState(false);
+    const [showHelp, setShowHelp] = useState(false);
     const [previousData, setPreviousData] = useState({
         grupos: [],
         classificacao: [],
@@ -460,7 +462,10 @@ export const BracketsPage = () => {
             <div className="flex flex-wrap justify-between items-center gap-4">
                 <div>
                     <div className="flex items-center gap-3">
-                        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">CHAVEAMENTO</h1>
+                        <div className="flex items-center">
+                            <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">CHAVEAMENTO</h1>
+                            <HelpButton onClick={() => setShowHelp(true)} />
+                        </div>
                         {loadingData && (
                             <div className="flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400">
                                 <div className="animate-spin h-4 w-4 border-2 border-blue-600 dark:border-blue-400 border-t-transparent rounded-full"></div>
@@ -670,6 +675,111 @@ export const BracketsPage = () => {
                     )}
                 </>
             )}
+            
+            <HelpModal
+                isOpen={showHelp}
+                onClose={() => setShowHelp(false)}
+                title="Ajuda - Chaveamento"
+                sections={[
+                    {
+                        title: "O que é a página de Chaveamento?",
+                        content: "Esta página exibe as classificações dos grupos e permite gerar as eliminatórias (mata-mata) do torneio. É onde você acompanha o desempenho dos times na fase de grupos e cria os confrontos das fases finais."
+                    },
+                    {
+                        title: "Entendendo a Classificação",
+                        content: [
+                            "A tabela mostra a pontuação de cada time em seu grupo",
+                            "PTS (Pontos): Vitória = 3 pts, Empate = 1 pt, Derrota = 0 pts",
+                            "J (Jogos): Número de partidas FINALIZADAS (não conta agendadas)",
+                            "V/E/D: Vitórias, Empates e Derrotas",
+                            "GP/GC: Gols/Pontos Pró e Contra",
+                            "SG: Saldo de Gols (GP - GC)",
+                            "Times com WO aparecem marcados e vão para o final da tabela"
+                        ]
+                    },
+                    {
+                        title: "Visualizando Classificações",
+                        content: [
+                            "Selecione a modalidade + gênero desejada",
+                            "Veja a classificação de cada grupo individualmente",
+                            "Expanda a 'Classificação Geral' para ver todos os grupos juntos",
+                            "A classificação geral é útil para comparar times de grupos diferentes",
+                            "Os dados são atualizados automaticamente após cada partida"
+                        ]
+                    },
+                    {
+                        title: "O que são Eliminatórias?",
+                        content: [
+                            "Fase mata-mata: quem perde está eliminado",
+                            "Classificados dos grupos avançam para esta fase",
+                            "Geralmente os 2 melhores de cada grupo se classificam",
+                            "Confrontos são definidos baseados na classificação",
+                            "Exemplo: 1º do Grupo A x 2º do Grupo B"
+                        ]
+                    },
+                    {
+                        title: "Gerando Eliminatórias",
+                        content: [
+                            "Clique em 'Gerar Eliminatórias' após concluir fase de grupos",
+                            "Escolha a fase inicial: Oitavas, Quartas, Semifinais ou Final",
+                            "Ou deixe o Sistema decidir automaticamente baseado no nº de times",
+                            "O sistema cria os confrontos seguindo regras de chaveamento",
+                            "Times são distribuídos evitando confrontos do mesmo grupo logo de início"
+                        ]
+                    },
+                    {
+                        title: "Fases das Eliminatórias",
+                        content: [
+                            "OITAVAS DE FINAL: 16 times (8 jogos)",
+                            "QUARTAS DE FINAL: 8 times (4 jogos)",
+                            "SEMIFINAIS: 4 times (2 jogos)",
+                            "FINAL: 2 times (1 jogo)",
+                            "O sistema adapta conforme o número de classificados"
+                        ]
+                    },
+                    {
+                        title: "Reorganizando Eliminatórias",
+                        content: [
+                            "Use 'Reorganizar Eliminatórias' para ajustar chaveamento",
+                            "Útil se houve erro na geração ou deseja alterar confrontos",
+                            "ATENÇÃO: Só reorganize antes das partidas começarem",
+                            "Partidas já finalizadas não podem ser alteradas",
+                            "Use com cuidado para manter a integridade do torneio"
+                        ]
+                    },
+                    {
+                        title: "Próxima Fase",
+                        content: [
+                            "Clique em 'Próxima Fase' para avançar nas eliminatórias",
+                            "Vencedores da fase atual avançam automaticamente",
+                            "Exemplo: Vencedores das Quartas vão para Semifinais",
+                            "O sistema valida se todas as partidas foram finalizadas",
+                            "Não é possível avançar com jogos pendentes"
+                        ]
+                    },
+                    {
+                        title: "Quando Gerar Eliminatórias?",
+                        content: [
+                            "Aguarde TODAS as partidas da fase de grupos serem finalizadas",
+                            "Verifique a classificação final de cada grupo",
+                            "Confirme quantos times se classificam por grupo",
+                            "Geralmente: 2 primeiros colocados avançam",
+                            "Em caso de empate em pontos, usa-se saldo de gols como critério"
+                        ]
+                    },
+                    {
+                        title: "Dicas Importantes",
+                        content: [
+                            "Finalize TODAS as partidas de grupos antes de gerar eliminatórias",
+                            "A coluna J (Jogos) mostra apenas partidas FINALIZADAS",
+                            "Verifique a classificação cuidadosamente antes de gerar mata-mata",
+                            "Após gerar eliminatórias, vá para 'Partidas' para agendar os jogos",
+                            "Não reorganize chaveamento após partidas começarem",
+                            "Mantenha registros precisos para evitar disputas"
+                        ]
+                    }
+                ]}
+            />
         </div>
     );
 };

@@ -7,6 +7,7 @@ import { Button, Input, Select, CardSplat } from '@/components/common';
 import { useTournament } from '@/contexts/TournamentContext';
 import { useToast } from '@/components/Toast';
 import { useConfirm } from '@/components/Confirm';
+import { HelpModal, HelpButton } from '@/components/HelpModal';
 
 function TeamsPage() {
   const { selectedTournament } = useTournament();
@@ -21,6 +22,7 @@ function TeamsPage() {
   const [showAddPlayer, setShowAddPlayer] = useState(false);
   const [newPlayer, setNewPlayer] = useState({ name: '', numeroCamisa: '' });
   const [availablePlayers, setAvailablePlayers] = useState([]);
+  const [showHelp, setShowHelp] = useState(false);
 
   // Estados dos filtros
   const [filters, setFilters] = useState({
@@ -573,7 +575,10 @@ function TeamsPage() {
       <div className="space-y-6">
         <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">TIMES</h1>
+            <div className="flex items-center">
+              <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">TIMES</h1>
+              <HelpButton onClick={() => setShowHelp(true)} />
+            </div>
             <p className="text-gray-500 dark:text-gray-400">
               Torneio: {selectedTournament.name}
             </p>
@@ -1225,6 +1230,83 @@ function TeamsPage() {
           </form>
         </Modal>
       )}
+      
+      <HelpModal
+        isOpen={showHelp}
+        onClose={() => setShowHelp(false)}
+        title="Ajuda - Times"
+        sections={[
+          {
+            title: "O que é a página de Times?",
+            content: "Aqui você gerencia todos os times do torneio selecionado. É possível visualizar, criar, editar e excluir times, além de gerenciar os jogadores de cada equipe."
+          },
+          {
+            title: "Visualizando Times",
+            content: [
+              "Cada card mostra informações do time: nome, modalidade, categoria, gênero e curso",
+              "O número de jogadores escalados aparece no card",
+              "Use os filtros para encontrar times específicos por gênero, modalidade, curso ou ano",
+              "Clique em um card para ver os detalhes e jogadores do time"
+            ]
+          },
+          {
+            title: "Criando um Time",
+            content: [
+              "Clique no botão 'Novo Time' no topo da página",
+              "Preencha: nome do time, curso, série (1º, 2º ou 3º ano), turma (opcional)",
+              "Selecione a categoria (modalidade + gênero)",
+              "O nome do time geralmente segue o padrão: [Ano][Sigla do Curso] (ex: 1ºDS, 2ºADA)"
+            ]
+          },
+          {
+            title: "Gerenciando Jogadores",
+            content: [
+              "Clique em um time para abrir os detalhes",
+              "Use 'Adicionar Jogador' para escalar jogadores existentes no banco",
+              "Selecione o jogador e defina o número da camisa",
+              "Os jogadores devem ser do mesmo curso, série e gênero do time",
+              "Para remover, clique no ícone de lixeira ao lado do jogador"
+            ]
+          },
+          {
+            title: "Editando Times",
+            content: [
+              "Clique no ícone de lápis no card do time",
+              "Você pode alterar o nome e a turma",
+              "Curso, série e categoria não podem ser alterados após criação",
+              "Para mudar categoria, é necessário criar um novo time"
+            ]
+          },
+          {
+            title: "Excluindo Times",
+            content: [
+              "Clique no ícone de lixeira no card do time",
+              "Confirme a exclusão na mensagem que aparecer",
+              "ATENÇÃO: Times com partidas agendadas ou finalizadas não podem ser excluídos",
+              "Exclua as partidas relacionadas primeiro se necessário"
+            ]
+          },
+          {
+            title: "Filtros",
+            content: [
+              "Gênero: Filtra times masculinos ou femininos",
+              "Modalidade: Filtra por esporte (Futsal, Vôlei, etc.)",
+              "Curso: Filtra por curso técnico",
+              "Ano: Filtra por série (1º, 2º, 3º ano)",
+              "Use 'Limpar Filtros' para remover todos os filtros de uma vez"
+            ]
+          },
+          {
+            title: "Dicas Importantes",
+            content: [
+              "Certifique-se que há jogadores cadastrados no banco antes de criar times",
+              "A quantidade mínima de jogadores varia por modalidade",
+              "Mantenha os números de camisa únicos dentro de cada time",
+              "O torneio deve estar selecionado para visualizar e gerenciar times"
+            ]
+          }
+        ]}
+      />
     </>
   );
 };

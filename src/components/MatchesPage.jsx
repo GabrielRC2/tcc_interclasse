@@ -8,6 +8,7 @@ import { WOModal } from '@/components/WOModal';
 import { Modal } from '@/components/Modal';
 import { useToast } from '@/components/Toast';
 import { useConfirm } from '@/components/Confirm';
+import { HelpModal, HelpButton } from '@/components/HelpModal';
 
 export const MatchesPage = () => {
   const { selectedTournament } = useTournament();
@@ -31,6 +32,7 @@ export const MatchesPage = () => {
   const [generating, setGenerating] = useState(false);
   const [showWOModal, setShowWOModal] = useState(false);
   const [partidaWO, setPartidaWO] = useState(null);
+  const [showHelp, setShowHelp] = useState(false);
 
   useEffect(() => {
     carregarDadosIniciais();
@@ -819,7 +821,10 @@ export const MatchesPage = () => {
     <div>
       <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">PARTIDAS</h1>
+          <div className="flex items-center">
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">PARTIDAS</h1>
+            <HelpButton onClick={() => setShowHelp(true)} />
+          </div>
           {selectedTournament && (
             <p className="text-gray-500 dark:text-gray-400">
               Torneio: {selectedTournament.name} • {partidasFiltradas.length} partidas
@@ -1195,6 +1200,116 @@ export const MatchesPage = () => {
               </div>
             </div>
           )}
+          
+          <HelpModal
+            isOpen={showHelp}
+            onClose={() => setShowHelp(false)}
+            title="Ajuda - Partidas"
+            sections={[
+              {
+                title: "O que é a página de Partidas?",
+                content: "Esta é a página central para gerenciar todos os jogos do torneio. Aqui você gera partidas automaticamente, configura locais, visualiza agendamentos e acompanha o status de cada jogo."
+              },
+              {
+                title: "Gerando Partidas Otimizadas",
+                content: [
+                  "Clique em 'Gerar Partidas Otimizadas' para criar todos os jogos automaticamente",
+                  "O sistema distribui as partidas de forma inteligente nos horários e locais disponíveis",
+                  "Evita conflitos: times não jogam em horários próximos",
+                  "Respeita a configuração de locais por modalidade",
+                  "Gera jogos da fase de grupos (todos contra todos dentro do grupo)"
+                ]
+              },
+              {
+                title: "Configurando Locais por Modalidade",
+                content: [
+                  "Use o botão 'Configurar Locais' antes de gerar partidas",
+                  "Defina qual quadra/local será usado para cada modalidade",
+                  "Exemplo: Futsal na Quadra de Cima, Vôlei na Quadra de Baixo",
+                  "Isso evita que dois jogos sejam marcados no mesmo local/horário",
+                  "As configurações são salvas e aplicadas na geração de partidas"
+                ]
+              },
+              {
+                title: "Refazendo Sorteio de Partidas",
+                content: [
+                  "Se não gostar da distribuição de horários, use 'Refazer Sorteio'",
+                  "Mantém os confrontos mas reorganiza datas e horários",
+                  "Útil para ajustar o calendário sem perder os jogos já criados",
+                  "ATENÇÃO: Partidas já finalizadas não são alteradas"
+                ]
+              },
+              {
+                title: "Visualizando e Filtrando Partidas",
+                content: [
+                  "Use os filtros para encontrar jogos específicos:",
+                  "Modalidade: Filtra por esporte",
+                  "Gênero: Masculino ou Feminino",
+                  "Status: Agendada, Em andamento, Finalizada, Cancelada",
+                  "Cada card mostra: times, placar, horário, local e categoria"
+                ]
+              },
+              {
+                title: "Iniciando uma Partida",
+                content: [
+                  "Clique em 'Iniciar' no card de uma partida agendada",
+                  "O status muda para 'Em andamento'",
+                  "Abre automaticamente a súmula para registrar eventos",
+                  "Durante o jogo, você pode adicionar pontos/gols e eventos",
+                  "A partida aparecerá na Home como 'Em Andamento'"
+                ]
+              },
+              {
+                title: "Registrando WO (Walk Over)",
+                content: [
+                  "Use o botão WO se um time não comparecer",
+                  "Selecione qual time deu WO (faltou)",
+                  "O time presente recebe vitória automática (3 pontos)",
+                  "O time faltoso recebe derrota (0 pontos)",
+                  "Útil para manter a integridade do torneio"
+                ]
+              },
+              {
+                title: "Acessando Eventos (Partida em Andamento)",
+                content: [
+                  "Durante o jogo, clique em 'Acessar Eventos'",
+                  "Registre pontos/gols em tempo real",
+                  "Adicione eventos como cartões, substituições, etc.",
+                  "Marque jogadores que pontuaram",
+                  "Finalize quando o jogo terminar"
+                ]
+              },
+              {
+                title: "Vendo Súmula (Partida Finalizada)",
+                content: [
+                  "Após finalizar, clique em 'Ver Súmula'",
+                  "Visualize o placar final e todos os eventos",
+                  "Veja estatísticas dos jogadores",
+                  "A súmula pode ser impressa ou exportada",
+                  "Dados são usados para classificação e rankings"
+                ]
+              },
+              {
+                title: "Status das Partidas",
+                content: [
+                  "AGENDADA: Jogo marcado, aguardando início",
+                  "EM ANDAMENTO: Partida acontecendo agora",
+                  "FINALIZADA: Jogo concluído com resultado registrado",
+                  "CANCELADA: Partida cancelada (não afeta classificação)"
+                ]
+              },
+              {
+                title: "Dicas Importantes",
+                content: [
+                  "Configure os locais ANTES de gerar as partidas",
+                  "Verifique se os grupos já foram criados antes de gerar jogos",
+                  "Inicie as partidas no horário agendado para melhor controle",
+                  "Registre os eventos durante o jogo para estatísticas precisas",
+                  "Finalize a súmula logo após o término da partida"
+                ]
+              }
+            ]}
+          />
         </>
       )}
     </div>
