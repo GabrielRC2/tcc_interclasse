@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useSession } from 'next-auth/react';
 import { Modal } from '@/components/Modal';
-import { Button } from '@/components/common';
+import { Button, Loading } from '@/components/common';
 import { useTournament } from '@/contexts/TournamentContext';
 import { useToast } from '@/components/Toast';
 import { useConfirm } from '@/components/Confirm';
@@ -55,9 +55,13 @@ const PDFDownloadButton = ({ className, fileName, matchData, tournamentData, tea
         />
       }
       fileName={fileName}
-      className={className}
+      style={{ textDecoration: 'none' }}
     >
-      {({ loading }) => (loading ? 'Gerando PDF...' : 'Exportar PDF')}
+      {({ loading }) => (
+        <Button variant="secondary" className="w-full md:w-auto">
+          {loading ? 'Gerando PDF...' : 'Exportar PDF'}
+        </Button>
+      )}
     </PDFDownloadLink>
   );
 };
@@ -775,9 +779,7 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEn
           </div>
 
           {carregando ? (
-            <div className="flex justify-center items-center h-full">
-              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-gray-900 dark:border-white"></div>
-            </div>
+            <Loading message="Carregando súmula..." />
           ) : (
             <div className="space-y-6">
               <div className="flex justify-around items-center text-center">
@@ -958,7 +960,6 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEn
                 teamData1={{ name: match.team1, players: jogadoresTimeA }}
                 teamData2={{ name: match.team2, players: jogadoresTimeB }}
                 fileName={gerarNomeArquivo()}
-                className="inline-flex items-center px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white font-medium rounded-md transition-colors"
               />
             )}
           </div>
@@ -973,7 +974,6 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEn
                 teamData1={{ name: match.team1, players: jogadoresTimeA }}
                 teamData2={{ name: match.team2, players: jogadoresTimeB }}
                 fileName={gerarNomeArquivo()}
-                className="inline-flex items-center px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white font-medium rounded-md transition-colors"
               />
             )}
 
@@ -983,8 +983,8 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEn
               </Button>
             )}
 
-            {/* Botão para permitir edição mesmo quando não está ao vivo (apenas para admins) */}
-            {!estaAoVivo && isAdmin && (
+            {/* Botão para permitir edição mesmo quando não está ao vivo */}
+            {!estaAoVivo && !carregando && (
               <Button
                 onClick={() => {
                   const novo = !permitirEdicao;
@@ -1014,7 +1014,6 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEn
               </Button>
             )}
 
-            <Button onClick={() => { setPermitirEdicao(false); setEditingFinalizada(false); onClose(); }}>Fechar</Button>
           </div>
         </div>
       </div>

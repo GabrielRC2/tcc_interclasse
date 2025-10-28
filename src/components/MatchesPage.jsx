@@ -1,7 +1,7 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import { Calendar, MapPin, Trophy, Filter, Play, Settings, Shuffle, RefreshCcw, AlertTriangle } from 'lucide-react';
-import { Button, Select } from '@/components/common';
+import { Button, IconButton, Select, Loading } from '@/components/common';
 import { useTournament } from '@/contexts/TournamentContext';
 import { SumulaModal } from '@/components/SumulaModal';
 import { WOModal } from '@/components/WOModal';
@@ -678,14 +678,14 @@ export const MatchesPage = () => {
   // Função para obter vencedor no caso de WO
   const obterVencedorWO = (partida) => {
     if (!partida.timeWOId) return null;
-    
+
     // O time que NÃO deu WO é o vencedor
     if (partida.timeWOId === partida.team1Id) {
       return { vencedor: partida.team2, tipo: 'visitante' };
     } else if (partida.timeWOId === partida.team2Id) {
       return { vencedor: partida.team1, tipo: 'casa' };
     }
-    
+
     return null;
   };
 
@@ -814,7 +814,7 @@ export const MatchesPage = () => {
   };
 
   if (carregando) {
-    return <div className="flex justify-center items-center h-64 text-gray-600 dark:text-gray-400">Carregando...</div>;
+    return <Loading message="Carregando..." />;
   }
 
   return (
@@ -831,21 +831,12 @@ export const MatchesPage = () => {
             </p>
           )}
         </div>
-        <div className="flex flex-col md:flex-row gap-2 w-full md:w-auto">
-          <Button
-            onClick={() => setShowConfigModal(true)}
-            variant="outline"
-            disabled={!selectedTournament}
-            className="w-full md:w-auto"
-          >
-            <Settings size={16} className="mr-2" />
-            Configurar Locais
-          </Button>
+        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto flex-wrap">
           {proximaAcao && proximaAcao.startsWith('GERAR') && (
             <Button
               onClick={handleGerarPartidas}
               disabled={!selectedTournament || generating}
-              className="w-full md:w-auto"
+              className="w-full sm:w-auto whitespace-nowrap"
             >
               <Play size={16} className="mr-2" />
               {generating ? 'Gerando...' : getBotaoGerarPartidasTexto()}
@@ -854,7 +845,7 @@ export const MatchesPage = () => {
           <Button
             onClick={refazerSorteioPartidas}
             disabled={!selectedTournament || generating || partidas.length === 0}
-            className="bg-purple-600 hover:bg-purple-700 w-full md:w-auto"
+            className="bg-red-600 hover:bg-red-700 w-full sm:w-auto whitespace-nowrap"
           >
             <RefreshCcw size={16} className="mr-2" />
             Refazer Sorteio
@@ -863,21 +854,13 @@ export const MatchesPage = () => {
             <Button
               onClick={reorganizarEliminatorias}
               disabled={!selectedTournament || generating}
-              className="bg-indigo-600 hover:bg-indigo-700 w-full md:w-auto"
+              variant="outline"
+              className="border-red-500 text-red-600 hover:bg-red-50 dark:border-red-400 dark:text-red-400 dark:hover:bg-red-900/20 w-full sm:w-auto whitespace-nowrap"
             >
               <RefreshCcw size={16} className="mr-2" />
               Reorganizar Eliminatórias
             </Button>
           )}
-          <Button
-            onClick={gerarPontuacoesAleatorias}
-            disabled={partidas.filter(p => p.status === 'Agendada').length === 0}
-            className="bg-orange-600 hover:bg-orange-700 w-full md:w-auto"
-          >
-            <Shuffle size={16} className="mr-2" />
-            Gerar Pontuações Aleatórias
-          </Button>
-
         </div>
       </div>
 
@@ -957,6 +940,27 @@ export const MatchesPage = () => {
                 </div>
               </div>
 
+              {/* Botões de Configuração */}
+              <div className="flex gap-2">
+                <IconButton
+                  onClick={gerarPontuacoesAleatorias}
+                  disabled={partidas.filter(p => p.status === 'Agendada').length === 0}
+                  variant="primary"
+                  title="Gerar Pontuações Aleatórias"
+                >
+                  <Shuffle size={20} />
+                </IconButton>
+                <Button
+                  onClick={() => setShowConfigModal(true)}
+                  variant="outline"
+                  disabled={!selectedTournament}
+                  className="flex-1 sm:flex-none sm:w-auto whitespace-nowrap"
+                >
+                  <Settings size={16} className="mr-2" />
+                  Configurar Locais
+                </Button>
+              </div>
+
               {partidasFiltradas.map(p => (
                 <div key={p.id} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm p-5 md:p-6">
                   <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 md:gap-6">
@@ -978,8 +982,8 @@ export const MatchesPage = () => {
                               }
                             }}
                             className={`px-2 py-1 rounded-full text-xs font-medium self-start sm:self-center ${obterCorStatus(p.status)} ${p.status === 'Finalizada' || p.status === 'FINALIZADA'
-                                ? 'cursor-not-allowed opacity-75'
-                                : 'cursor-pointer hover:opacity-80'
+                              ? 'cursor-not-allowed opacity-75'
+                              : 'cursor-pointer hover:opacity-80'
                               }`}
                             title={
                               p.status === 'Finalizada' || p.status === 'FINALIZADA'

@@ -1,14 +1,16 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { Trash2 } from 'lucide-react';
+import { Trash2, Plus } from 'lucide-react';
 import { Modal } from '@/components/Modal';
-import { Button, Input, Select, Textarea, CardSplat } from '@/components/common';
+import { Button, Input, Select, Textarea, CardSplat, Loading } from '@/components/common';
+import { useTournament } from '@/contexts/TournamentContext';
 import { useToast } from '@/components/Toast';
 import { useConfirm } from '@/components/Confirm';
 import { HelpModal, HelpButton } from '@/components/HelpModal';
 
 export const RegistrationsPage = () => {
     // Hooks
+    const { selectedTournament } = useTournament();
     const toast = useToast();
     const confirm = useConfirm();
 
@@ -108,7 +110,7 @@ export const RegistrationsPage = () => {
 
             // Separar usuários por tipo (importante para controle de acesso)
             console.log('Dados dos usuários carregados:', usersData);
-            
+
             setUsers({
                 administradores: usersData.filter(u => {
                     const tipo = u.tipo?.toLowerCase();
@@ -116,7 +118,7 @@ export const RegistrationsPage = () => {
                 }),
                 staff: usersData.filter(u => u.tipo?.toLowerCase() === 'staff'),
                 representantes: usersData.filter(u => {
-                    const tipo = u.tipo?.toLowerCase(); 
+                    const tipo = u.tipo?.toLowerCase();
                     return tipo === 'representante';
                 })
             });
@@ -146,7 +148,7 @@ export const RegistrationsPage = () => {
             // Mapear o tipo do usuário para os valores do select
             let tipoMapeado = '';
             const tipoOriginal = (item.tipo || '').toLowerCase();
-            
+
             if (tipoOriginal === 'admin' || tipoOriginal === 'administrador') {
                 tipoMapeado = 'admin';
             } else if (tipoOriginal === 'staff') {
@@ -306,7 +308,7 @@ export const RegistrationsPage = () => {
     };
 
     if (loading) {
-        return <div className="flex justify-center items-center h-64 text-gray-600 dark:text-gray-400">Carregando...</div>;
+        return <Loading message="Carregando..." />;
     }
 
     // Bloquear acesso para usuários do tipo 'staff'
@@ -328,12 +330,25 @@ export const RegistrationsPage = () => {
         <>
             <div className="space-y-8">
                 <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
-                    <div className="flex items-center">
+                    <div>
                         <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">CADASTROS</h1>
+
                         <HelpButton onClick={() => setShowHelp(true)} />
+                        {selectedTournament && (
+                            <p className="text-gray-500 dark:text-gray-400">
+                                Torneio: {selectedTournament.name}
+                            </p>
+                        )}
                     </div>
-                    <Button onClick={handleCreate} className="w-full md:w-auto">Cadastrar Novo</Button>
+                    <Button onClick={handleCreate} className="w-full md:w-auto">
+                        <Plus size={20} className="mr-2" />
+                        Cadastrar Novo
+                    </Button>
                 </div>
+
+
+
+
 
                 <div>
                     <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">ESPORTES</h2>
@@ -346,7 +361,8 @@ export const RegistrationsPage = () => {
                                         <Button onClick={() => handleEdit(item, 'Esportes')}>Editar</Button>
                                         <Button
                                             onClick={() => handleDelete(item, 'Esportes')}
-                                            className="bg-red-600 hover:bg-red-700"
+                                            variant="outline"
+                                            className="border-red-500 text-red-600 hover:bg-red-50 dark:border-red-400 dark:text-red-400 dark:hover:bg-red-900/20"
                                         >
                                             Excluir
                                         </Button>
@@ -369,7 +385,8 @@ export const RegistrationsPage = () => {
                                         <Button onClick={() => handleEdit(item, 'Locais')}>Editar</Button>
                                         <Button
                                             onClick={() => handleDelete(item, 'Locais')}
-                                            className="bg-red-600 hover:bg-red-700"
+                                            variant="outline"
+                                            className="border-red-500 text-red-600 hover:bg-red-50 dark:border-red-400 dark:text-red-400 dark:hover:bg-red-900/20"
                                         >
                                             Excluir
                                         </Button>
@@ -393,7 +410,8 @@ export const RegistrationsPage = () => {
                                         <Button onClick={() => handleEdit(item, 'Cursos')}>Editar</Button>
                                         <Button
                                             onClick={() => handleDelete(item, 'Cursos')}
-                                            className="bg-red-600 hover:bg-red-700"
+                                            variant="outline"
+                                            className="border-red-500 text-red-600 hover:bg-red-50 dark:border-red-400 dark:text-red-400 dark:hover:bg-red-900/20"
                                         >
                                             Excluir
                                         </Button>
@@ -418,8 +436,8 @@ export const RegistrationsPage = () => {
                                     setEditingItem(null);
                                     setCategory('Usuários');
                                     // Manter a categoria atualmente selecionada
-                                    const tipoUsuario = selectedUserCategory === 'Administradores' ? 'admin' : 
-                                                       selectedUserCategory === 'Staff' ? 'staff' : 'representante';
+                                    const tipoUsuario = selectedUserCategory === 'Administradores' ? 'admin' :
+                                        selectedUserCategory === 'Staff' ? 'staff' : 'representante';
                                     setFormData({ name: '', sigla: '', email: '', senha: '', tipo_usuario: tipoUsuario });
                                     setIsModalOpen(true);
                                 }}>
@@ -471,7 +489,8 @@ export const RegistrationsPage = () => {
                                                 </Button>
                                                 <Button
                                                     size="sm"
-                                                    className="bg-red-600 hover:bg-red-700"
+                                                    variant="outline"
+                                                    className="border-red-500 text-red-600 hover:bg-red-50 dark:border-red-400 dark:text-red-400 dark:hover:bg-red-900/20"
                                                     onClick={() => handleDelete(user, 'Usuários')}
                                                 >
                                                     Excluir
@@ -487,7 +506,7 @@ export const RegistrationsPage = () => {
                                             onClick={() => {
                                                 setEditingItem(null);
                                                 setCategory('Usuários');
-                                                setFormData({ name: '', sigla: '', email: '', senha: '', tipo_usuario: selectedUserCategory === 'Administradores' ? 'admin' : selectedUserCategory === 'Staff' ? 'staff' : 'representante'});
+                                                setFormData({ name: '', sigla: '', email: '', senha: '', tipo_usuario: selectedUserCategory === 'Administradores' ? 'admin' : selectedUserCategory === 'Staff' ? 'staff' : 'representante' });
                                                 setIsModalOpen(true);
                                             }}
                                             className="mt-2"
@@ -578,7 +597,7 @@ export const RegistrationsPage = () => {
                     </div>
                 </form>
             </Modal>
-            
+
             <HelpModal
                 isOpen={showHelp}
                 onClose={() => setShowHelp(false)}

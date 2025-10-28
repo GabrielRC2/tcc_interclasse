@@ -1,7 +1,7 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import { Trophy, Users, Calendar, Target, Award } from 'lucide-react';
-import { Button, Select, CardSplat } from '@/components/common';
+import { Button, Select, CardSplat, Loading } from '@/components/common';
 import { useTournament } from '@/contexts/TournamentContext';
 import { useToast } from '@/components/Toast';
 import { useConfirm } from '@/components/Confirm';
@@ -447,7 +447,7 @@ export const BracketsPage = () => {
 
     // Só mostrar carregamento inicial se não há torneio selecionado ou na primeira carga
     if (loading && !selectedTournament) {
-        return <div className="flex justify-center items-center h-64 text-gray-600 dark:text-gray-400">Carregando...</div>;
+        return <Loading message="Carregando..." />;
     }
 
     // Usar dados preservados durante carregamento para evitar flash
@@ -479,11 +479,11 @@ export const BracketsPage = () => {
                         </p>
                     )}
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-2 w-full md:w-auto">
                     <Button 
                         onClick={mostrarOpcoesEliminatorias} 
                         disabled={!selectedTournament?.id || !modalidadeSelecionada || displayData.classificacao.length === 0}
-                        className="bg-red-600 hover:bg-red-700"
+                        className="bg-red-600 hover:bg-red-700 w-full md:w-auto"
                     >
                         <Target className="mr-2" size={16} />
                         Gerar Eliminatórias

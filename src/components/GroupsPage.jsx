@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Shuffle, Users, Trophy, Play, Trash2 } from 'lucide-react';
 import { Modal } from '@/components/Modal';
-import { Button, Select, CardSplat } from '@/components/common';
+import { Button, Select, CardSplat, Loading } from '@/components/common';
 import { useTournament } from '@/contexts/TournamentContext';
 import { useToast } from '@/components/Toast';
 import { useConfirm } from '@/components/Confirm';
@@ -244,7 +244,7 @@ export const GroupsPage = () => {
     };
 
     if (loading) {
-        return <div className="flex justify-center items-center h-64 text-gray-600 dark:text-gray-400">Carregando...</div>;
+        return <Loading message="Carregando..." />;
     }
 
     return (

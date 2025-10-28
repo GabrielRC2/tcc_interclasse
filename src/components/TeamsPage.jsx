@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Edit, Trash2, UserCircle, Filter, X, MoreVertical } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 import { Modal } from '@/components/Modal';
-import { Button, Input, Select, CardSplat } from '@/components/common';
+import { Button, Input, Select, CardSplat, Loading } from '@/components/common';
 import { useTournament } from '@/contexts/TournamentContext';
 import { useToast } from '@/components/Toast';
 import { useConfirm } from '@/components/Confirm';
@@ -41,7 +41,7 @@ function TeamsPage() {
     loadTeams();
     loadCursos();
     loadModalidades();
-  }, [selectedTournament]); // Recarregar quando o torneio mudar
+  }, [selectedTournament]); // Adicionar selectedTournament como dependência
 
   const loadTeams = async () => {
     if (!selectedTournament) {
@@ -556,6 +556,11 @@ function TeamsPage() {
     }
   };
 
+  // Mostrar loading enquanto carrega
+  if (loading) {
+    return <Loading message="Carregando times..." />;
+  }
+
   // Adicionar verificação de torneio
   if (!selectedTournament) {
     return (
@@ -590,18 +595,22 @@ function TeamsPage() {
                 <span className="text-sm text-gray-600 dark:text-gray-400">
                   {selectedTeamsIds.length} selecionado(s)
                 </span>
-                <button
+                <Button
                   onClick={deleteSelectedTeams}
-                  className="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300"
+                  variant="outline"
+                  className="border-red-500 text-red-600 hover:bg-red-50 dark:border-red-400 dark:text-red-400 dark:hover:bg-red-900/20"
                   title={`Excluir ${selectedTeamsIds.length} time(s) selecionado(s)`}
                 >
                   <Trash2 size={24} />
-                </button>
+                </Button>
               </>
             )}
             {/* Botão Criar Novo Time - oculto para usuários STAFF */}
             {session?.user?.tipo_usuario !== 'STAFF' && (
-              <Button onClick={() => openDetails(null)}>Criar Novo Time</Button>
+              <Button onClick={() => openDetails(null)} className="w-full md:w-auto">
+                <Plus size={20} className="mr-2" />
+                Criar Novo Time
+              </Button>
             )}
           </div>
         </div>
@@ -770,13 +779,15 @@ function TeamsPage() {
                     >
                       <Edit size={20} />
                     </button>
-                    <button
+                    <Button
                       onClick={() => deleteTeam(selectedTeam.id)}
-                      className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+                      variant="outline"
+                      size="sm"
+                      className="border-red-500 text-red-600 hover:bg-red-50 dark:border-red-400 dark:text-red-400 dark:hover:bg-red-900/20"
                       title="Excluir time"
                     >
                       <Trash2 size={20} />
-                    </button>
+                    </Button>
                   </div>
                 )}
               </div>

@@ -4,7 +4,7 @@ import { Trophy, Users, Calendar, Target, Filter, X, Settings, ChevronDown, Chev
 import { useTournament } from '@/contexts/TournamentContext';
 import { SumulaModal } from '@/components/SumulaModal';
 import { TournamentSelector } from '@/components/TournamentSelector';
-import { Button, CardSplat, Select } from '@/components/common';
+import { Button, CardSplat, Select, Loading } from '@/components/common';
 import { HelpModal, HelpButton } from '@/components/HelpModal';
 
 export const Dashboard = ({ isGuest = false }) => {
@@ -464,10 +464,7 @@ export const Dashboard = ({ isGuest = false }) => {
                 {partidasEmAndamento.length === 0 ? (
                   <div className="col-span-2 text-center py-8 text-gray-500">
                     {carregandoAndamento && primeiraCarregaAndamento ? (
-                      <div className="flex items-center justify-center gap-2">
-                        <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-                        <span>Carregando partidas em andamento...</span>
-                      </div>
+                      <Loading message="Carregando partidas em andamento..." />
                     ) : (
                       <>
                         Nenhuma partida em andamento no momento.
@@ -483,25 +480,25 @@ export const Dashboard = ({ isGuest = false }) => {
                     const temPenaltis = penaltisTemp?.temPenaltis ?? match.temPenaltis;
                     const penaltisCasa = penaltisTemp?.penaltisCasa ?? match.penaltisCasa;
                     const penaltisVisitante = penaltisTemp?.penaltisVisitante ?? match.penaltisVisitante;
-                    
-                    return (
-                    <div key={match.id} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm p-4 relative overflow-hidden">
-                      <div className="relative z-10">
-                        {/* AO VIVO no canto superior esquerdo */}
-                        <div className="mb-4">
-                          <p className="text-sm text-red-600 dark:text-red-400 font-semibold uppercase flex items-center gap-2">
-                            <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
-                            AO VIVO
-                          </p>
-                        </div>
 
-                        {/* Layout com colunas proporcionais */}
-                        <div className="mb-4 w-full text-center">
-                          {(() => {
-                            // Calcular a largura baseada no maior nome
-                            const maxLength = Math.max(match.team1.length, match.team2.length);
-                            // Definir largura mínima de 80px e máxima de 160px, baseada no comprimento
-                            const columnWidth = Math.max(80, Math.min(160, maxLength * 12));
+                    return (
+                      <div key={match.id} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm p-4 relative overflow-hidden">
+                        <div className="relative z-10">
+                          {/* AO VIVO no canto superior esquerdo */}
+                          <div className="mb-4">
+                            <p className="text-sm text-red-600 dark:text-red-400 font-semibold uppercase flex items-center gap-2">
+                              <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
+                              AO VIVO
+                            </p>
+                          </div>
+
+                          {/* Layout com colunas proporcionais */}
+                          <div className="mb-4 w-full text-center">
+                            {(() => {
+                              // Calcular a largura baseada no maior nome
+                              const maxLength = Math.max(match.team1.length, match.team2.length);
+                              // Definir largura mínima de 80px e máxima de 160px, baseada no comprimento
+                              const columnWidth = Math.max(80, Math.min(160, maxLength * 12));
 
                             return (
                               <div className="grid grid-cols-3 gap-2 items-center justify-center max-w-fit mx-auto">
@@ -518,7 +515,35 @@ export const Dashboard = ({ isGuest = false }) => {
                                       <span className="text-lg text-gray-600 dark:text-gray-400 mt-1 font-medium">
                                         ({penaltisCasa})
                                       </span>
-                                    )}
+                                      {temPenaltis && penaltisCasa !== null && (
+                                        <span className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                                          ({penaltisCasa})
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+
+                                  {/* Coluna separador VS */}
+                                  <div className="text-center px-3">
+                                    <div className="mb-1 h-6"></div>
+                                    <span className="text-2xl font-bold text-red-600 dark:text-red-400">x</span>
+                                  </div>
+
+                                  {/* Coluna Time 2 */}
+                                  <div className="text-center" style={{ minWidth: `${columnWidth}px` }}>
+                                    <p className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-1">
+                                      {match.team2}
+                                    </p>
+                                    <div className="flex flex-col items-center">
+                                      <span className="text-3xl font-bold text-red-600 dark:text-red-400">
+                                        {match.pontuacaoTime2 || 0}
+                                      </span>
+                                      {temPenaltis && penaltisVisitante !== null && (
+                                        <span className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                                          ({penaltisVisitante})
+                                        </span>
+                                      )}
+                                    </div>
                                   </div>
                                 </div>
 
@@ -554,9 +579,8 @@ export const Dashboard = ({ isGuest = false }) => {
                           <p className="text-sm text-gray-600 dark:text-gray-300">Local: {match.location}</p>
                           {match.fase && <p className="text-sm text-gray-600 dark:text-gray-300">Fase: {match.fase}</p>}
                         </div>
+                        <CardSplat />
                       </div>
-                      <CardSplat />
-                    </div>
                     );
                   })
                 )}
@@ -593,7 +617,7 @@ export const Dashboard = ({ isGuest = false }) => {
               <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">JOGADORES(AS) EM DESTAQUE</h2>
               <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm p-6">
                 {carregandoJogadores ? (
-                  <div className="text-center py-8 text-gray-600 dark:text-gray-400">Carregando jogadores em destaque...</div>
+                  <Loading message="Carregando jogadores em destaque..." />
                 ) : Object.keys(jogadoresDestaque).length === 0 ? (
                   <div className="text-center py-8 text-gray-500 dark:text-gray-400">Nenhum jogador encontrado para este torneio.</div>
                 ) : (
@@ -787,7 +811,9 @@ export const Dashboard = ({ isGuest = false }) => {
                         <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
                           {carregandoAgendadas ? (
                             <tr>
-                              <td colSpan="6" className="p-6 text-center text-gray-600 dark:text-gray-400">Carregando partidas agendadas...</td>
+                              <td colSpan="6" className="p-6">
+                                <Loading message="Carregando partidas agendadas..." />
+                              </td>
                             </tr>
                           ) : partidasAgendadas.length === 0 ? (
                             <tr>
@@ -920,7 +946,9 @@ export const Dashboard = ({ isGuest = false }) => {
                         <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
                           {carregandoFinalizadas ? (
                             <tr>
-                              <td colSpan="7" className="p-6 text-center text-gray-600 dark:text-gray-400">Carregando súmulas...</td>
+                              <td colSpan="7" className="p-6">
+                                <Loading message="Carregando súmulas..." />
+                              </td>
                             </tr>
                           ) : partidasFinalizadas.length === 0 ? (
                             <tr>
