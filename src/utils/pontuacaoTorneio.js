@@ -304,39 +304,45 @@ export async function obterClassificacao(prisma, torneioId, filtro = null) {
     }
 
     const team = acc[timeId];
-    team.pontos += partidaTime.pontosTorneio || 0; // Garantir que não seja null
-    team.jogos += 1;
+    
+    // Só contar como jogo se a partida foi finalizada
+    const partidaFinalizada = partidaTime.partida.statusPartida === 'FINALIZADA';
+    
+    if (partidaFinalizada) {
+      team.pontos += partidaTime.pontosTorneio || 0; // Garantir que não seja null
+      team.jogos += 1;
 
-    // Contar resultados
-    switch (partidaTime.resultado) {
-      case 'VENCEDOR':
-        team.vitorias += 1;
-        break;
-      case 'EMPATE':
-        team.empates += 1;
-        break;
-      case 'PERDEDOR':
-        team.derrotas += 1;
-        break;
-      case 'WO':
-        team.derrotas += 1;
-        team.temWO = true; // Marcar que o time teve WO
-        break;
-    }
-
-    // Calcular gols (pontos da partida)
-    const partida = partidaTime.partida;
-    if (partida.pontosCasa !== null && partida.pontosVisitante !== null) {
-      if (partidaTime.ehCasa) {
-        team.golsPro += partida.pontosCasa;
-        team.golsContra += partida.pontosVisitante;
-      } else {
-        team.golsPro += partida.pontosVisitante;
-        team.golsContra += partida.pontosCasa;
+      // Contar resultados
+      switch (partidaTime.resultado) {
+        case 'VENCEDOR':
+          team.vitorias += 1;
+          break;
+        case 'EMPATE':
+          team.empates += 1;
+          break;
+        case 'PERDEDOR':
+          team.derrotas += 1;
+          break;
+        case 'WO':
+          team.derrotas += 1;
+          team.temWO = true; // Marcar que o time teve WO
+          break;
       }
-    }
 
-    team.saldoGols = team.golsPro - team.golsContra;
+      // Calcular gols (pontos da partida)
+      const partida = partidaTime.partida;
+      if (partida.pontosCasa !== null && partida.pontosVisitante !== null) {
+        if (partidaTime.ehCasa) {
+          team.golsPro += partida.pontosCasa;
+          team.golsContra += partida.pontosVisitante;
+        } else {
+          team.golsPro += partida.pontosVisitante;
+          team.golsContra += partida.pontosCasa;
+        }
+      }
+
+      team.saldoGols = team.golsPro - team.golsContra;
+    }
 
     return acc;
   }, {});

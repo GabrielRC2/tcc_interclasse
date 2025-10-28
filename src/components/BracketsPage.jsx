@@ -333,8 +333,8 @@ export const BracketsPage = () => {
         // Adicionar opção automática
         opcoesSelect.push({
             value: 'auto',
-            label: `${opcoes.length + 1}. Deixar a API decidir automaticamente`,
-            description: 'A API escolherá a melhor fase baseada no número de times'
+            label: `${opcoes.length + 1}. Deixar o Sistema decidir automaticamente`,
+            description: 'O Sistema escolherá a melhor fase baseada no número de times'
         });
         
         const escolha = await confirm.select(
@@ -352,8 +352,8 @@ export const BracketsPage = () => {
         
         if (escolha) {
             if (escolha === 'auto') {
-                // Deixar a API decidir automaticamente
-                console.log('Deixando a API decidir automaticamente');
+                // Deixar o Sistema decidir automaticamente
+                console.log('Deixando o Sistema decidir automaticamente');
                 gerarEliminatorias(); // Sem especificar fase
             } else {
                 // Usar a fase escolhida
