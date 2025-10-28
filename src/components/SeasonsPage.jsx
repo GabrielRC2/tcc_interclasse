@@ -30,15 +30,8 @@ export const SeasonsPage = () => {
         location: 'ETEC João Belarmino',
         startDate: '',
         endDate: '',
-        modalities: '',
         status: 'PLANEJAMENTO'
     });
-
-    // Opções de modalidades baseadas no tipo de torneio
-    const modalitiesByType = {
-        'Meio do Ano': 'Vôlei, Handebol',
-        'Fim de Ano': 'Futsal, Basquete'
-    };
 
     useEffect(() => {
         loadSeasons();
@@ -64,16 +57,6 @@ export const SeasonsPage = () => {
             setUserLoading(false);
         }
     };
-
-    useEffect(() => {
-        // Atualizar modalidades quando o nome do torneio mudar
-        if (formData.name && modalitiesByType[formData.name]) {
-            setFormData(prev => ({
-                ...prev,
-                modalities: modalitiesByType[formData.name]
-            }));
-        }
-    }, [formData.name]);
 
     const loadSeasons = async () => {
         try {
@@ -145,7 +128,6 @@ export const SeasonsPage = () => {
                     location: torneioCompleto.location,
                     startDate: torneioCompleto.startDate,
                     endDate: torneioCompleto.endDate,
-                    modalities: torneioCompleto.modalities,
                     status: torneioCompleto.status
                 });
             } else {
@@ -160,7 +142,6 @@ export const SeasonsPage = () => {
                     location: season.location,
                     startDate: season.startDate,
                     endDate: season.endDate,
-                    modalities: season.modalities,
                     status: season.status
                 });
             }
@@ -177,7 +158,6 @@ export const SeasonsPage = () => {
                 location: season.location,
                 startDate: season.startDate,
                 endDate: season.endDate,
-                modalities: season.modalities,
                 status: season.status
             });
         }
@@ -228,7 +208,6 @@ export const SeasonsPage = () => {
             location: 'ETEC João Belarmino',
             startDate: '',
             endDate: '',
-            modalities: '',
             status: 'PLANEJAMENTO'
         });
     };
@@ -306,10 +285,10 @@ export const SeasonsPage = () => {
 
                 <div className="space-y-4">
                     {Object.keys(groupedSeasons).length === 0 ? (
-                        <div className="text-center py-12">
+                        <div className="text-center py-12 flex flex-col items-center">
                             <Trophy size={48} className="mx-auto text-gray-400 mb-4" />
-                            <p className="text-gray-500 dark:text-gray-400 text-lg">Nenhum torneio encontrado</p>
-                            <Button onClick={() => setIsModalOpen(true)} className="mt-4">
+                            <p className="text-gray-500 dark:text-gray-400 text-lg mb-4">Nenhum torneio encontrado</p>
+                            <Button onClick={() => setIsModalOpen(true)}>
                                 Criar Primeiro Torneio
                             </Button>
                         </div>
@@ -442,15 +421,6 @@ export const SeasonsPage = () => {
                             onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
                             required
                         />
-                    </div>
-
-                    <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                            Modalidades (Automático)
-                        </label>
-                        <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                            {formData.modalities || 'Selecione o tipo de torneio'}
-                        </div>
                     </div>
 
                     <Select
