@@ -1,0 +1,97 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Scrollbar global personalizada para todas as páginas */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #9ca3af #e5e7eb;
+  /* thumb track (light mode) */
+}
+
+/* Dark mode scrollbar */
+.dark * {
+  scrollbar-color: #4b5563 #1f2937;
+  /* thumb track (dark mode) */
+}
+
+/* Webkit browsers (Chrome, Safari, Edge) */
+*::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+*::-webkit-scrollbar-track {
+  background-color: #e5e7eb;
+  /* light mode */
+}
+
+.dark *::-webkit-scrollbar-track {
+  background-color: #1f2937;
+  /* dark mode */
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: #9ca3af;
+  /* light mode */
+  border-radius: 6px;
+  border: 2px solid #e5e7eb;
+}
+
+.dark *::-webkit-scrollbar-thumb {
+  background-color: #4b5563;
+  /* dark mode */
+  border: 2px solid #1f2937;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background-color: #6b7280;
+  /* light mode hover */
+}
+
+.dark *::-webkit-scrollbar-thumb:hover {
+  background-color: #6b7280;
+  /* dark mode hover */
+}
+
+/* Scrollbar personalizada para tabelas responsivas (mantida para compatibilidade) */
+.scrollbar-thin {
+  scrollbar-width: thin;
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+  height: 6px;
+  width: 6px;
+}
+
+.scrollbar-thumb-gray-300::-webkit-scrollbar-thumb {
+  background-color: #d1d5db;
+  border-radius: 3px;
+}
+
+.scrollbar-thumb-gray-600::-webkit-scrollbar-thumb {
+  background-color: #4b5563;
+  border-radius: 3px;
+}
+
+.scrollbar-track-gray-100::-webkit-scrollbar-track {
+  background-color: #f3f4f6;
+}
+
+.scrollbar-track-gray-800::-webkit-scrollbar-track {
+  background-color: #1f2937;
+}
+
+/* Efeito de sombra nas bordas para indicar scroll */
+.scroll-shadow {
+  background:
+    linear-gradient(90deg, white 30%, rgba(255, 255, 255, 0)),
+    linear-gradient(90deg, rgba(255, 255, 255, 0), white 70%),
+    radial-gradient(farthest-side at 0% 50%, rgba(0, 0, 0, .2), rgba(0, 0, 0, 0)),
+    radial-gradient(farthest-side at 100% 50%, rgba(0, 0, 0, .2), rgba(0, 0, 0, 0));
+  background-repeat: no-repeat;
+  background-color: white;
+  background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+  background-position: 0 0, 100%, 0 0, 100%;
+  background-attachment: local, local, scroll, scroll;
+}
