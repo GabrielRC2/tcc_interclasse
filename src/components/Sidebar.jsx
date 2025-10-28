@@ -47,7 +47,7 @@ export const Sidebar = ({
     onTournamentSelectorClick
 }) => {
     const isGuest = userType === 'guest';
-    
+
     // Lógica para escolher a logo baseada no tema e estado da sidebar
     const getLogoUrl = () => {
         if (isDarkMode) {
@@ -127,14 +127,14 @@ export const Sidebar = ({
                         {isLoggedIn && !isGuest && (
                             <>
                                 {/* Renderização baseada em páginas permitidas */}
-                                {allowedPages?.includes('teams') && (
-                                    <NavLink icon={<Users size={20} />} label="Times" pageName="teams" isSidebarOpen={isSidebarOpen} currentPage={currentPage} setCurrentPage={setCurrentPage} toggleSidebar={toggleSidebar} />
+                                {allowedPages?.includes('registrations') && (
+                                    <NavLink icon={<Plus size={20} />} label="Cadastros" pageName="registrations" isSidebarOpen={isSidebarOpen} currentPage={currentPage} setCurrentPage={setCurrentPage} toggleSidebar={toggleSidebar} />
                                 )}
                                 {allowedPages?.includes('seasons') && (
                                     <NavLink icon={<Calendar size={20} />} label="Temporadas" pageName="seasons" isSidebarOpen={isSidebarOpen} currentPage={currentPage} setCurrentPage={setCurrentPage} toggleSidebar={toggleSidebar} />
                                 )}
-                                {allowedPages?.includes('registrations') && (
-                                    <NavLink icon={<Plus size={20} />} label="Cadastros" pageName="registrations" isSidebarOpen={isSidebarOpen} currentPage={currentPage} setCurrentPage={setCurrentPage} toggleSidebar={toggleSidebar} />
+                                {allowedPages?.includes('teams') && (
+                                    <NavLink icon={<Users size={20} />} label="Times" pageName="teams" isSidebarOpen={isSidebarOpen} currentPage={currentPage} setCurrentPage={setCurrentPage} toggleSidebar={toggleSidebar} />
                                 )}
                                 {allowedPages?.includes('groups') && (
                                     <NavLink icon={<Layers size={20} />} label="Grupos" pageName="groups" isSidebarOpen={isSidebarOpen} currentPage={currentPage} setCurrentPage={setCurrentPage} toggleSidebar={toggleSidebar} />

@@ -2,19 +2,34 @@ import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-export async function GET() {
+export async function GET(request) {
   try {
-    // Buscar modalidades com suas relações com locais
-    const modalidades = await prisma.modalidade.findMany({
+    const { searchParams } = new URL(request.url);
+    const torneioId = searchParams.get('torneioId');
+
+    if (!torneioId) {
+      return Response.json({ error: 'Torneio não especificado' }, { status: 400 });
+    }
+
+    // Buscar modalidades vinculadas ao torneio específico
+    const torneioModalidades = await prisma.torneioModalidade.findMany({
+      where: { torneioId: parseInt(torneioId) },
       include: {
-        categorias: true,
-        locais: {
+        modalidade: {
           include: {
-            local: true
+            categorias: true,
+            locais: {
+              include: {
+                local: true
+              }
+            }
           }
         }
       }
     });
+
+    // Extrair apenas as modalidades
+    const modalidades = torneioModalidades.map(tm => tm.modalidade);
 
     // Buscar todos os locais disponíveis
     const locais = await prisma.local.findMany({

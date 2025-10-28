@@ -47,8 +47,10 @@ export const MatchesPage = () => {
   }, [partidas, statusSelecionado]);
 
   useEffect(() => {
-    loadConfiguracaoLocais();
-  }, []);
+    if (selectedTournament) {
+      loadConfiguracaoLocais();
+    }
+  }, [selectedTournament]);
 
   // carrega modalidades (exemplo)
   const carregarDadosIniciais = async () => {
@@ -239,8 +241,13 @@ export const MatchesPage = () => {
   };
 
   const loadConfiguracaoLocais = async () => {
+    if (!selectedTournament) {
+      console.log('Nenhum torneio selecionado');
+      return;
+    }
+
     try {
-      const response = await fetch('/api/modalidades-locais');
+      const response = await fetch(`/api/modalidades-locais?torneioId=${selectedTournament.id}`);
       const data = await response.json();
 
       setModalidadesDisponiveis(data.modalidades);
