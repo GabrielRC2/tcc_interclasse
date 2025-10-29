@@ -107,6 +107,8 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEn
   useEffect(() => {
     const carregarDados = async () => {
       setCarregando(true);
+      console.log('🔄 Iniciando carregamento de dados da súmula, Match ID:', match.id);
+      
       try {
         const partidaRes = await fetch(`/api/partidas/${match.id}`);
         const partidaData = partidaRes.ok ? await partidaRes.json() : null;
@@ -122,6 +124,9 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEn
         const dataT1 = resT1.ok ? await resT1.json() : [];
         const dataT2 = resT2.ok ? await resT2.json() : [];
         const dataEv = resEv.ok ? await resEv.json() : [];
+
+        console.log('📥 Eventos carregados do servidor:', JSON.stringify(dataEv, null, 2));
+        console.log('📥 Total de eventos:', dataEv.length);
 
         const mappedT1 = dataT1.map(p => ({ ...p, pontos: 0, amarelos: 0, vermelhos: 0 }));
         const mappedT2 = dataT2.map(p => ({ ...p, pontos: 0, amarelos: 0, vermelhos: 0 }));
@@ -146,6 +151,9 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEn
         const statsA = montarEstatisticas(mappedT1, dataEv);
         const statsB = montarEstatisticas(mappedT2, dataEv);
 
+        console.log('📊 Estatísticas calculadas TimeA:', JSON.stringify(statsA, null, 2));
+        console.log('📊 Estatísticas calculadas TimeB:', JSON.stringify(statsB, null, 2));
+
         // Inicializa edições garantindo que todos os jogadores estejam presentes
         const inicializarEdicao = (jogadores, stats) => {
           return jogadores.map(jogador => {
@@ -159,8 +167,14 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEn
           });
         };
 
-        setEdicaoTimeA(inicializarEdicao(mappedT1, statsA));
-        setEdicaoTimeB(inicializarEdicao(mappedT2, statsB));
+        const edicaoInicialA = inicializarEdicao(mappedT1, statsA);
+        const edicaoInicialB = inicializarEdicao(mappedT2, statsB);
+
+        console.log('✅ Edição inicial TimeA:', JSON.stringify(edicaoInicialA, null, 2));
+        console.log('✅ Edição inicial TimeB:', JSON.stringify(edicaoInicialB, null, 2));
+
+        setEdicaoTimeA(edicaoInicialA);
+        setEdicaoTimeB(edicaoInicialB);
 
         // atualiza exibição (modo final) com estatísticas
         setJogadoresTimeA(mappedT1.map(j => {
@@ -288,14 +302,25 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEn
       const estadoA = estadoTimeA || edicaoTimeARef.current;
       const estadoB = estadoTimeB || edicaoTimeBRef.current;
 
+      console.log('🔍 DEBUG salvarEventosAssincronos - EstadoA:', JSON.stringify(estadoA, null, 2));
+      console.log('🔍 DEBUG salvarEventosAssincronos - EstadoB:', JSON.stringify(estadoB, null, 2));
+
+      // Verificar se temos TODOS os jogadores
+      console.log('🔢 Total jogadores no estadoA:', estadoA.length);
+      console.log('🔢 Total jogadores no estadoB:', estadoB.length);
+
       // Construir eventos baseado no estado atual de edição
+      // IMPORTANTE: Processar TODOS os jogadores, não apenas os com valores > 0
       const eventosParaSalvar = [];
       const todasEdicoes = [
         ...estadoA.map(e => ({ ...e, time: 1 })),
         ...estadoB.map(e => ({ ...e, time: 2 }))
       ];
 
+      console.log('🔢 Total de edições a processar:', todasEdicoes.length);
+
       todasEdicoes.forEach(edicao => {
+        // SEMPRE incluir o jogador, mesmo com 0 gols (para não perder dados anteriores)
         // GOLS: 1 evento por jogador com a quantidade total
         if (edicao.points > 0) {
           eventosParaSalvar.push({
@@ -331,9 +356,9 @@ export const SumulaModal = ({ isOpen, onClose, match, mode = 'final', onSumulaEn
         jogador: e.jogadorId
       }));
 
-      console.log('Enviando eventos para o backend:', JSON.stringify(dadosParaEnvio, null, 2));
-      console.log('Estado TimeA usado:', JSON.stringify(estadoA, null, 2));
-      console.log('Estado TimeB usado:', JSON.stringify(estadoB, null, 2));
+      console.log('📤 Enviando eventos para o backend:', JSON.stringify(dadosParaEnvio, null, 2));
+      console.log('📊 Total de eventos a enviar:', dadosParaEnvio.length);
+      console.log('👥 Jogadores com gols:', dadosParaEnvio.filter(e => e.tipo === 'GOL').map(e => `J${e.jogador}:${e.ponto}`));
 
       // Substituir todos os eventos da partida (DELETE + CREATE)
       const response = await fetch(`/api/partidas/${match.id}/eventos`, {

@@ -303,12 +303,13 @@ export const RegistrationsPage = () => {
         setEditingItem(null);
     };
 
-    if (loading) {
+    if (loading || userLoading) {
         return <div className="flex justify-center items-center h-64 text-gray-600 dark:text-gray-400">Carregando...</div>;
     }
 
     // Bloquear acesso para usuários que NÃO são ADMIN
-    if (currentUser && currentUser.tipo_usuario !== 'ADMIN') {
+    // Usar comparação case-insensitive e verificar se currentUser existe
+    if (!currentUser || currentUser.tipo_usuario?.toUpperCase() !== 'ADMIN') {
         return (
             <div className="flex flex-col items-center justify-center h-64 text-center">
                 <h2 className="text-2xl font-bold text-red-600 mb-2">Acesso Negado</h2>

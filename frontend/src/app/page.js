@@ -18,7 +18,8 @@ import { useTournament } from '@/contexts/TournamentContext';
 const checkUserAccess = (userType, pageName, isGuest) => {
   // Cadastros (registrations) é exclusivo para ADMIN
   if (pageName === 'registrations') {
-    return userType === 'ADMIN' && !isGuest;
+    // Comparação case-insensitive para ADMIN
+    return userType?.toUpperCase() === 'ADMIN' && !isGuest;
   }
   
   // Visitantes e usuários logados podem acessar todas as outras páginas
@@ -36,7 +37,8 @@ const getAllowedPages = (userType, isGuest) => {
   }
   
   // ADMIN tem acesso a TODAS as páginas (incluindo cadastros)
-  if (userType === 'ADMIN') {
+  // Comparação case-insensitive
+  if (userType?.toUpperCase() === 'ADMIN') {
     return [...basePagesForAll, 'registrations'];
   }
   
@@ -59,6 +61,13 @@ function AppContent() {
   useEffect(() => {
     document.documentElement.classList.toggle('dark', isDarkMode);
   }, [isDarkMode]);
+  
+  // Reseta isGuest quando um usuário real fizer login
+  useEffect(() => {
+    if (status === 'authenticated' && session) {
+      setIsGuest(false);
+    }
+  }, [status, session]);
 
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
