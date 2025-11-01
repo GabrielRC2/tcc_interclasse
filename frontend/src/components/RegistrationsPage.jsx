@@ -108,7 +108,7 @@ export const RegistrationsPage = () => {
 
             // Separar usuários por tipo (importante para controle de acesso)
             console.log('Dados dos usuários carregados:', usersData);
-            
+
             setUsers({
                 administradores: usersData.filter(u => {
                     const tipo = u.tipo?.toLowerCase();
@@ -116,7 +116,7 @@ export const RegistrationsPage = () => {
                 }),
                 staff: usersData.filter(u => u.tipo?.toLowerCase() === 'staff'),
                 representantes: usersData.filter(u => {
-                    const tipo = u.tipo?.toLowerCase(); 
+                    const tipo = u.tipo?.toLowerCase();
                     return tipo === 'representante';
                 })
             });
@@ -146,7 +146,7 @@ export const RegistrationsPage = () => {
             // Mapear o tipo do usuário para os valores do select
             let tipoMapeado = '';
             const tipoOriginal = (item.tipo || '').toLowerCase();
-            
+
             if (tipoOriginal === 'admin' || tipoOriginal === 'administrador') {
                 tipoMapeado = 'admin';
             } else if (tipoOriginal === 'staff') {
@@ -420,16 +420,16 @@ export const RegistrationsPage = () => {
                     <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">GERENCIAMENTO DE USUÁRIOS</h2>
                     <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm p-6 relative overflow-hidden">
                         <div className="relative z-10">
-                            <div className="flex justify-between items-center mb-6">
+                            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
                                 <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">
                                     Sistema de Autenticação
                                 </h3>
-                                <Button onClick={() => {
+                                <Button className="w-full sm:w-auto" onClick={() => {
                                     setEditingItem(null);
                                     setCategory('Usuários');
                                     // Manter a categoria atualmente selecionada
-                                    const tipoUsuario = selectedUserCategory === 'Administradores' ? 'admin' : 
-                                                       selectedUserCategory === 'Staff' ? 'staff' : 'representante';
+                                    const tipoUsuario = selectedUserCategory === 'Administradores' ? 'admin' :
+                                        selectedUserCategory === 'Staff' ? 'staff' : 'representante';
                                     setFormData({ name: '', sigla: '', email: '', senha: '', tipo_usuario: tipoUsuario });
                                     setIsModalOpen(true);
                                 }}>
@@ -438,12 +438,12 @@ export const RegistrationsPage = () => {
                             </div>
 
                             {/* Tabs para tipos de usuários */}
-                            <div className="flex border-b border-gray-200 dark:border-gray-700 mb-4">
+                            <div className="flex border-b border-gray-200 dark:border-gray-700 mb-4 overflow-x-auto">
                                 {['Administradores', 'Staff', 'Representantes'].map((tab) => (
                                     <button
                                         key={tab}
                                         onClick={() => setSelectedUserCategory(tab)}
-                                        className={`py-2 px-4 border-b-2 transition-colors ${selectedUserCategory === tab
+                                        className={`py-2 px-4 border-b-2 transition-colors whitespace-nowrap ${selectedUserCategory === tab
                                             ? 'border-red-600 text-red-600'
                                             : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
                                             }`}
@@ -460,8 +460,8 @@ export const RegistrationsPage = () => {
                                         key={user.id || user.id}
                                         className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg"
                                     >
-                                        <div className="flex justify-between items-start">
-                                            <div>
+                                        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
+                                            <div className="flex-1">
                                                 <h4 className="font-semibold text-gray-900 dark:text-gray-100">
                                                     {user.nome}
                                                 </h4>
@@ -472,9 +472,10 @@ export const RegistrationsPage = () => {
                                                     {user.tipo}
                                                 </span>
                                             </div>
-                                            <div className="flex gap-2">
+                                            <div className="flex flex-col sm:flex-row gap-2">
                                                 <Button
                                                     size="sm"
+                                                    className="w-full sm:w-auto"
                                                     onClick={() => handleEdit(user, 'Usuários')}
                                                 >
                                                     Editar
@@ -482,7 +483,7 @@ export const RegistrationsPage = () => {
                                                 <Button
                                                     size="sm"
                                                     variant="outline"
-                                                    className="border-red-500 text-red-600 hover:bg-red-50 dark:border-red-400 dark:text-red-400 dark:hover:bg-red-900/20"
+                                                    className="w-full sm:w-auto border-red-500 text-red-600 hover:bg-red-50 dark:border-red-400 dark:text-red-400 dark:hover:bg-red-900/20"
                                                     onClick={() => handleDelete(user, 'Usuários')}
                                                 >
                                                     Excluir
@@ -498,7 +499,7 @@ export const RegistrationsPage = () => {
                                             onClick={() => {
                                                 setEditingItem(null);
                                                 setCategory('Usuários');
-                                                setFormData({ name: '', sigla: '', email: '', senha: '', tipo_usuario: selectedUserCategory === 'Administradores' ? 'admin' : selectedUserCategory === 'Staff' ? 'staff' : 'representante'});
+                                                setFormData({ name: '', sigla: '', email: '', senha: '', tipo_usuario: selectedUserCategory === 'Administradores' ? 'admin' : selectedUserCategory === 'Staff' ? 'staff' : 'representante' });
                                                 setIsModalOpen(true);
                                             }}
                                             className="mt-2"
