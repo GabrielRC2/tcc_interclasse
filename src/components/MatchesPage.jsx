@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { Calendar, MapPin, Trophy, Filter, Play, Settings, Shuffle, RefreshCcw, AlertTriangle } from 'lucide-react';
+import { Calendar, MapPin, Trophy, Filter, Play, Settings, Shuffle, RefreshCcw, AlertTriangle, Dices } from 'lucide-react';
 import { Button, IconButton, Select, Loading } from '@/components/common';
 import { useTournament } from '@/contexts/TournamentContext';
 import { SumulaModal } from '@/components/SumulaModal';
@@ -942,22 +942,23 @@ export const MatchesPage = () => {
 
               {/* Botões de Configuração */}
               <div className="flex gap-2">
-                <IconButton
-                  onClick={gerarPontuacoesAleatorias}
-                  disabled={partidas.filter(p => p.status === 'Agendada').length === 0}
-                  variant="primary"
-                  title="Gerar Pontuações Aleatórias"
-                >
-                  <Shuffle size={20} />
-                </IconButton>
                 <Button
                   onClick={() => setShowConfigModal(true)}
                   variant="outline"
                   disabled={!selectedTournament}
-                  className="flex-1 sm:flex-none sm:w-auto whitespace-nowrap"
+                  className="w-full sm:w-auto whitespace-nowrap"
                 >
                   <Settings size={16} className="mr-2" />
                   Configurar Locais
+                </Button>
+                <Button
+                  onClick={gerarPontuacoesAleatorias}
+                  disabled={partidas.filter(p => p.status === 'Agendada').length === 0}
+                  variant="primary"
+                  className="w-full sm:w-auto whitespace-nowrap"
+                >
+                  <Dices size={16} className="mr-2" />
+                  Gerar Resultados
                 </Button>
               </div>
 
