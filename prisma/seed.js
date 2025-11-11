@@ -17,94 +17,79 @@ const sobrenomes = [
   'Costa', 'Ribeiro', 'Martins', 'Carvalho', 'Almeida', 'Melo', 'Barbosa', 'Nunes', 'Mendes', 'Vieira'
 ];
 
-// --- Função para Criar Usuários de Teste ---
-async function createTestUsers() {
-  console.log('\n🔄 Criando usuários de teste...');
+// --- Função para Criar Usuários ---
+async function createUsers() {
+  console.log('🔄 Criando usuários...');
 
-  // Hash para a senha "123456"
-  const hashedPassword = await bcrypt.hash('123456', 12);
-
-  // Deletar usuários de teste existentes
-  await prisma.usuario.deleteMany({
-    where: {
-      email: {
-        in: [
-          'admin@interclasse.com',
-          'staff@interclasse.com',
-          'rep1a@interclasse.com',
-          'rep1b@interclasse.com',
-          'rep2a@interclasse.com'
-        ]
-      }
-    }
-  });
+  // Hash das senhas
+  const adminPassword = await bcrypt.hash('icm007belarmino', 12);
+  const staffPassword = await bcrypt.hash('equipeconfiavel', 12);
+  const repPassword = await bcrypt.hash('vozdosalunos', 12);
 
   // Criar usuários
-  const admin = await prisma.usuario.create({
+  await prisma.usuario.create({
     data: {
       nome: 'Administrador Sistema',
       email: 'admin@interclasse.com',
-      senhaHash: hashedPassword,
+      senhaHash: adminPassword,
       tipo: 'ADMIN'
     }
   });
 
-  const staff = await prisma.usuario.create({
+  await prisma.usuario.create({
     data: {
       nome: 'Staff Organizador',
       email: 'staff@interclasse.com',
-      senhaHash: hashedPassword,
+      senhaHash: staffPassword,
       tipo: 'STAFF'
     }
   });
 
-  const rep1A = await prisma.usuario.create({
+  await prisma.usuario.create({
     data: {
-      nome: 'Representante Turma 1A',
-      email: 'rep1a@interclasse.com',
-      senhaHash: hashedPassword,
+      nome: 'Representante 1',
+      email: 'rep1@interclasse.com',
+      senhaHash: repPassword,
       tipo: 'REPRESENTANTE'
     }
   });
 
-  const rep1B = await prisma.usuario.create({
+  await prisma.usuario.create({
     data: {
-      nome: 'Representante Turma 1B',
-      email: 'rep1b@interclasse.com',
-      senhaHash: hashedPassword,
+      nome: 'Representante 2',
+      email: 'rep2@interclasse.com',
+      senhaHash: repPassword,
       tipo: 'REPRESENTANTE'
     }
   });
 
-  const rep2A = await prisma.usuario.create({
+  await prisma.usuario.create({
     data: {
-      nome: 'Representante Turma 2A',
-      email: 'rep2a@interclasse.com',
-      senhaHash: hashedPassword,
+      nome: 'Representante 3',
+      email: 'rep3@interclasse.com',
+      senhaHash: repPassword,
       tipo: 'REPRESENTANTE'
     }
   });
 
-  console.log('✅ Usuários de teste criados com sucesso!\n');
+  console.log('✅ Usuários criados com sucesso!\n');
   console.log('═══════════════════════════════════════════════════════════');
-  console.log('📋 CREDENCIAIS PARA TESTE');
+  console.log('📋 CREDENCIAIS ATUAIS');
   console.log('═══════════════════════════════════════════════════════════\n');
   
   console.log('👨‍💼 ADMIN');
   console.log('   Email: admin@interclasse.com');
-  console.log('   Senha: 123456');
-  console.log('   ID: ' + admin.id + '\n');
+  console.log('   Senha: icm007belarmino\n');
   
   console.log('👔 STAFF');
   console.log('   Email: staff@interclasse.com');
-  console.log('   Senha: 123456');
-  console.log('   ID: ' + staff.id + '\n');
+  console.log('   Senha: equipeconfiavel\n');
   
   console.log('👨‍🎓 REPRESENTANTES');
-  console.log('   • rep1a@interclasse.com (ID: ' + rep1A.id + ')');
-  console.log('   • rep1b@interclasse.com (ID: ' + rep1B.id + ')');
-  console.log('   • rep2a@interclasse.com (ID: ' + rep2A.id + ')');
-  console.log('   Senha: 123456\n');
+  console.log('   • rep1@interclasse.com');
+  console.log('   • rep2@interclasse.com');
+  console.log('   • rep3@interclasse.com');
+  console.log('   Senha: vozdosalunos\n');
   
   console.log('═══════════════════════════════════════════════════════════\n');
 }
@@ -115,10 +100,7 @@ async function main() {
   console.log('║     SEEDING DO BANCO DE DADOS - SISTEMA INTERCLASSE       ║');
   console.log('╚════════════════════════════════════════════════════════════╝\n');
 
-  // ETAPA 1: Criar usuários de teste
-  await createTestUsers();
-
-  // ETAPA 2: Limpeza do banco de dados
+  // ETAPA 1: Limpeza do banco de dados
   console.log('🗑️  Limpando dados antigos do sistema...');
   await prisma.TimeJogador.deleteMany({});
   await prisma.PartidaTime.deleteMany({});
@@ -136,6 +118,10 @@ async function main() {
   await prisma.Modalidade.deleteMany({});
   await prisma.Torneio.deleteMany({});
   await prisma.Usuario.deleteMany({});
+  console.log('✅ Limpeza concluída!\n');
+
+  // ETAPA 2: Criar usuários
+  await createUsers();
 
   // ETAPA 3: Inserir Locais
   console.log('📍 Criando Locais...');
@@ -426,55 +412,7 @@ async function main() {
   console.log(`   • Fim de Ano: ${timesFimAno.length} times (Futsal e Basquete)`);
   console.log(`✅ ${escalacoes.length} escalações de jogadores criadas\n`);
 
-  // 9. Criação de Usuários de Teste
-  console.log('Criando usuários de teste...');
-  
-  // Hash para a senha "123456"
-  const hashedPassword = await bcrypt.hash('123456', 12);
-
-  // Criar usuários de teste
-  await prisma.Usuario.createMany({
-    data: [
-      {
-        nome: 'Admin Teste',
-        email: 'a@test.com',
-        senhaHash: hashedPassword,
-        tipo: 'ADMIN'
-      },
-      {
-        nome: 'Staff Teste',
-        email: 's@test.com',
-        senhaHash: hashedPassword,
-        tipo: 'STAFF'
-      },
-      {
-        nome: 'Representante Teste',
-        email: 'r@test.com',
-        senhaHash: hashedPassword,
-        tipo: 'REPRESENTANTE'
-      }
-    ]
-  });
-
   console.log('✅ Seeding concluído com sucesso!');
-  console.log('');
-  console.log('📝 Usuários de teste criados:');
-  console.log('');
-  console.log('   👤 ADMIN:');
-  console.log('      Email: a@test.com');
-  console.log('      Senha: 123456');
-  console.log('      Acesso: Todas as páginas');
-  console.log('');
-  console.log('   👤 STAFF:');
-  console.log('      Email: s@test.com');
-  console.log('      Senha: 123456');
-  console.log('      Acesso: Home, Times, Cadastros');
-  console.log('');
-  console.log('   👤 REPRESENTANTE:');
-  console.log('      Email: r@test.com');
-  console.log('      Senha: 123456');
-  console.log('      Acesso: Home, Times');
-  console.log('');
 }
 
 main()
@@ -493,5 +431,3 @@ main()
   .finally(async () => {
     await prisma.$disconnect();
   });
-
-
