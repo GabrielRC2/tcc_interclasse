@@ -72,26 +72,7 @@ async function createUsers() {
     }
   });
 
-  console.log('✅ Usuários criados com sucesso!\n');
-  console.log('═══════════════════════════════════════════════════════════');
-  console.log('📋 CREDENCIAIS ATUAIS');
-  console.log('═══════════════════════════════════════════════════════════\n');
-  
-  console.log('👨‍💼 ADMIN');
-  console.log('   Email: admin@interclasse.com');
-  console.log('   Senha: icm007belarmino\n');
-  
-  console.log('👔 STAFF');
-  console.log('   Email: staff@interclasse.com');
-  console.log('   Senha: equipeconfiavel\n');
-  
-  console.log('👨‍🎓 REPRESENTANTES');
-  console.log('   • rep1@interclasse.com');
-  console.log('   • rep2@interclasse.com');
-  console.log('   • rep3@interclasse.com');
-  console.log('   Senha: vozdosalunos\n');
-  
-  console.log('═══════════════════════════════════════════════════════════\n');
+  console.log('✅ 5 usuários criados com sucesso!\n');
 }
 
 // --- Função Principal do Seeder ---
