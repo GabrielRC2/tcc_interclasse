@@ -850,6 +850,24 @@ export const MatchesPage = () => {
             <RefreshCcw size={16} className="mr-2" />
             Refazer Sorteio
           </Button>
+          <Button
+            onClick={() => setShowConfigModal(true)}
+            variant="outline"
+            disabled={!selectedTournament}
+            className="w-full sm:w-auto whitespace-nowrap"
+          >
+            <Settings size={16} className="mr-2" />
+            Configurar Locais
+          </Button>
+          <Button
+            onClick={gerarPontuacoesAleatorias}
+            disabled={partidas.filter(p => p.status === 'Agendada').length === 0}
+            variant="primary"
+            className="w-full sm:w-auto whitespace-nowrap"
+          >
+            <Dices size={16} className="mr-2" />
+            Gerar Resultados
+          </Button>
           {temEliminatorias && (
             <Button
               onClick={reorganizarEliminatorias}
@@ -938,28 +956,6 @@ export const MatchesPage = () => {
                   <p>🏟️ <strong>Regra 4:</strong> Um jogo em cada quadra conforme configuração de modalidades</p>
                   <p>⏱️ <strong>Regra 5:</strong> Maximizar tempo de descanso entre jogos dos times</p>
                 </div>
-              </div>
-
-              {/* Botões de Configuração */}
-              <div className="flex gap-2">
-                <Button
-                  onClick={() => setShowConfigModal(true)}
-                  variant="outline"
-                  disabled={!selectedTournament}
-                  className="w-full sm:w-auto whitespace-nowrap"
-                >
-                  <Settings size={16} className="mr-2" />
-                  Configurar Locais
-                </Button>
-                <Button
-                  onClick={gerarPontuacoesAleatorias}
-                  disabled={partidas.filter(p => p.status === 'Agendada').length === 0}
-                  variant="primary"
-                  className="w-full sm:w-auto whitespace-nowrap"
-                >
-                  <Dices size={16} className="mr-2" />
-                  Gerar Resultados
-                </Button>
               </div>
 
               {partidasFiltradas.map(p => (
