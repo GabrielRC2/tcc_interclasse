@@ -13,7 +13,7 @@ const timesData = [
   { curso: 'Ciências da Natureza e Ciências Biológicas', ano: '2º', modalidades: ['Futsal Masculino'] },
   { curso: 'Ciências da Natureza e Ciências Biológicas', ano: '3º', modalidades: ['Basquete Masculino', 'Futsal Masculino'] },
   
-  { curso: 'Ciências Humanas', ano: '3º', modalidades: ['Futsal Feminino', 'Basquete Feminino'] },
+  { curso: 'Ciências Humanas', ano: '3º', modalidades: ['Basquete Feminino'] },
   
   { curso: 'Desenvolvimento de Sistemas', ano: '1º', turma: 'Manhã', modalidades: ['Basquete Masculino', 'Futsal Masculino'] },
   { curso: 'Desenvolvimento de Sistemas', ano: '1º', turma: 'Tarde', modalidades: ['Basquete Masculino', 'Futsal Masculino'] },
@@ -26,13 +26,15 @@ const timesData = [
   { curso: 'Edificações', ano: '2º', modalidades: ['Basquete Masculino', 'Basquete Feminino', 'Futsal Masculino'] },
   { curso: 'Edificações', ano: '3º', modalidades: ['Basquete Masculino', 'Basquete Feminino', 'Futsal Masculino', 'Futsal Feminino'] },
   
-  { curso: 'Eletrônica', ano: '1º', modalidades: ['Basquete Masculino', 'Basquete Feminino', 'Futsal Masculino', 'Futsal Feminino'] },
-  { curso: 'Eletrônica', ano: '2º', modalidades: ['Basquete Masculino', 'Basquete Feminino', 'Futsal Masculino', 'Futsal Feminino'] },
-  { curso: 'Eletrônica', ano: '3º', modalidades: ['Basquete Masculino', 'Basquete Feminino', 'Futsal Masculino', 'Futsal Feminino'] },
+  { curso: 'Eletrônica', ano: '1º', modalidades: ['Basquete Masculino', 'Futsal Masculino'] },
+  { curso: 'Eletrônica', ano: '2º', modalidades: ['Basquete Masculino', 'Futsal Masculino'] },
+  { curso: 'Eletrônica', ano: '3º', modalidades: ['Basquete Masculino', 'Futsal Masculino'] },
+  { curso: 'Eletrônica', ano: 'MISTO', modalidades: ['Basquete Feminino', 'Futsal Feminino'] },
   
-  { curso: 'Eventos', ano: '1º', modalidades: [] }, // Sem inscrições
-  { curso: 'Eventos', ano: '2º', modalidades: ['Basquete Masculino', 'Futsal Masculino'] },
-  { curso: 'Eventos', ano: '3º', modalidades: ['Basquete Masculino', 'Futsal Masculino', 'Futsal Feminino'] },
+  { curso: 'Eventos', ano: '1º', modalidades: [] },
+  { curso: 'Eventos', ano: '2º', modalidades: ['Basquete Masculino', 'Futsal Masculino', 'Basquete Feminino', 'Futsal Feminino'] },
+  { curso: 'Eventos', ano: '3º', modalidades: ['Futsal Feminino'] },
+  { curso: 'Eventos', ano: 'MISTO', modalidades: ['Basquete Masculino', 'Futsal Masculino'] },
   
   { curso: 'Química', ano: '1º', modalidades: ['Basquete Masculino', 'Basquete Feminino', 'Futsal Masculino', 'Futsal Feminino'] },
   { curso: 'Química', ano: '2º', modalidades: ['Basquete Masculino', 'Futsal Masculino'] },
